@@ -1,0 +1,22 @@
+node_modules/
+/build
+/.svelte-kit
+/package
+dist/
+coverage/
+
+# Env — never commit real values; keep the example
+.env
+.env.*
+!.env.example
+
+# Vite timestamp artifacts
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
+
+# Editor / OS
+.idea/
+.vscode/
+.DS_Store
+*.log
+npm-debug.log*

@@ -1,0 +1,221 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Design tokens (RGB triplets) — dark is the default ── */
+:root,
+[data-theme='dark'] {
+  --c-ink: 11 14 20;
+  --c-panel: 17 22 31;
+  --c-panel-2: 22 29 40;
+  --c-edge: 34 43 57;
+  --c-muted: 139 151 168;
+  --c-strong: 255 255 255;
+  --c-body: 226 232 240;
+  --c-soft: 203 213 225;
+  --c-mint: 55 224 166;
+  --c-mint-dim: 31 143 107;
+  --c-danger: 255 93 108;
+  --c-warn: 255 181 71;
+  --c-accent: 91 140 255;
+  color-scheme: dark;
+}
+
+[data-theme='light'] {
+  --c-ink: 244 246 249;
+  --c-panel: 255 255 255;
+  --c-panel-2: 240 243 247;
+  --c-edge: 223 227 234;
+  --c-muted: 96 106 122;
+  --c-strong: 16 22 33;
+  --c-body: 30 39 54;
+  --c-soft: 55 65 81;
+  --c-mint: 13 138 102;
+  --c-mint-dim: 13 138 102;
+  --c-danger: 220 38 60;
+  --c-warn: 176 116 8;
+  --c-accent: 37 99 235;
+  color-scheme: light;
+}
+
+@layer base {
+  html {
+    background-color: rgb(var(--c-ink));
+    color: rgb(var(--c-body));
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    background-color: rgb(var(--c-ink));
+    min-height: 100vh;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-xl border border-edge bg-panel p-5;
+  }
+  .stat-label {
+    @apply text-xs uppercase tracking-wider text-muted;
+  }
+  .stat-value {
+    @apply text-2xl font-semibold;
+    color: rgb(var(--c-strong));
+  }
+  .pill {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition;
+  }
+  .btn-primary {
+    @apply btn bg-mint text-ink hover:bg-mint/90;
+  }
+  .btn-ghost {
+    @apply btn border border-edge hover:bg-panel-2;
+    color: rgb(var(--c-body));
+  }
+  .input {
+    @apply w-full rounded-lg border border-edge bg-panel-2 px-3 py-2 text-sm outline-none placeholder:text-muted focus:border-mint;
+    color: rgb(var(--c-strong));
+  }
+  .nav-link {
+    @apply rounded-lg px-3 py-2 text-sm text-muted hover:bg-panel-2;
+  }
+  .nav-link:hover {
+    color: rgb(var(--c-strong));
+  }
+  .nav-link-active {
+    @apply bg-panel-2;
+    color: rgb(var(--c-strong));
+  }
+
+  /* Premium stat tile: depth + dot-grid pattern + corner glow + hover lift (theme-aware) */
+  .stat-tile {
+    position: relative;
+    overflow: hidden;
+    border-radius: 0.85rem;
+    border: 1px solid rgb(var(--c-edge));
+    background:
+      radial-gradient(130% 130% at 0% 0%, rgb(var(--c-mint) / 0.08), transparent 42%),
+      rgb(var(--c-panel));
+    padding: 1.1rem 1.2rem;
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  /* faint dot grid (neutral gray reads on both themes) that fades downward */
+  .stat-tile::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(rgb(127 140 160 / 0.12) 1px, transparent 1.4px);
+    background-size: 16px 16px;
+    -webkit-mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.6), transparent 75%);
+    mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.6), transparent 75%);
+    pointer-events: none;
+  }
+  .stat-tile::after {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgb(var(--c-mint) / 0.45), transparent);
+    opacity: 0.6;
+    pointer-events: none;
+  }
+  .stat-tile > * {
+    position: relative;
+    z-index: 1;
+  }
+  .stat-tile:hover {
+    transform: translateY(-2px);
+    border-color: rgb(var(--c-mint) / 0.35);
+    box-shadow: 0 14px 34px rgb(0 0 0 / 0.25);
+  }
+
+  /* ── Report cards (Ecosystem Rotation Report) ───────────────────────── */
+
+  /* Hero card: dual corner glow + dot grid + top hairline (theme-aware) */
+  .hero-card {
+    position: relative;
+    overflow: hidden;
+    border-radius: 0.9rem;
+    border: 1px solid rgb(var(--c-edge));
+    background:
+      radial-gradient(120% 130% at 100% 0%, rgb(var(--c-accent) / 0.1), transparent 46%),
+      radial-gradient(110% 120% at 0% 100%, rgb(var(--c-mint) / 0.06), transparent 52%),
+      rgb(var(--c-panel));
+    padding: 1.3rem 1.45rem;
+  }
+  .hero-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(rgb(127 140 160 / 0.1) 1px, transparent 1.4px);
+    background-size: 16px 16px;
+    -webkit-mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.5), transparent 70%);
+    mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.5), transparent 70%);
+    pointer-events: none;
+  }
+  .hero-card > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Card with a soft glowing top hairline; tint set via --rail (defaults mint) */
+  .rail-card {
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  .rail-card::after {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, rgb(var(--rail, var(--c-mint)) / 0.6), transparent);
+    pointer-events: none;
+  }
+  .rail-card:hover {
+    transform: translateY(-2px);
+    border-color: rgb(var(--rail, var(--c-mint)) / 0.32);
+    box-shadow: 0 12px 30px rgb(0 0 0 / 0.18);
+  }
+
+  /* Rounded icon chip used in card headers */
+  .icon-badge {
+    @apply inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl;
+  }
+
+  /* Small numbered rank chip */
+  .rank-badge {
+    @apply inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-xs font-semibold;
+    background: rgb(var(--c-panel-2));
+    color: rgb(var(--c-muted));
+  }
+
+  /* List row that lifts on hover */
+  .lead-row {
+    @apply flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 transition-colors;
+  }
+  .lead-row:hover {
+    background: rgb(var(--c-panel-2) / 0.7);
+  }
+
+  /* Thin progress meter */
+  .meter {
+    @apply h-1.5 w-full overflow-hidden rounded-full;
+    background: rgb(var(--c-panel-2));
+  }
+  .meter-fill {
+    @apply h-full rounded-full transition-all duration-500;
+  }
+}
+
+/* Thin scrollbars to match the dark dashboard look */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  @apply rounded-full bg-edge;
+}
