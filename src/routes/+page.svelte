@@ -83,20 +83,20 @@
 </script>
 
 <!-- ── 1 · HERO ───────────────────────────────────────────────────────────── -->
-<section class="relative overflow-hidden py-12 lg:py-16">
+<section class="relative overflow-hidden py-10 sm:py-12 lg:py-16">
   <div class="hero-grid"></div>
-  <div class="relative grid items-center gap-10 lg:grid-cols-[1.05fr_0.95fr]">
+  <div class="relative grid items-center gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:gap-12">
     <div>
       <span class="pill bg-mint/10 text-mint">{$t('landing.eyebrow')}</span>
-      <h1 class="mt-5 text-4xl font-bold leading-[1.07] tracking-tight sm:text-[3.25rem]">
+      <h1 class="mt-5 text-3xl font-bold leading-[1.1] tracking-tight sm:text-4xl lg:text-[3.25rem] lg:leading-[1.07]">
         <span class="text-strong">{$t('landing.h1.a')}</span>
         <span class="mt-1 block text-mint">{$t('landing.h1.accent')}</span>
       </h1>
-      <p class="mt-5 max-w-xl text-lg leading-relaxed text-muted">{$t('landing.sub')}</p>
+      <p class="mt-4 max-w-xl text-base leading-relaxed text-muted sm:mt-5 sm:text-lg">{$t('landing.sub')}</p>
 
-      <div class="mt-7 flex flex-wrap items-center gap-3">
-        <a href="/register" class="btn-primary px-6 py-3 text-base">{$t('landing.cta.startFree')} <ArrowRight class="h-4 w-4" /></a>
-        <a href="/pricing" class="btn-ghost px-6 py-3 text-base">{$t('landing.cta.viewPricing')}</a>
+      <div class="mt-6 flex flex-col gap-3 sm:mt-7 sm:flex-row sm:flex-wrap sm:items-center">
+        <a href="/register" class="btn-primary w-full justify-center px-6 py-3 text-base sm:w-auto">{$t('landing.cta.startFree')} <ArrowRight class="h-4 w-4" /></a>
+        <a href="/pricing" class="btn-ghost w-full justify-center px-6 py-3 text-base sm:w-auto">{$t('landing.cta.viewPricing')}</a>
       </div>
       <p class="mt-3 flex items-center gap-1.5 text-xs text-muted"><Star class="h-3.5 w-3.5 text-accent" /> {$t('landing.hero.builtfor')}</p>
 
@@ -178,7 +178,7 @@
 </section>
 
 <!-- ── 3 · PROBLEM → SOLUTION ─────────────────────────────────────────────── -->
-<section class="py-14">
+<section class="py-10 sm:py-14">
   <div class="mx-auto max-w-2xl text-center">
     <span class="pill bg-warn/10 text-warn">{$t('landing.prob.eyebrow')}</span>
     <h2 class="mt-3 text-2xl font-semibold text-strong sm:text-3xl">{$t('landing.prob.title')}</h2>
@@ -216,7 +216,7 @@
 </section>
 
 <!-- ── 5 · HOW IT WORKS ───────────────────────────────────────────────────── -->
-<section class="py-14">
+<section class="py-10 sm:py-14">
   <div class="mx-auto mb-8 max-w-2xl text-center">
     <span class="pill bg-mint/10 text-mint">{$t('landing.steps.eyebrow')}</span>
     <h2 class="mt-3 text-2xl font-semibold text-strong sm:text-3xl">{$t('landing.steps.title')}</h2>
@@ -276,7 +276,7 @@
 {/if}
 
 <!-- ── 7 · WHO IT'S FOR ───────────────────────────────────────────────────── -->
-<section class="py-14">
+<section class="py-10 sm:py-14">
   <div class="mx-auto mb-8 max-w-2xl text-center">
     <span class="pill bg-accent/10 text-accent">{$t('landing.persona.eyebrow')}</span>
     <h2 class="mt-3 text-2xl font-semibold text-strong sm:text-3xl">{$t('landing.persona.title')}</h2>
@@ -320,14 +320,14 @@
 </section>
 
 <!-- ── 9 · FINAL CTA ──────────────────────────────────────────────────────── -->
-<section class="py-14">
+<section class="py-10 sm:py-14">
   <div class="hero-card text-center" use:inview>
     <span class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-mint/15 text-mint"><Zap class="h-6 w-6" /></span>
     <h2 class="text-2xl font-semibold text-strong sm:text-3xl">{$t('landing.final.title')}</h2>
     <p class="mx-auto mt-2 max-w-xl text-muted">{$t('landing.final.sub')}</p>
-    <div class="mt-6 flex flex-wrap items-center justify-center gap-3">
-      <a href="/register" class="btn-primary px-6 py-3 text-base">{$t('landing.cta.startFree')} <ArrowRight class="h-4 w-4" /></a>
-      <a href="/pricing" class="btn-ghost px-6 py-3 text-base">{$t('landing.cta.viewPricing')}</a>
+    <div class="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row sm:flex-wrap">
+      <a href="/register" class="btn-primary w-full justify-center px-6 py-3 text-base sm:w-auto">{$t('landing.cta.startFree')} <ArrowRight class="h-4 w-4" /></a>
+      <a href="/pricing" class="btn-ghost w-full justify-center px-6 py-3 text-base sm:w-auto">{$t('landing.cta.viewPricing')}</a>
     </div>
     <p class="mt-4 flex items-center justify-center gap-1.5 text-xs text-muted"><ShieldCheck class="h-3.5 w-3.5 text-mint" /> {$t('landing.final.trust')}</p>
   </div>

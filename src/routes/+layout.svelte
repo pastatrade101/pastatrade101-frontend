@@ -4,7 +4,7 @@
   import { fly } from 'svelte/transition';
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
-  import { Activity, ChevronDown, CreditCard, FileText, Languages, LayoutDashboard, LogOut, Menu, Moon, Shield, Sun, Tag } from '@lucide/svelte';
+  import { Activity, ChevronDown, CreditCard, FileText, Languages, LayoutDashboard, LogIn, LogOut, Menu, Moon, Shield, Sun, Tag, X } from '@lucide/svelte';
   import { authReady, initAuth, logout, user } from '$lib/stores/auth';
   import { clearMembership, loadMembership, membership } from '$lib/stores/membership';
   import { sidebarOpen } from '$lib/stores/ui';
@@ -132,9 +132,39 @@
             {/if}
           </div>
         {:else if $authReady}
-          <a href="/pricing" class="nav-link">{$t('nav.pricing')}</a>
-          <a href="/login" class="nav-link">{$t('nav.signin')}</a>
-          <a href="/register" class="btn-primary">{$t('nav.getstarted')}</a>
+          <!-- Inline links from sm: up -->
+          <div class="hidden items-center gap-1 sm:flex">
+            <a href="/pricing" class="nav-link">{$t('nav.pricing')}</a>
+            <a href="/login" class="nav-link">{$t('nav.signin')}</a>
+            <a href="/register" class="btn-primary">{$t('nav.getstarted')}</a>
+          </div>
+          <!-- Hamburger on mobile so the header never overflows -->
+          <div class="relative sm:hidden">
+            <button
+              class="rounded-lg border border-edge p-2 text-body transition hover:bg-panel-2"
+              aria-label="Open menu"
+              onclick={() => (menuOpen = !menuOpen)}
+            >
+              {#if menuOpen}<X class="h-5 w-5" />{:else}<Menu class="h-5 w-5" />{/if}
+            </button>
+            {#if menuOpen}
+              <button class="fixed inset-0 z-30 cursor-default" aria-label="Close menu" onclick={() => (menuOpen = false)}></button>
+              <div
+                class="absolute right-0 z-40 mt-2 w-52 overflow-hidden rounded-xl border border-edge bg-panel shadow-2xl"
+                transition:fly={{ y: -8, duration: 160 }}
+              >
+                <div class="p-1.5">
+                  <a href="/pricing" onclick={() => (menuOpen = false)} class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-body transition hover:bg-panel-2">
+                    <Tag class="h-4 w-4" /> {$t('nav.pricing')}
+                  </a>
+                  <a href="/login" onclick={() => (menuOpen = false)} class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-body transition hover:bg-panel-2">
+                    <LogIn class="h-4 w-4" /> {$t('nav.signin')}
+                  </a>
+                  <a href="/register" onclick={() => (menuOpen = false)} class="btn-primary mt-1 w-full justify-center">{$t('nav.getstarted')}</a>
+                </div>
+              </div>
+            {/if}
+          </div>
         {/if}
       </nav>
     </div>

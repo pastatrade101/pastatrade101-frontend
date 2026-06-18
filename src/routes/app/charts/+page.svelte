@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { Search } from '@lucide/svelte';
+  import { Search, List, ChevronDown } from '@lucide/svelte';
   import { api } from '$lib/api';
   import { fmtPct, fmtUsd } from '$lib/format';
   import BarChart from '$lib/components/BarChart.svelte';
@@ -24,6 +24,7 @@
   let catalog = $state<ChartDef[]>([]);
   let search = $state('');
   let selected = $state<ChartDef | null>(null);
+  let browseOpen = $state(false); // mobile: catalog collapsed by default
   let chart = $state<any>(null);
   let error = $state('');
   let loadingChart = $state(false);
@@ -64,6 +65,7 @@
 
   const select = async (def: ChartDef) => {
     selected = def;
+    browseOpen = false; // close the mobile catalog after picking
     loadingChart = true;
     error = '';
     chart = null;
@@ -131,16 +133,25 @@
   <p class="text-sm text-muted">A catalog of DCA, returns, ROI and rotation charts — computed from free market data.</p>
 </header>
 
-<div class="grid gap-4 lg:grid-cols-[260px_1fr]">
-  <!-- Search sidebar -->
-  <aside class="card p-0">
+<!-- Mobile: collapsible catalog toggle (chart shows first on phones) -->
+<button
+  class="mb-3 flex w-full items-center justify-between gap-2 rounded-lg border border-edge bg-panel px-4 py-2.5 text-sm font-medium text-soft lg:hidden"
+  onclick={() => (browseOpen = !browseOpen)}
+>
+  <span class="flex min-w-0 items-center gap-2"><List class="h-4 w-4 shrink-0 text-muted" /> <span class="truncate">{selected ? selected.title : 'Browse charts'}</span></span>
+  <ChevronDown class="h-4 w-4 shrink-0 transition {browseOpen ? 'rotate-180' : ''}" />
+</button>
+
+<div class="grid grid-cols-1 gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
+  <!-- Search sidebar (collapsed on mobile, always shown on lg) -->
+  <aside class="card p-0 min-w-0 {browseOpen ? '' : 'hidden'} lg:block">
     <div class="border-b border-edge p-3">
       <div class="flex items-center gap-2 rounded-lg border border-edge bg-panel-2 px-2">
         <Search class="h-4 w-4 text-muted" />
         <input class="w-full bg-transparent py-2 text-sm text-strong outline-none placeholder:text-muted" placeholder="Search charts…" bind:value={search} />
       </div>
     </div>
-    <div class="max-h-[70vh] overflow-y-auto p-2">
+    <div class="max-h-[55vh] overflow-y-auto p-2 lg:max-h-[70vh]">
       {#each filtered as def}
         <button
           class="w-full rounded-lg px-3 py-2 text-left text-sm transition hover:bg-panel-2"
@@ -159,7 +170,7 @@
   </aside>
 
   <!-- Main panel -->
-  <section class="card min-h-[360px]">
+  <section class="card min-h-[360px] min-w-0">
     {#if error}
       <div class="text-danger">{error}</div>
     {:else if loadingChart || !chart}
@@ -172,7 +183,7 @@
 
       {#if chart.render === 'dca'}
         <!-- Controls -->
-        <div class="mb-4 grid gap-3 sm:grid-cols-3">
+        <div class="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
           <div>
             <label class="stat-label" for="amt">Amount per buy (USD)</label>
             <input id="amt" class="input mt-1" type="number" min="1" bind:value={dcaAmount} oninput={reloadDca} />
