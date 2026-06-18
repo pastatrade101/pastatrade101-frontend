@@ -6,7 +6,7 @@
   import BarChart from '$lib/components/BarChart.svelte';
   import MultiLineChart from '$lib/components/MultiLineChart.svelte';
   import Sparkline from '$lib/components/Sparkline.svelte';
-  import ScoreBar from '$lib/components/ScoreBar.svelte';
+  import AltcoinSeason from '$lib/components/AltcoinSeason.svelte';
   import Disclaimer from '$lib/components/Disclaimer.svelte';
 
   interface ChartDef {
@@ -287,27 +287,12 @@
           </table>
         </div>
       {:else if chart.render === 'index'}
-        <div class="mx-auto max-w-md">
-          <ScoreBar score={chart.value} label={chart.label} />
-          <p class="mt-3 text-sm text-muted">
-            {chart.outperforming} of {chart.total} top-50 altcoins outperformed BTC over the last {chart.window}
-            (BTC {fmtPct(chart.btc_return_30d)}).
-          </p>
-          {#if chart.leaders?.length}
-            <h3 class="mt-4 text-sm font-semibold text-strong">Leaders vs BTC</h3>
-            <ul class="mt-2 divide-y divide-edge">
-              {#each chart.leaders as c}
-                <li class="flex items-center justify-between py-1.5 text-sm">
-                  <span class="text-soft">{c.symbol} <span class="text-muted">{c.name}</span></span>
-                  <span class="text-mint">{fmtPct(c.return_30d)}</span>
-                </li>
-              {/each}
-            </ul>
-          {/if}
-        </div>
+        <!-- Robust Altcoin Season module (self-fetches the dedicated endpoint with
+             timeframe + universe controls and relative-vs-absolute breakdown). -->
+        <AltcoinSeason />
       {/if}
 
-      <div class="mt-6"><Disclaimer /></div>
+      {#if chart.render !== 'index'}<div class="mt-6"><Disclaimer /></div>{/if}
     {/if}
   </section>
 </div>
