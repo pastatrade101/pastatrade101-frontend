@@ -85,8 +85,8 @@
 <!-- ── 1 · HERO ───────────────────────────────────────────────────────────── -->
 <section class="relative overflow-hidden py-10 sm:py-12 lg:py-16">
   <div class="hero-grid"></div>
-  <div class="relative grid items-center gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:gap-12">
-    <div>
+  <div class="relative grid grid-cols-1 items-center gap-8 lg:grid-cols-[1.05fr_minmax(0,0.95fr)] lg:gap-12">
+    <div class="min-w-0">
       <span class="pill bg-mint/10 text-mint">{$t('landing.eyebrow')}</span>
       <h1 class="mt-5 text-3xl font-bold leading-[1.1] tracking-tight sm:text-4xl lg:text-[3.25rem] lg:leading-[1.07]">
         <span class="text-strong">{$t('landing.h1.a')}</span>
@@ -109,7 +109,7 @@
     </div>
 
     <!-- Product preview mock -->
-    <div class="relative">
+    <div class="relative min-w-0">
       <div class="hero-glow"></div>
       <div class="hero-card relative">
         <div class="mb-3 flex items-center justify-between">
@@ -123,7 +123,7 @@
           </span>
         </div>
 
-        <div class="grid gap-3 sm:grid-cols-2">
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <!-- BTC risk -->
           <div class="rounded-xl border border-edge bg-panel-2/40 p-3">
             <div class="flex items-center justify-between text-xs"><span class="text-muted">{$t('landing.preview.btcrisk')}</span><span class="font-semibold text-mint">{$t('landing.preview.gooddca')}</span></div>
@@ -184,7 +184,7 @@
     <h2 class="mt-3 text-2xl font-semibold text-strong sm:text-3xl">{$t('landing.prob.title')}</h2>
     <p class="mt-2 text-muted">{$t('landing.prob.sub')}</p>
   </div>
-  <div class="mt-8 grid gap-4 md:grid-cols-3">
+  <div class="mt-8 grid grid-cols-1 gap-4 md:grid-cols-3">
     {#each pains as p, i}
       <div class="card rail-card flex flex-col" style="--rail: var(--c-warn)" use:inview={{ delay: i * 80 }}>
         <span class="icon-badge bg-warn/12 text-warn"><p.icon class="h-5 w-5" /></span>
@@ -204,7 +204,7 @@
     <span class="pill bg-mint/10 text-mint">{$t('landing.feat.eyebrow')}</span>
     <h2 class="mt-3 text-2xl font-semibold text-strong sm:text-3xl">{$t('landing.feat.title')}</h2>
   </div>
-  <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
     {#each features as f, i}
       <div class="card rail-card" use:inview={{ delay: i * 70 }}>
         <span class="icon-badge bg-mint/12 text-mint"><f.icon class="h-5 w-5" /></span>
@@ -221,7 +221,7 @@
     <span class="pill bg-mint/10 text-mint">{$t('landing.steps.eyebrow')}</span>
     <h2 class="mt-3 text-2xl font-semibold text-strong sm:text-3xl">{$t('landing.steps.title')}</h2>
   </div>
-  <div class="grid gap-4 md:grid-cols-3">
+  <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
     {#each steps as s, i}
       <div class="card rail-card relative overflow-hidden" style="--rail: var(--c-mint)" use:inview={{ delay: i * 80 }}>
         <span class="pointer-events-none absolute -right-1 top-1 select-none text-6xl font-bold leading-none text-mint/10">{s.n}</span>
@@ -242,7 +242,7 @@
       <h2 class="mt-3 text-2xl font-semibold text-strong sm:text-3xl">{$t('landing.price.title')}</h2>
       <p class="mt-2 text-muted">{$t('landing.price.sub')}</p>
     </div>
-    <div class="grid gap-4 md:grid-cols-3">
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
       {#if pricingVisible}
         {#each plans as p, i}
         <div
@@ -281,7 +281,7 @@
     <span class="pill bg-accent/10 text-accent">{$t('landing.persona.eyebrow')}</span>
     <h2 class="mt-3 text-2xl font-semibold text-strong sm:text-3xl">{$t('landing.persona.title')}</h2>
   </div>
-  <div class="grid gap-4 md:grid-cols-3">
+  <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
     {#each personas as p, i}
       <div class="card rail-card flex flex-col" style="--rail: var(--c-accent)" use:inview={{ delay: i * 80 }}>
         <Quote class="h-7 w-7 text-accent/30" />
