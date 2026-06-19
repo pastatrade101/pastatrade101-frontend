@@ -136,7 +136,7 @@
         />
 
         <!-- Floating: live BTC risk proof (bottom-left) -->
-        <div class="absolute bottom-5 left-0 z-[2] w-44 rounded-xl border border-edge bg-panel/90 p-3 shadow-xl backdrop-blur sm:-left-4">
+        <div class="absolute bottom-5 left-3 z-[2] w-44 rounded-xl border border-edge bg-panel/90 p-3 shadow-xl backdrop-blur">
           <div class="flex items-center justify-between text-[11px]"><span class="text-muted">{$t('landing.preview.btcrisk')}</span><span class="font-semibold text-mint">{$t('landing.preview.gooddca')}</span></div>
           <div class="mt-2 h-2 w-full overflow-hidden rounded-full" style="background: linear-gradient(90deg,#22c55e,#f59e0b,#ef4444)">
             <div class="h-full w-[32%] border-r-2 border-strong bg-transparent"></div>

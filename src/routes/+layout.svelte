@@ -43,7 +43,7 @@
 
 <div class="flex min-h-screen flex-col">
   <header class="sticky top-0 z-20 border-b border-edge bg-ink/80 backdrop-blur">
-    <div class="mx-auto flex w-full max-w-[1760px] items-center justify-between px-4 py-3 lg:px-8">
+    <div class="mx-auto flex w-full max-w-[1440px] items-center justify-between px-4 py-3 lg:px-8">
       <div class="flex items-center gap-2">
         {#if $authReady && $user && onApp}
           <button
@@ -170,7 +170,7 @@
     </div>
   </header>
 
-  <main class="mx-auto w-full max-w-[1760px] flex-1 px-4 py-6 lg:px-8">
+  <main class="mx-auto w-full max-w-[1440px] flex-1 px-4 py-6 lg:px-8">
     {@render children()}
   </main>
 
