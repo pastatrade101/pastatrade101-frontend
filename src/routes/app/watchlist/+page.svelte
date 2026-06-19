@@ -1,10 +1,10 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { Trash2, X, Bell, Plus } from '@lucide/svelte';
+  import { Trash2, X, Bell, Plus, Lock } from '@lucide/svelte';
   import { api } from '$lib/api';
   import { signalTone, tonePill } from '$lib/ecosystem-insight';
   import Sparkline from '$lib/components/Sparkline.svelte';
-  import { membership, hasFeature } from '$lib/stores/membership';
+  import { membership, hasFeature, limitOf } from '$lib/stores/membership';
 
   // Watchlist alerts are a Mid+ feature (backend enforces on create too).
   const canAlerts = $derived(hasFeature($membership, 'access_alerts'));
@@ -135,6 +135,9 @@
 
   // ── Derived filtered + sorted list ──────────────────────────────────────
   const items = $derived(watchlist?.items ?? []);
+  // Plan limit on watchlist items (null = unlimited). Backend enforces on add.
+  const wlLimit = $derived(limitOf($membership, 'max_watchlist_items'));
+  const atLimit = $derived(wlLimit != null && items.length >= wlLimit);
   const inFilter = (it: WatchItem): boolean => {
     if (confFilter !== 'any' && it.confidence !== confFilter) return false;
     if (filter === 'ecosystem') return it.item_type === 'ecosystem';
@@ -318,19 +321,32 @@
   {/if}
 
   <!-- Add item -->
-  <div class="card mb-4 flex flex-wrap items-end gap-3">
-    <div class="min-w-[180px] flex-1">
-      <label class="stat-label" for="eco">Add an ecosystem</label>
-      <select id="eco" class="input mt-1" bind:value={selectedEco}>
-        <option value="">Select an ecosystem…</option>
-        {#each ecosystems as eco}<option value={eco.id}>{eco.name}</option>{/each}
-      </select>
+  <div class="card mb-4">
+    <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+      <span class="stat-label">Add to watchlist</span>
+      <span class="text-xs {atLimit ? 'font-medium text-warn' : 'text-muted'}">{items.length}{wlLimit != null ? ` / ${wlLimit}` : ''} items{wlLimit == null ? ' · unlimited' : ''}</span>
     </div>
-    <div class="min-w-[200px] flex-[2]">
-      <label class="stat-label" for="why">Why watching (optional)</label>
-      <input id="why" class="input mt-1" placeholder="Auto-generated if left blank" bind:value={whyInput} />
-    </div>
-    <button class="btn-primary" onclick={addEcosystem} disabled={!selectedEco || busy}>{busy ? 'Adding…' : 'Add'}</button>
+    {#if atLimit}
+      <div class="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-warn/30 bg-warn/5 px-3 py-2 text-sm text-warn">
+        <span><Lock class="mr-1 inline h-3.5 w-3.5" />You've reached your plan's limit of {wlLimit} watchlist items. Remove one, or upgrade for more.</span>
+        <a href="/app/account" class="btn-primary px-3 py-1.5 text-xs">Upgrade</a>
+      </div>
+    {:else}
+      <div class="flex flex-wrap items-end gap-3">
+        <div class="min-w-[180px] flex-1">
+          <label class="stat-label" for="eco">Add an ecosystem</label>
+          <select id="eco" class="input mt-1" bind:value={selectedEco}>
+            <option value="">Select an ecosystem…</option>
+            {#each ecosystems as eco}<option value={eco.id}>{eco.name}</option>{/each}
+          </select>
+        </div>
+        <div class="min-w-[200px] flex-[2]">
+          <label class="stat-label" for="why">Why watching (optional)</label>
+          <input id="why" class="input mt-1" placeholder="Auto-generated if left blank" bind:value={whyInput} />
+        </div>
+        <button class="btn-primary" onclick={addEcosystem} disabled={!selectedEco || busy}>{busy ? 'Adding…' : 'Add'}</button>
+      </div>
+    {/if}
   </div>
 
   {#if addError}

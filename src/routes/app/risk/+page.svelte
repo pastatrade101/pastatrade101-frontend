@@ -11,6 +11,9 @@
   // Social Metrics is a Mid+ feature, so the social card is gated here too.
   const canSocial = $derived(hasFeature($membership, 'access_social_metrics'));
   const canOnchain = $derived(hasFeature($membership, 'access_onchain_metrics'));
+  // The premium takeaway / interpretation is gated by a feature flag (admin-toggleable
+  // per plan) — free sees the score + zone, not the plain-language read.
+  const canInterp = $derived(hasFeature($membership, 'access_premium_interpretation'));
 
   interface MetricRow {
     key: string;
@@ -878,10 +881,23 @@
   </div>
 
   <!-- Premium takeaway -->
-  <div class="card mb-4 border border-mint/30 bg-mint/5">
-    <p class="stat-label text-mint">Premium Takeaway</p>
-    <p class="mt-1 text-sm leading-relaxed text-soft">{premiumTakeaway}</p>
-  </div>
+  {#if canInterp}
+    <div class="card mb-4 border border-mint/30 bg-mint/5">
+      <p class="stat-label text-mint">Premium Takeaway</p>
+      <p class="mt-1 text-sm leading-relaxed text-soft">{premiumTakeaway}</p>
+    </div>
+  {:else}
+    <div class="relative mb-4">
+      <div class="card border border-mint/30 bg-mint/5 blur-[3px]" aria-hidden="true">
+        <p class="stat-label text-mint">Premium Takeaway</p>
+        <p class="mt-1 text-sm leading-relaxed text-soft">BTC risk is currently low-to-moderate. The model supports disciplined DCA, though it does not yet show an extreme bottom zone. On-chain and social metrics would give a fuller picture once connected.</p>
+      </div>
+      <div class="absolute inset-0 flex flex-col items-center justify-center gap-1.5 px-4 text-center">
+        <a href="/pricing" class="btn-primary text-sm shadow-lg"><Lock class="h-4 w-4" /> Unlock with Premium</a>
+        <p class="text-xs text-muted">Plain-language risk interpretation is a Mid &amp; Premium feature.</p>
+      </div>
+    </div>
+  {/if}
 
   <!-- Category gauges + explanations -->
   <div class="mb-4 grid gap-4 sm:grid-cols-3">
@@ -1021,7 +1037,11 @@
 
       <!-- Takeaway + coverage note below chart -->
       <p class="mt-3 rounded-lg border border-edge bg-panel-2 px-3 py-2 text-xs leading-relaxed text-soft">
-        <span class="font-medium text-strong">Premium Takeaway:</span> {premiumTakeaway}
+        {#if canInterp}
+          <span class="font-medium text-strong">Premium Takeaway:</span> {premiumTakeaway}
+        {:else}
+          <Lock class="mr-1 inline h-3 w-3 text-accent" /><span class="font-medium text-strong">Premium Takeaway</span> — the plain-language interpretation is a Mid &amp; Premium feature. <a href="/pricing" class="font-medium text-accent hover:underline">Upgrade</a>
+        {/if}
       </p>
       <p class="mt-2 text-xs leading-relaxed text-muted">
         Current model coverage: price metrics {coverage.price ? 'active' : 'inactive'}; on-chain

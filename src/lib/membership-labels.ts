@@ -16,6 +16,10 @@ export const FEATURE_LABELS: Record<string, string> = {
   access_model_watchlists: 'Model watchlists',
   access_advanced_filters: 'Advanced filters',
   access_onchain_metrics: 'On-chain metrics',
+  access_premium_interpretation: 'Premium interpretation (takeaways & signals)',
+  access_exit_strategy: 'Dynamic Exit Strategy',
+  access_exit_simulator: 'Portfolio Exit Simulator',
+  access_log_regression_charts: 'Log Regression Bands',
   access_export_reports: 'Export / share reports'
 };
 

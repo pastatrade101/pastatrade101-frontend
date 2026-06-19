@@ -3,6 +3,7 @@
   import { api } from '$lib/api';
   import { fmtPct, fmtUsd } from '$lib/format';
   import Disclaimer from '$lib/components/Disclaimer.svelte';
+  import { Lock } from '@lucide/svelte';
   import { membership, hasFeature } from '$lib/stores/membership';
   import {
     enrich,
@@ -68,6 +69,9 @@
   // drawer). Premium unlocks advanced filters + "why ranked here" drawers.
   const FREE_ROWS = 8;
   const canAdvanced = $derived(hasFeature($membership, 'access_advanced_filters'));
+  // Plain-language takeaway is gated by a feature flag (admin-toggleable per plan)
+  // — free still sees the regime + breadth.
+  const canInterp = $derived(hasFeature($membership, 'access_premium_interpretation'));
   const rows = $derived(canAdvanced ? filtered : all.slice(0, FREE_ROWS));
 
   const views: { id: View; label: string }[] = [
@@ -118,7 +122,16 @@
           <span class="text-[11px] font-semibold uppercase tracking-[0.14em] text-accent">Premium Takeaway</span>
           <span class="pill {tonePill(regime.tone)}">{regime.label}</span>
         </div>
-        <p class="text-[15px] leading-relaxed text-body">{takeaway}</p>
+        {#if canInterp}
+          <p class="text-[15px] leading-relaxed text-body">{takeaway}</p>
+        {:else}
+          <div class="relative">
+            <p class="text-[15px] leading-relaxed text-body blur-[3px]" aria-hidden="true">Ecosystem rotation is selective — a few chains are improving while most remain neutral or weak. This favours disciplined, selective exposure rather than broad ecosystem bets until breadth improves.</p>
+            <div class="absolute inset-0 flex items-center justify-center">
+              <a href="/pricing" class="btn-primary text-xs shadow-lg"><Lock class="h-3.5 w-3.5" /> Unlock with Premium</a>
+            </div>
+          </div>
+        {/if}
         <p class="mt-2 flex items-center gap-1.5 text-xs text-muted">
           <span class="h-1.5 w-1.5 rounded-full bg-muted/60"></span>{regime.blurb}
         </p>
