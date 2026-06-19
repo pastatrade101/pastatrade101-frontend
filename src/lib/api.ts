@@ -45,3 +45,19 @@ export async function api<T = unknown>(path: string, options: Options = {}): Pro
 
   return payload.data as T;
 }
+
+// POST a raw text body (e.g. CSV upload). Always authenticated.
+export async function apiUpload<T = unknown>(path: string, text: string, contentType = 'text/csv'): Promise<T> {
+  const token = getToken();
+  const headers: Record<string, string> = { 'Content-Type': contentType };
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  const response = await fetch(`${API_BASE}${path}`, { method: 'POST', headers, body: text });
+  const payload = await response.json().catch(() => ({}));
+
+  if (!response.ok || payload.success === false) {
+    throw new ApiError(payload.message ?? `Request failed (${response.status})`, response.status);
+  }
+
+  return payload.data as T;
+}

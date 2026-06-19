@@ -6,6 +6,7 @@
   import { api } from '$lib/api';
   import { authReady, user } from '$lib/stores/auth';
   import { CURRENCIES, fmtMoney } from '$lib/format';
+  import AdminTabs from '$lib/components/AdminTabs.svelte';
   import { FEATURE_LABELS, FEATURE_ORDER, LIMIT_LABELS } from '$lib/membership-labels';
 
   interface AdminPlan {
@@ -139,18 +140,11 @@
   </div>
 {/if}
 
-<header class="mb-4 flex flex-wrap items-end justify-between gap-2">
-  <div>
-    <h1 class="text-xl font-semibold text-strong">Plans &amp; Pricing</h1>
-    <p class="text-sm text-muted">Control pricing, limits and feature access. Changes apply to all users on each plan immediately.</p>
-  </div>
-  <nav class="flex gap-2 text-sm">
-    <a href="/admin/users" class="btn-ghost">Users</a>
-    <a href="/admin/subscriptions" class="btn-ghost">Subscriptions</a>
-    <a href="/admin/payments" class="btn-ghost">Payments</a>
-    <a href="/admin/payment-attempts" class="btn-ghost">Follow-ups</a>
-  </nav>
+<header class="mb-4">
+  <h1 class="text-xl font-semibold text-strong">Plans &amp; Pricing</h1>
+  <p class="text-sm text-muted">Control pricing, limits and feature access. Changes apply to all users on each plan immediately.</p>
 </header>
+<AdminTabs />
 
 <!-- New plan -->
 <div class="card mb-4 flex flex-wrap items-end gap-3">

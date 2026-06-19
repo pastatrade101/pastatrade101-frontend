@@ -4,6 +4,7 @@
   import { X } from '@lucide/svelte';
   import { api } from '$lib/api';
   import { authReady, user } from '$lib/stores/auth';
+  import AdminTabs from '$lib/components/AdminTabs.svelte';
 
   interface Ref {
     email?: string;
@@ -121,18 +122,11 @@
   };
 </script>
 
-<header class="mb-4 flex flex-wrap items-end justify-between gap-2">
-  <div>
-    <h1 class="text-xl font-semibold text-strong">Subscriptions</h1>
-    <p class="text-sm text-muted">Every subscription record across users. Manual assignment, extend, cancel, suspend.</p>
-  </div>
-  <nav class="flex gap-2 text-sm">
-    <a href="/admin/plans" class="btn-ghost">Plans</a>
-    <a href="/admin/users" class="btn-ghost">Users</a>
-    <a href="/admin/payments" class="btn-ghost">Payments</a>
-    <a href="/admin/payment-attempts" class="btn-ghost">Follow-ups</a>
-  </nav>
+<header class="mb-4">
+  <h1 class="text-xl font-semibold text-strong">Subscriptions</h1>
+  <p class="text-sm text-muted">Every subscription record across users. Manual assignment, extend, cancel, suspend.</p>
 </header>
+<AdminTabs />
 
 {#if message}<div class="card mb-4 border-mint/30 bg-mint/5 text-mint">{message}</div>{/if}
 {#if error}<div class="card mb-4 border-danger/30 bg-danger/5 text-danger">{error}</div>{/if}

@@ -25,6 +25,7 @@ export const sw: Record<string, string> = {
   'app.nav.ecosystems': 'Mifumo Ikolojia',
   'app.nav.watchlist': 'Orodha ya Kufuatilia',
   'app.nav.exit': 'Mkakati wa Kutoka',
+  'app.nav.logreg': 'Log Regression',
   'app.nav.reports': 'Taarifa',
 
   // Brand panel

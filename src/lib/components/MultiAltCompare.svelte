@@ -65,7 +65,7 @@
     loading = true;
     error = '';
     try {
-      const r = await api<{ coins: CompareCoin[]; verdict: string }>(`/altcoin-btc/compare?coins=${selected.join(',')}`);
+      const r = await api<{ coins: CompareCoin[]; verdict: string }>(`/altcoin-btc/compare?coins=${selected.join(',')}`, { auth: true });
       data = r.coins;
       verdict = r.verdict;
     } catch (err) {

@@ -4,7 +4,7 @@
   import { fly } from 'svelte/transition';
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
-  import { Activity, ChevronDown, CreditCard, DoorOpen, FileText, Languages, LayoutDashboard, LogIn, LogOut, Menu, Moon, Shield, Sun, Tag, X } from '@lucide/svelte';
+  import { Activity, ChevronDown, CreditCard, DoorOpen, FileText, Languages, LayoutDashboard, LogIn, LogOut, Menu, Moon, Shield, Spline, Sun, Tag, X } from '@lucide/svelte';
   import { authReady, initAuth, logout, user } from '$lib/stores/auth';
   import { clearMembership, loadMembership, membership } from '$lib/stores/membership';
   import { sidebarOpen } from '$lib/stores/ui';
@@ -126,6 +126,9 @@
                     <a href="/admin/exit-strategy-settings" onclick={() => (menuOpen = false)} class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-body transition hover:bg-panel-2">
                       <DoorOpen class="h-4 w-4" /> Exit strategy
                     </a>
+                    <a href="/admin/charts/log-regression-settings" onclick={() => (menuOpen = false)} class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-body transition hover:bg-panel-2">
+                      <Spline class="h-4 w-4" /> Log regression
+                    </a>
                   {/if}
                   <button onclick={handleLogout} class="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-danger transition hover:bg-panel-2">
                     <LogOut class="h-4 w-4" /> {$t('nav.signout')}
@@ -182,6 +185,18 @@
       <a href="/insights" class="transition hover:text-soft">Insights</a>
       <a href="/pricing" class="transition hover:text-soft">{$t('nav.pricing')}</a>
       <a href="/journey" class="transition hover:text-soft">My Journey</a>
+      <a href="https://www.youtube.com/@pastatrade101" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 transition hover:text-soft" aria-label="Pastatrade on YouTube">
+        <svg viewBox="0 0 24 24" fill="currentColor" class="h-3.5 w-3.5" aria-hidden="true"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2 31 31 0 0 0 0 12a31 31 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1A31 31 0 0 0 24 12a31 31 0 0 0-.5-5.8zM9.5 15.5v-7l6.3 3.5-6.3 3.5z"/></svg>
+        YouTube
+      </a>
+      <a href="https://www.instagram.com/_pastory_" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 transition hover:text-soft" aria-label="Pastory on Instagram">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>
+        Instagram
+      </a>
+      <a href="https://x.com/pastatrade101" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 transition hover:text-soft" aria-label="Pastatrade on X">
+        <svg viewBox="0 0 24 24" fill="currentColor" class="h-3 w-3" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24h-6.66l-5.214-6.817-5.967 6.817H1.68l7.73-8.835L1.254 2.25h6.83l4.713 6.231 5.447-6.231zm-1.161 17.52h1.833L7.084 4.126H5.117l11.966 15.644z"/></svg>
+        X
+      </a>
     </nav>
     {$t('footer.tagline')}
   </footer>

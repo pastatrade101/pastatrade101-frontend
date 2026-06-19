@@ -24,6 +24,7 @@ export const en: Record<string, string> = {
   'app.nav.ecosystems': 'Ecosystems',
   'app.nav.watchlist': 'Watchlist',
   'app.nav.exit': 'Exit Strategy',
+  'app.nav.logreg': 'Log Regression',
   'app.nav.reports': 'Reports',
 
   // Brand panel (auth shell)
