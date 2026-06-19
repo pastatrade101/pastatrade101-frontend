@@ -24,6 +24,7 @@ export const sw: Record<string, string> = {
   'app.nav.altbtc': 'Alt dhidi ya BTC',
   'app.nav.ecosystems': 'Mifumo Ikolojia',
   'app.nav.watchlist': 'Orodha ya Kufuatilia',
+  'app.nav.exit': 'Mkakati wa Kutoka',
   'app.nav.reports': 'Taarifa',
 
   // Brand panel

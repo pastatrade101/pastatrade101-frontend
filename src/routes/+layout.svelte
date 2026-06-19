@@ -4,7 +4,7 @@
   import { fly } from 'svelte/transition';
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
-  import { Activity, ChevronDown, CreditCard, FileText, Languages, LayoutDashboard, LogIn, LogOut, Menu, Moon, Shield, Sun, Tag, X } from '@lucide/svelte';
+  import { Activity, ChevronDown, CreditCard, DoorOpen, FileText, Languages, LayoutDashboard, LogIn, LogOut, Menu, Moon, Shield, Sun, Tag, X } from '@lucide/svelte';
   import { authReady, initAuth, logout, user } from '$lib/stores/auth';
   import { clearMembership, loadMembership, membership } from '$lib/stores/membership';
   import { sidebarOpen } from '$lib/stores/ui';
@@ -122,6 +122,9 @@
                     </a>
                     <a href="/admin/reports" onclick={() => (menuOpen = false)} class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-body transition hover:bg-panel-2">
                       <FileText class="h-4 w-4" /> Reports
+                    </a>
+                    <a href="/admin/exit-strategy-settings" onclick={() => (menuOpen = false)} class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-body transition hover:bg-panel-2">
+                      <DoorOpen class="h-4 w-4" /> Exit strategy
                     </a>
                   {/if}
                   <button onclick={handleLogout} class="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-danger transition hover:bg-panel-2">
