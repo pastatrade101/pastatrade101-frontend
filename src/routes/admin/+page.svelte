@@ -68,8 +68,15 @@
     message = '';
     error = '';
     try {
-      await api(path, { method: 'POST', auth: true });
-      message = `${label} completed.`;
+      const res = await api<{ steps?: { step: string; ok: boolean; error?: string }[]; ok?: number }>(path, { method: 'POST', auth: true });
+      if (res && Array.isArray(res.steps)) {
+        const failed = res.steps.filter((s) => !s.ok);
+        message = failed.length
+          ? `${label}: ${res.ok}/${res.steps.length} stages OK · failed: ${failed.map((s) => s.step).join(', ')}`
+          : `${label}: all ${res.steps.length} stages completed.`;
+      } else {
+        message = `${label} completed.`;
+      }
       await Promise.all([loadJobs(), loadOnchain()]);
     } catch (err) {
       error = err instanceof Error ? err.message : `${label} failed.`;
@@ -91,7 +98,7 @@
 {#if error}<div class="card mb-4 border-danger/30 bg-danger/5 text-danger">{error}</div>{/if}
 
 <div class="card mb-6 flex flex-wrap gap-3">
-  <button class="btn-primary" disabled={running} onclick={() => runSync('/admin/sync', 'Full sync')}>
+  <button class="btn-primary" disabled={running} title="Runs every stage: coins, BTC, global, ecosystems, Lab price series, social, on-chain (incl. supply P/L) and the risk model" onclick={() => runSync('/admin/sync', 'Full sync')}>
     <RefreshCw class="h-4 w-4 {running ? 'animate-spin' : ''}" /> Run full sync
   </button>
   <button class="btn-ghost" disabled={running} onclick={() => runSync('/admin/sync/coingecko', 'CoinGecko sync')}>
@@ -117,6 +124,10 @@
   </button>
 </div>
 <p class="mb-4 text-xs text-muted">
+  <span class="font-medium text-soft">“Run full sync”</span> runs the entire pipeline in order — coins, BTC, global, ecosystems, Lab price series,
+  social, on-chain (incl. supply profit/loss) and the risk model. Each stage is independent, so one failure won't stop the rest;
+  it's heavy (several minutes on free tiers). The individual buttons re-run a single stage.
+  <br />
   “Sync Lab price series” prebakes BTC + top-100 daily history so Charts, Cycle Lab and Alt vs BTC read saved data
   (no live CoinGecko calls from users). It’s heavy — ~100 throttled calls, a few minutes. Run it on a schedule, or via
   <code class="rounded bg-panel-2 px-1">npm run sync:prices</code>.
