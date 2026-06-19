@@ -78,7 +78,10 @@
 <section class="grid items-center gap-8 lg:grid-cols-[0.85fr_1.15fr] lg:gap-12">
   <div class="relative mx-auto w-full max-w-sm">
     <div class="absolute inset-x-2 bottom-0 top-8 rounded-[2rem] border border-edge/60 bg-gradient-to-b from-mint/12 via-accent/[0.08] to-transparent"></div>
-    <img src="/hero-img.png" alt="Pastatrade founder" width="900" height="900" class="relative z-[1] mx-auto block w-full object-contain" style="filter: drop-shadow(0 22px 45px rgb(0 0 0 / 0.4));" />
+    <picture class="contents">
+      <source srcset="/hero-img.avif" type="image/avif" />
+      <img src="/hero-img.png" alt="Pastatrade founder" width="900" height="900" class="relative z-[1] mx-auto block w-full object-contain" style="filter: drop-shadow(0 22px 45px rgb(0 0 0 / 0.4));" />
+    </picture>
   </div>
 
   <div class="min-w-0">

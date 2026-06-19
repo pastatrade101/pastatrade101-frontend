@@ -20,7 +20,7 @@
   import { inview, whenInView } from '$lib/actions/inview';
 
   const SITE_URL = 'https://pastatrade101.com';
-  const seoJsonLd = [
+  const baseJsonLd = [
     { '@context': 'https://schema.org', '@type': 'Organization', name: 'Pastatrade', url: SITE_URL, logo: `${SITE_URL}/favicon.svg`, description: 'Crypto rotation intelligence — BTC risk, Alt/BTC strength, on-chain data, ecosystem rotation and social attention in one clear read.' },
     { '@context': 'https://schema.org', '@type': 'WebSite', name: 'Pastatrade', url: SITE_URL },
     { '@context': 'https://schema.org', '@type': 'SoftwareApplication', name: 'Pastatrade', applicationCategory: 'FinanceApplication', operatingSystem: 'Web', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' } }
@@ -98,6 +98,16 @@
     { qKey: 'landing.faq.5.q', aKey: 'landing.faq.5.a' },
     { qKey: 'landing.faq.6.q', aKey: 'landing.faq.6.a' }
   ];
+
+  // Base structured data + a FAQPage built from the FAQ section (rich-result eligible).
+  const seoJsonLd = $derived([
+    ...baseJsonLd,
+    {
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: faqs.map((f) => ({ '@type': 'Question', name: $t(f.qKey), acceptedAnswer: { '@type': 'Answer', text: $t(f.aKey) } }))
+    }
+  ]);
 </script>
 
 <Seo
@@ -106,6 +116,11 @@
   description="Pastatrade turns BTC risk, Alt/BTC strength, on-chain data, ecosystem rotation and social attention into one clear read — so you know what's improving, what's weakening, and what needs confirmation. Free to start. Not financial advice."
   jsonLd={seoJsonLd}
 />
+
+<svelte:head>
+  <!-- Preload the LCP hero image (AVIF for modern browsers). -->
+  <link rel="preload" as="image" href="/hero-img.avif" type="image/avif" />
+</svelte:head>
 
 <!-- ── 1 · HERO ───────────────────────────────────────────────────────────── -->
 <section class="relative overflow-hidden py-10 sm:py-12 lg:py-16">
@@ -140,15 +155,18 @@
         <!-- Soft branded backdrop the cutout stands on -->
         <div class="absolute inset-x-2 bottom-0 top-10 rounded-[2rem] border border-edge/60 bg-gradient-to-b from-mint/12 via-accent/[0.08] to-transparent"></div>
 
-        <img
-          src="/hero-img.png"
-          alt="Pastatrade founder"
-          width="900"
-          height="900"
-          loading="eager"
-          class="relative z-[1] mx-auto block w-full max-w-[26rem] object-contain"
-          style="filter: drop-shadow(0 22px 45px rgb(0 0 0 / 0.4));"
-        />
+        <picture class="contents">
+          <source srcset="/hero-img.avif" type="image/avif" />
+          <img
+            src="/hero-img.png"
+            alt="Pastatrade founder"
+            width="900"
+            height="900"
+            fetchpriority="high"
+            class="relative z-[1] mx-auto block w-full max-w-[26rem] object-contain"
+            style="filter: drop-shadow(0 22px 45px rgb(0 0 0 / 0.4));"
+          />
+        </picture>
 
         <!-- Floating: live BTC risk proof (bottom-left) -->
         <div class="absolute bottom-5 left-3 z-[2] w-44 rounded-xl border border-edge bg-panel/90 p-3 shadow-xl backdrop-blur">

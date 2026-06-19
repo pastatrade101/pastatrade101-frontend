@@ -5,6 +5,7 @@ const SITE = 'https://pastatrade101.com';
 // Public, indexable pages only.
 const PAGES: { path: string; changefreq: string; priority: string }[] = [
   { path: '/', changefreq: 'daily', priority: '1.0' },
+  { path: '/insights', changefreq: 'daily', priority: '0.9' },
   { path: '/pricing', changefreq: 'weekly', priority: '0.8' },
   { path: '/journey', changefreq: 'monthly', priority: '0.6' }
 ];
