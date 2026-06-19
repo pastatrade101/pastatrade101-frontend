@@ -1,5 +1,6 @@
 <script lang="ts">
   import { ArrowLeft, ArrowRight, Compass, TrendingUp, ShieldCheck, Rocket, Activity, Quote, BookOpen, GraduationCap } from '@lucide/svelte';
+  import Seo from '$lib/components/Seo.svelte';
 
   const milestones = [
     {
@@ -65,10 +66,11 @@
   ];
 </script>
 
-<svelte:head>
-  <title>My Journey · Pastatrade</title>
-  <meta name="description" content="The story and philosophy behind Pastatrade — two full crypto cycles of hard-won lessons since 2019, turned into a disciplined, probability-based market-intelligence platform." />
-</svelte:head>
+<Seo
+  title="My Journey"
+  type="profile"
+  description="The story and philosophy behind Pastatrade — two full crypto cycles of hard-won lessons since 2019, an analytical foundation in economics, maths and ICT, turned into a disciplined, probability-based market-intelligence platform."
+/>
 
 <a href="/" class="mb-6 inline-flex items-center gap-1.5 text-sm text-muted transition hover:text-soft"><ArrowLeft class="h-4 w-4" /> Back to home</a>
 

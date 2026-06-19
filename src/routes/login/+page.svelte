@@ -6,6 +6,7 @@
   import { login, user } from '$lib/stores/auth';
   import { t } from '$lib/i18n';
   import AuthShell from '$lib/components/AuthShell.svelte';
+  import Seo from '$lib/components/Seo.svelte';
 
   let email = $state('');
   let password = $state('');
@@ -34,6 +35,8 @@
     }
   };
 </script>
+
+<Seo title="Sign in" description="Sign in to your Pastatrade account." noindex />
 
 <div class="flex min-h-[78vh] items-center">
   <AuthShell>

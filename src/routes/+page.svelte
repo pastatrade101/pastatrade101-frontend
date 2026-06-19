@@ -16,7 +16,15 @@
   const reduceMotion = browser && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   import CoinMarquee from '$lib/components/CoinMarquee.svelte';
   import CountUp from '$lib/components/CountUp.svelte';
+  import Seo from '$lib/components/Seo.svelte';
   import { inview, whenInView } from '$lib/actions/inview';
+
+  const SITE_URL = 'https://pastatrade101.com';
+  const seoJsonLd = [
+    { '@context': 'https://schema.org', '@type': 'Organization', name: 'Pastatrade', url: SITE_URL, logo: `${SITE_URL}/favicon.svg`, description: 'Crypto rotation intelligence — BTC risk, Alt/BTC strength, on-chain data, ecosystem rotation and social attention in one clear read.' },
+    { '@context': 'https://schema.org', '@type': 'WebSite', name: 'Pastatrade', url: SITE_URL },
+    { '@context': 'https://schema.org', '@type': 'SoftwareApplication', name: 'Pastatrade', applicationCategory: 'FinanceApplication', operatingSystem: 'Web', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' } }
+  ];
 
   // ── Pricing teaser (DB-driven) ──────────────────────────────────────────
   interface Plan {
@@ -91,6 +99,13 @@
     { qKey: 'landing.faq.6.q', aKey: 'landing.faq.6.a' }
   ];
 </script>
+
+<Seo
+  home
+  title="Pastatrade — Crypto rotation intelligence"
+  description="Pastatrade turns BTC risk, Alt/BTC strength, on-chain data, ecosystem rotation and social attention into one clear read — so you know what's improving, what's weakening, and what needs confirmation. Free to start. Not financial advice."
+  jsonLd={seoJsonLd}
+/>
 
 <!-- ── 1 · HERO ───────────────────────────────────────────────────────────── -->
 <section class="relative overflow-hidden py-10 sm:py-12 lg:py-16">

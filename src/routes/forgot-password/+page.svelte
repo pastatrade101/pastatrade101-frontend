@@ -2,6 +2,7 @@
   import { Mail, ArrowLeft } from '@lucide/svelte';
   import { t } from '$lib/i18n';
   import AuthShell from '$lib/components/AuthShell.svelte';
+  import Seo from '$lib/components/Seo.svelte';
 
   let email = $state('');
   let sent = $state(false);
@@ -13,6 +14,8 @@
     sent = true;
   };
 </script>
+
+<Seo title="Reset password" description="Reset your Pastatrade account password." noindex />
 
 <div class="flex min-h-[78vh] items-center">
   <AuthShell>

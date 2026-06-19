@@ -4,6 +4,7 @@
   import { register } from '$lib/stores/auth';
   import { t } from '$lib/i18n';
   import AuthShell from '$lib/components/AuthShell.svelte';
+  import Seo from '$lib/components/Seo.svelte';
 
   let fullName = $state('');
   let email = $state('');
@@ -31,6 +32,8 @@
     }
   };
 </script>
+
+<Seo title="Create your account" description="Create a free Pastatrade account and start reading crypto market rotation with structure." noindex />
 
 <div class="flex min-h-[78vh] items-center">
   <AuthShell>

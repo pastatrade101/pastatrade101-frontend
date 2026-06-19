@@ -6,6 +6,7 @@
   import { authReady, user } from '$lib/stores/auth';
   import { sidebarOpen } from '$lib/stores/ui';
   import { t } from '$lib/i18n';
+  import Seo from '$lib/components/Seo.svelte';
 
   let { children } = $props();
 
@@ -49,6 +50,8 @@
     return path === href || path.startsWith(`${href}/`);
   };
 </script>
+
+<Seo title="Dashboard" description="Your Pastatrade market-intelligence dashboard." noindex />
 
 {#snippet navList()}
   <nav class="flex flex-col gap-1">

@@ -6,6 +6,7 @@
   import { user } from '$lib/stores/auth';
   import { membership } from '$lib/stores/membership';
   import { FEATURE_LABELS, FEATURE_ORDER, LIMIT_LABELS, fmtLimit } from '$lib/membership-labels';
+  import Seo from '$lib/components/Seo.svelte';
   import { t } from '$lib/i18n';
 
   interface Plan {
@@ -46,6 +47,11 @@
   // Show the headline limits on each card.
   const KEY_LIMITS = ['max_watchlist_items', 'max_alerts', 'max_history_years'];
 </script>
+
+<Seo
+  title="Pricing"
+  description="Pastatrade plans — start free, then upgrade for full daily, weekly and monthly reports, on-chain depth, premium signals and exports. No exchange connection required."
+/>
 
 <section class="mx-auto max-w-[1100px] px-4 py-10">
   <header class="mb-8 text-center">
