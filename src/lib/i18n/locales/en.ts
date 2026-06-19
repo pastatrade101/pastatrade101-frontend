@@ -88,6 +88,7 @@ export const en: Record<string, string> = {
     'Pastatrade turns BTC risk, Alt/BTC strength, ecosystem rotation, social attention and premium market signals into one clear read — so you know what is improving, what is weakening, and what needs confirmation.',
   'landing.cta.startFree': 'Start free',
   'landing.cta.viewPricing': 'View pricing',
+  'landing.cta.journey': 'Discover my journey',
   'landing.hero.builtfor': 'Built for premium members',
   'landing.trust.free': 'Free plan available',
   'landing.trust.noexchange': 'No exchange connection required',

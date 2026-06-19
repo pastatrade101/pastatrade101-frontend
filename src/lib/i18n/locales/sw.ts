@@ -89,6 +89,7 @@ export const sw: Record<string, string> = {
     'Pastatrade hubadilisha hatari ya BTC, nguvu ya Alt/BTC, mzunguko wa mifumo ikolojia, umakini wa jamii na ishara za soko za kiwango cha juu kuwa picha moja iliyo wazi — ili ujue kinachoimarika, kinachodhoofika, na kinachohitaji uthibitisho.',
   'landing.cta.startFree': 'Anza bure',
   'landing.cta.viewPricing': 'Tazama bei',
+  'landing.cta.journey': 'Gundua safari yangu',
   'landing.hero.builtfor': 'Imetengenezwa kwa wanachama wa kiwango cha juu',
   'landing.trust.free': 'Mpango wa bure unapatikana',
   'landing.trust.noexchange': 'Hakuna kuunganisha na soko la ubadilishaji',

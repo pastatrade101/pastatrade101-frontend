@@ -3,7 +3,7 @@
   import {
     ArrowRight, Radar, Layers, Waves, Gauge, Star, ShieldCheck, Check, Zap, TrendingUp,
     Coins, Database, RefreshCw, Clock, LayoutGrid, HeartCrack, UserPlus, LineChart, Rocket,
-    PiggyBank, Repeat, Quote, Plus
+    PiggyBank, Repeat, Quote, Plus, Activity, BarChart3, User, Compass
   } from '@lucide/svelte';
   import { api } from '$lib/api';
   import { fmtMoney } from '$lib/format';
@@ -32,14 +32,24 @@
   }
   let plans = $state<Plan[]>([]);
   let pricingVisible = $state(false); // gates the staggered fly-in for pricing cards
+  let userCount = $state<number | null>(null); // real registered users (from /stats)
   onMount(async () => {
     try {
       plans = (await api<{ items: Plan[] }>('/plans')).items;
     } catch {
       /* pricing teaser is optional on the landing page */
     }
+    try {
+      userCount = (await api<{ users: number }>('/stats')).users;
+    } catch {
+      /* social-proof count is optional */
+    }
   });
   const topFeatures = (p: Plan) => FEATURE_ORDER.filter((k) => p.features?.[k]).slice(0, 4);
+
+  // Real user count → friendly label (e.g. 1240 → "1.2k+", 127 → "120+", 8 → "8").
+  const fmtInvestors = (n: number): string =>
+    n >= 1000 ? `${(Math.floor(n / 100) / 10).toString()}k+` : n >= 100 ? `${Math.floor(n / 10) * 10}+` : `${n}`;
 
   // ── Marketing content (i18n keys; icons + numbers stay here) ─────────────
   const trust: { v?: string; vKey?: string; lKey: string; icon: typeof Coins }[] = [
@@ -85,8 +95,8 @@
 <!-- ── 1 · HERO ───────────────────────────────────────────────────────────── -->
 <section class="relative overflow-hidden py-10 sm:py-12 lg:py-16">
   <div class="hero-grid"></div>
-  <div class="relative grid grid-cols-1 items-center gap-8 lg:grid-cols-[1.05fr_minmax(0,0.95fr)] lg:gap-12">
-    <div class="min-w-0">
+  <div class="relative grid grid-cols-1 items-center gap-8 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:gap-12">
+    <div class="min-w-0 lg:order-2">
       <span class="pill bg-mint/10 text-mint">{$t('landing.eyebrow')}</span>
       <h1 class="mt-5 text-3xl font-bold leading-[1.1] tracking-tight sm:text-4xl lg:text-[3.25rem] lg:leading-[1.07]">
         <span class="text-strong">{$t('landing.h1.a')}</span>
@@ -108,57 +118,80 @@
       </div>
     </div>
 
-    <!-- Product preview mock -->
-    <div class="relative min-w-0">
+    <!-- Founder portrait on a branded platform, with floating product proof -->
+    <div class="relative min-w-0 lg:order-1">
       <div class="hero-glow"></div>
-      <div class="hero-card relative">
-        <div class="mb-3 flex items-center justify-between">
-          <span class="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">{$t('landing.preview.title')}</span>
-          <span class="pill inline-flex items-center gap-1.5 bg-mint/15 text-[10px] text-mint">
+      <div class="relative mx-auto w-full max-w-md lg:ml-0 lg:mr-auto">
+        <!-- Soft branded backdrop the cutout stands on -->
+        <div class="absolute inset-x-2 bottom-0 top-10 rounded-[2rem] border border-edge/60 bg-gradient-to-b from-mint/12 via-accent/[0.08] to-transparent"></div>
+
+        <img
+          src="/hero-img.png"
+          alt="Pastatrade founder"
+          width="900"
+          height="900"
+          loading="eager"
+          class="relative z-[1] mx-auto block w-full max-w-[26rem] object-contain"
+          style="filter: drop-shadow(0 22px 45px rgb(0 0 0 / 0.4));"
+        />
+
+        <!-- Floating: live BTC risk proof (bottom-left) -->
+        <div class="absolute bottom-5 left-0 z-[2] w-44 rounded-xl border border-edge bg-panel/90 p-3 shadow-xl backdrop-blur sm:-left-4">
+          <div class="flex items-center justify-between text-[11px]"><span class="text-muted">{$t('landing.preview.btcrisk')}</span><span class="font-semibold text-mint">{$t('landing.preview.gooddca')}</span></div>
+          <div class="mt-2 h-2 w-full overflow-hidden rounded-full" style="background: linear-gradient(90deg,#22c55e,#f59e0b,#ef4444)">
+            <div class="h-full w-[32%] border-r-2 border-strong bg-transparent"></div>
+          </div>
+          <div class="mt-1 text-xl font-bold text-strong">0.32</div>
+        </div>
+
+        <!-- Floating: live status + ecosystem signal (top-right) -->
+        <div class="absolute right-0 top-8 z-[2] rounded-xl border border-edge bg-panel/90 px-3 py-2 shadow-xl backdrop-blur sm:-right-3">
+          <div class="flex items-center gap-1.5">
             <span class="relative flex h-1.5 w-1.5">
               <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-mint opacity-75"></span>
               <span class="relative inline-flex h-1.5 w-1.5 rounded-full bg-mint"></span>
             </span>
-            {$t('landing.preview.synced')}
-          </span>
-        </div>
-
-        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <!-- BTC risk -->
-          <div class="rounded-xl border border-edge bg-panel-2/40 p-3">
-            <div class="flex items-center justify-between text-xs"><span class="text-muted">{$t('landing.preview.btcrisk')}</span><span class="font-semibold text-mint">{$t('landing.preview.gooddca')}</span></div>
-            <div class="mt-2 h-2 w-full overflow-hidden rounded-full" style="background: linear-gradient(90deg,#22c55e,#f59e0b,#ef4444)">
-              <div class="h-full w-[32%] border-r-2 border-strong bg-transparent"></div>
-            </div>
-            <div class="mt-1 text-2xl font-semibold text-strong">0.32</div>
+            <span class="text-[10px] uppercase tracking-wide text-muted">{$t('landing.preview.synced')}</span>
           </div>
-          <!-- Social risk -->
-          <div class="rounded-xl border border-edge bg-panel-2/40 p-3">
-            <div class="flex items-center justify-between text-xs"><span class="text-muted">{$t('landing.preview.socialrisk')}</span><span class="font-semibold text-soft">{$t('landing.preview.normalatt')}</span></div>
-            <div class="mt-2 flex items-end gap-0.5">
-              {#each [40, 55, 48, 62, 70, 58, 41] as h}<div class="w-full rounded-sm bg-accent/50" style="height: {h * 0.4}px"></div>{/each}
-            </div>
-            <div class="mt-1 text-2xl font-semibold text-strong">0.41</div>
+          <span class="mt-1.5 inline-flex items-center rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-medium text-accent">NEAR · {$t('landing.preview.improving')}</span>
+        </div>
+      </div>
+
+      <!-- Discover my journey CTA -->
+      <div class="mt-5 flex justify-center lg:justify-start">
+        <a href="/journey" class="inline-flex items-center gap-2 rounded-full border border-mint/40 bg-mint/10 px-5 py-2.5 text-sm font-semibold text-mint transition hover:bg-mint/20">
+          <Compass class="h-4 w-4" /> {$t('landing.cta.journey')} <ArrowRight class="h-4 w-4" />
+        </a>
+      </div>
+
+      <!-- Social proof strip (below the portrait) -->
+      <div class="mt-6 flex flex-wrap items-center gap-x-5 gap-y-3">
+        <div class="flex items-center gap-3">
+          <div class="flex -space-x-2.5">
+            {#each [0, 1, 2] as i}
+              <span class="flex h-9 w-9 items-center justify-center rounded-full border-2 border-ink bg-panel-2 text-muted">
+                <User class="h-4 w-4" />
+              </span>
+            {/each}
+          </div>
+          <div>
+            <div class="text-sm font-bold text-strong">{userCount != null ? `${fmtInvestors(userCount)} ` : ''}Investors</div>
+            <div class="text-xs text-muted">Learn from our analysis</div>
           </div>
         </div>
 
-        <!-- Signal rows -->
-        <div class="mt-3 space-y-2 rounded-xl border border-edge bg-panel-2/40 p-3 text-sm">
-          <div class="flex items-center justify-between"><span class="text-muted">{$t('landing.preview.altmarket')}</span><span class="pill bg-warn/15 text-warn text-[10px]">{$t('landing.preview.selective')}</span></div>
-          <div class="flex items-center justify-between"><span class="text-muted">{$t('landing.preview.ecorotation')}</span><span class="pill bg-accent/15 text-accent text-[10px]">NEAR · {$t('landing.preview.improving')}</span></div>
-          <div class="flex items-center justify-between"><span class="text-muted">{$t('landing.preview.altbtcsignal')}</span><span class="pill bg-mint/15 text-mint text-[10px]">INJ · {$t('landing.preview.confirmed')}</span></div>
-        </div>
+        <span class="hidden h-8 w-px bg-edge sm:block"></span>
 
-        <!-- Premium takeaway -->
-        <div class="mt-3 rounded-xl border border-accent/30 bg-accent/5 p-3">
-          <div class="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-accent"><Zap class="h-3.5 w-3.5" /> {$t('landing.preview.takeawayLabel')}</div>
-          <p class="mt-1 text-xs leading-relaxed text-soft">{$t('landing.preview.takeaway')}</p>
+        <div class="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs font-semibold uppercase tracking-wide text-soft">
+          <span class="flex items-center gap-1.5"><BarChart3 class="h-4 w-4 text-[#5b8cff]" /> Macro</span>
+          <span class="flex items-center gap-1.5"><TrendingUp class="h-4 w-4 text-[#37e0a6]" /> Crypto</span>
+          <span class="flex items-center gap-1.5"><Activity class="h-4 w-4 text-[#a855f7]" /> TradFi</span>
         </div>
       </div>
     </div>
 
     <!-- Live coin logos marquee (hover for label) -->
-    <div class="col-span-full mt-2 lg:mt-6">
+    <div class="col-span-full mt-2 lg:order-3 lg:mt-6">
       <CoinMarquee />
     </div>
   </div>
