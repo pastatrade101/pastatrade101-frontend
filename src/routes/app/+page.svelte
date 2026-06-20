@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { BarChart3, Bitcoin, CircleDollarSign, Gem, Globe, PieChart, TrendingDown, TrendingUp, Gauge, Users, DoorOpen, Layers, FileText, Spline, ArrowRight, AlertTriangle, Zap, Activity, Lock } from '@lucide/svelte';
+  import { BarChart3, Bitcoin, CircleDollarSign, Gem, Globe, PieChart, TrendingDown, TrendingUp, Gauge, Users, DoorOpen, Layers, FileText, Spline, ArrowRight, AlertTriangle, Zap, Activity, Lock, Flame } from '@lucide/svelte';
   import { api } from '$lib/api';
   import { changeColor, fmtPct, fmtUsd } from '$lib/format';
   import Disclaimer from '$lib/components/Disclaimer.svelte';
@@ -59,7 +59,8 @@
     social_risk: Users,
     exit_strategy: DoorOpen,
     ecosystem_rotation: Layers,
-    stablecoin_liquidity: CircleDollarSign
+    stablecoin_liquidity: CircleDollarSign,
+    derivatives: Flame
   };
 
   const metricDefs = $derived(

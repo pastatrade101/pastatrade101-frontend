@@ -17,6 +17,7 @@ export const en: Record<string, string> = {
   'app.nav.overview': 'Overview',
   'app.nav.risk': 'Risk',
   'app.nav.social': 'Social',
+  'app.nav.derivatives': 'Leverage Risk',
   'app.nav.charts': 'Charts',
   'app.nav.btc': 'Bitcoin Cycle',
   'app.nav.cyclelab': 'Cycle Lab',
