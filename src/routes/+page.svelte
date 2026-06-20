@@ -3,7 +3,8 @@
   import {
     ArrowRight, Radar, Layers, Waves, Gauge, Star, ShieldCheck, Check, Zap, TrendingUp,
     Coins, Database, RefreshCw, Clock, LayoutGrid, HeartCrack, UserPlus, LineChart, Rocket,
-    PiggyBank, Repeat, Quote, Plus, Activity, BarChart3, User, Compass, Download, FileText
+    PiggyBank, Repeat, Quote, Plus, Activity, BarChart3, User, Compass, Download, FileText,
+    DoorOpen, Spline, Flame
   } from '@lucide/svelte';
   import { api } from '$lib/api';
   import { fmtMoney } from '$lib/format';
@@ -63,7 +64,7 @@
   const trust: { v?: string; vKey?: string; lKey: string; icon: typeof Coins }[] = [
     { v: 'Top 100+', lKey: 'landing.stat.coins', icon: Coins },
     { v: '11+', lKey: 'landing.stat.eco', icon: Layers },
-    { v: '6+', lKey: 'landing.stat.sources', icon: Database },
+    { v: '9+', lKey: 'landing.stat.sources', icon: Database },
     { vKey: 'landing.stat.daily', lKey: 'landing.stat.refresh', icon: RefreshCw },
     { v: '0–1', lKey: 'landing.stat.riskmodel', icon: Gauge }
   ];
@@ -75,9 +76,15 @@
   const features = [
     { icon: Gauge, tKey: 'landing.feat.risk.t', bKey: 'landing.feat.risk.b' },
     { icon: Radar, tKey: 'landing.feat.radar.t', bKey: 'landing.feat.radar.b' },
+    { icon: DoorOpen, tKey: 'landing.feat.exit.t', bKey: 'landing.feat.exit.b' },
+    { icon: Spline, tKey: 'landing.feat.logreg.t', bKey: 'landing.feat.logreg.b' },
+    { icon: Flame, tKey: 'landing.feat.deriv.t', bKey: 'landing.feat.deriv.b' },
+    { icon: Compass, tKey: 'landing.feat.eor.t', bKey: 'landing.feat.eor.b' },
     { icon: TrendingUp, tKey: 'landing.feat.alt.t', bKey: 'landing.feat.alt.b' },
     { icon: Layers, tKey: 'landing.feat.eco.t', bKey: 'landing.feat.eco.b' },
     { icon: Waves, tKey: 'landing.feat.social.t', bKey: 'landing.feat.social.b' },
+    { icon: LayoutGrid, tKey: 'landing.feat.overview.t', bKey: 'landing.feat.overview.b' },
+    { icon: FileText, tKey: 'landing.feat.reports.t', bKey: 'landing.feat.reports.b' },
     { icon: Star, tKey: 'landing.feat.watch.t', bKey: 'landing.feat.watch.b' }
   ];
   const steps = [

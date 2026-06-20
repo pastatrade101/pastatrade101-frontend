@@ -107,11 +107,85 @@
   ];
   const VIEWS = [
     { id: 'clean', label: 'Premium Clean' },
+    { id: 'clean_watchlist', label: 'Clean Watchlist' },
     { id: 'all', label: 'All Candidates' },
     { id: 'high_risk', label: 'High Risk' },
     { id: 'dex_only', label: 'DEX Only' },
     { id: 'cex_listed', label: 'CEX Listed' }
   ];
+
+  // ── explainability helpers ──
+  const SOURCE_BADGE: Record<string, string> = {
+    coingecko_trending: 'CoinGecko Trending',
+    geckoterminal_trending: 'GeckoTerminal Trending Pool',
+    geckoterminal_new: 'GeckoTerminal New Pool',
+    coingecko_category: 'Narrative Radar'
+  };
+  const sourceLabel = (c: any) => SOURCE_BADGE[c.source_name] ?? (c.source_name ?? '').replace(/_/g, ' ');
+
+  const CONF_TIP: Record<string, string> = {
+    High: 'Good liquidity, real volume, enough age/history and a cleaner risk profile.',
+    Medium: 'Real activity, but some validation is still missing.',
+    Low: 'Very new, thin liquidity, an abnormal spike, or contract/security data is missing.'
+  };
+  const SORT_HELP: Record<string, string> = {
+    opportunity: 'Ranks candidates by attention and traction — not by safety.',
+    risk: 'Lower risk does not mean safe — only fewer visible warnings.',
+    volume: 'Ranks by 24h volume. High volume vs liquidity can signal wash activity.',
+    liquidity: 'Ranks by pool depth. More liquidity usually means lower slippage.',
+    price_change: 'Ranks by 24h price move. Big moves are often noisy or short-lived.',
+    trending: 'Ranks by trending position across sources.'
+  };
+  const FLAG_TIP: Record<string, string> = {
+    'Very new pool': 'The pool was created very recently, so there is little price/liquidity history to trust.',
+    'Low liquidity': 'Thin liquidity means higher slippage and easier price manipulation.',
+    'High FDV / low liquidity': 'Valuation looks large vs available liquidity — this can increase slippage and volatility risk.',
+    'Abnormal price spike': 'Price moved very sharply in 24h — the signal may be noise or short-term speculation.',
+    'Thin transactions': 'Few trades in 24h — activity may not be genuine or sustained.',
+    'Unknown market cap': 'Market cap is unavailable, so size and dilution are hard to judge.',
+    'Contract risk unknown': 'Security data is incomplete. Treat as unverified until contract checks are available.',
+    'Honeypot warning': 'Security screening flagged possible honeypot behaviour — treat as dangerous.',
+    'DEX-only · single source': 'Seen on a single DEX pool only — not confirmed across exchanges or aggregators.',
+    'Possible wash / hype spike': 'Volume is very high vs liquidity — can indicate wash trading or a hype spike.'
+  };
+  const flagTip = (f: string) => FLAG_TIP[f] ?? 'A risk factor to validate before researching further.';
+
+  const GOOD_BADGE = /clean|improving|expanding|strong|trending|cex/i;
+  const whyPositives = (c: any): string[] => (c.quality_badges ?? []).filter((b: string) => GOOD_BADGE.test(b));
+  const whyNegatives = (c: any): string[] => (c.risk_flags ?? []);
+
+  const whatToWatch = (c: any): string[] => {
+    const out: string[] = [];
+    const lowRisk = c.risk_score <= 40;
+    if (lowRisk) {
+      if (c.liquidity_usd) out.push(`Liquidity stays above ${compact(c.liquidity_usd * 0.8)}`);
+      out.push('Volume continues without abnormal spikes');
+      out.push('Risk score stays below 40');
+      out.push('Token keeps trending for more than 24–48 hours');
+      if (!c.security_checked && c.source_type === 'dex_pool') out.push('Contract / security data becomes clearer');
+    } else {
+      out.push('Watch for liquidity dropping');
+      out.push('Watch for abnormal volume fading');
+      if ((c.fdv ?? 0) && (c.liquidity_usd ?? 0) && c.fdv / c.liquidity_usd > 30) out.push('Watch the high FDV vs liquidity imbalance');
+      out.push('Watch for contract / security warnings');
+    }
+    return out.slice(0, 5);
+  };
+
+  const whyAppeared = (c: any): string => {
+    if (c.source_type === 'trending') return 'Appeared because it is trending on CoinGecko (multi-source search interest).';
+    return `Appeared as a trending DEX pool on ${c.network ?? 'its network'}${c.dex_name ? ` (${c.dex_name})` : ''} — rising volume/attention relative to other pools.`;
+  };
+
+  const relatedAssets = (n: any): string[] => (n.top_coins ?? []).filter((x: string) => !/^https?:/i.test(x));
+
+  // expandable "why this score" per card
+  let openWhy = $state<Record<string, boolean>>({});
+  const toggleWhy = (id: string) => (openWhy = { ...openWhy, [id]: !openWhy[id] });
+
+  // source health banner
+  const staleSources = $derived((data?.source_status ?? []).filter((s: any) => s.status === 'Stale').map((s: any) => s.source));
+  const downSources = $derived((data?.source_status ?? []).filter((s: any) => s.status === 'Unavailable' || s.status === 'Partial').map((s: any) => s.source));
 </script>
 
 <header class="mb-4 flex items-start gap-2">
@@ -145,6 +219,12 @@
     </div>
   {/if}
 
+  <!-- Opportunity vs Risk explainer -->
+  <div class="mb-3 flex items-start gap-2 rounded-lg border border-edge bg-panel-2 px-3 py-2 text-xs leading-relaxed text-muted">
+    <Info class="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" />
+    <span><span class="text-soft">Opportunity score</span> measures early attention and traction. <span class="text-soft">Risk score</span> measures danger, noise and uncertainty. <span class="font-medium text-soft">A high opportunity score does not mean low risk.</span></span>
+  </div>
+
   <!-- Education + disclaimer -->
   <details class="card mb-3">
     <summary class="cursor-pointer text-sm font-medium text-soft">How to use Early Opportunity Radar</summary>
@@ -155,6 +235,16 @@
       <li>Confirm with market trend, liquidity and broader narrative strength.</li>
       <li>These are <span class="text-soft">research candidates</span>, not confirmed opportunities.</li>
     </ol>
+    <p class="mt-3 text-xs font-medium text-soft">Research checklist — before adding a candidate to a watchlist:</p>
+    <ul class="mt-1 grid gap-1 pl-1 text-sm text-muted sm:grid-cols-2">
+      <li>☐ Check liquidity</li>
+      <li>☐ Check 24h volume</li>
+      <li>☐ Check pool age / history</li>
+      <li>☐ Check risk flags</li>
+      <li>☐ Don't rely only on price spikes</li>
+      <li>☐ Prefer real transactions over hype</li>
+      <li>☐ Confirm with broader market &amp; narrative strength</li>
+    </ul>
   </details>
 
   {#if loading && !data}
@@ -180,6 +270,12 @@
       {/each}
     </div>
 
+    {#if staleSources.length}
+      <div class="mb-3 rounded-lg border border-warn/25 bg-warn/5 px-3 py-2 text-xs text-warn">Some source data is stale — showing the last successful sync. Scores may not reflect the latest market activity.</div>
+    {:else if downSources.length}
+      <div class="mb-3 rounded-lg border border-warn/25 bg-warn/5 px-3 py-2 text-xs text-warn">Some sources are unavailable or rate-limited ({downSources.map((s: string) => s.replace(/_/g, ' ')).join(', ')}). Scores may have lower confidence.</div>
+    {/if}
+
     <!-- Tabs -->
     <div class="mb-2 flex flex-wrap gap-1.5">
       {#each TABS as t}
@@ -192,7 +288,10 @@
       <div class="grid gap-2 sm:grid-cols-2">
         {#each data.narratives as n}
           <div class="card flex items-center justify-between p-3">
-            <div class="min-w-0"><p class="truncate font-medium text-soft">{n.narrative}</p><p class="truncate text-xs text-muted">{(n.top_coins ?? []).join(' · ') || '—'}</p></div>
+            <div class="min-w-0">
+              <p class="truncate font-medium text-soft">{n.narrative}</p>
+              <p class="truncate text-xs text-muted">{relatedAssets(n).length ? `Related: ${relatedAssets(n).join(', ')}` : 'Category momentum from CoinGecko'}</p>
+            </div>
             <span class="shrink-0 text-sm font-semibold {pctTone(n.market_cap_change_24h)}">{pct(n.market_cap_change_24h)}</span>
           </div>
         {/each}
@@ -219,29 +318,34 @@
         </div>
         {#if loading}<span class="text-xs text-muted">updating…</span>{/if}
       </div>
+      {#if SORT_HELP[sort]}<p class="-mt-1 mb-3 text-[11px] text-muted">Sorting by {sort}: {SORT_HELP[sort]}</p>{/if}
 
       <!-- Candidate cards -->
       {#if !data.candidates.length}
-        <div class="card text-center text-sm text-muted">No candidates match these filters. Try “All Candidates” or a different network.</div>
+        <div class="card text-center text-sm text-muted">No candidates passed the current filters. Try <span class="text-soft">All Candidates</span>, switch network, or lower the minimum liquidity in admin settings.</div>
       {:else}
         <div class="grid gap-2 lg:grid-cols-2">
           {#each data.candidates as c}
-            <button class="card p-3 text-left transition hover:border-accent/40" onclick={() => openDetail(c.id)}>
+            <div class="card p-3 transition hover:border-accent/40">
               <div class="flex items-start justify-between gap-2">
                 <div class="min-w-0">
                   <p class="truncate font-semibold text-strong">{c.symbol} <span class="text-xs font-normal text-muted">{c.asset_name !== c.symbol ? c.asset_name : ''}</span></p>
-                  <p class="text-xs text-muted">{c.network ?? 'multi-chain'} · {c.dex_name ?? c.source_name.replace(/_/g, ' ')}</p>
+                  <div class="mt-0.5 flex flex-wrap items-center gap-1">
+                    {#if c.network}<span class="rounded bg-panel-2 px-1.5 py-0.5 text-[10px] text-muted">{c.network}</span>{/if}
+                    <span class="rounded bg-accent/10 px-1.5 py-0.5 text-[10px] text-accent">{sourceLabel(c)}</span>
+                    {#if c.security_checked}<span class="rounded bg-mint/10 px-1.5 py-0.5 text-[10px] text-mint">GoPlus checked</span>{/if}
+                  </div>
                 </div>
-                <span class="shrink-0 rounded px-1.5 py-0.5 text-[10px] {confPill(c.confidence)}">{c.confidence}</span>
+                <span class="shrink-0 cursor-help rounded px-1.5 py-0.5 text-[10px] {confPill(c.confidence)}" title={CONF_TIP[c.confidence]}>{c.confidence}</span>
               </div>
 
               <div class="mt-2 grid grid-cols-2 gap-2">
-                <div>
+                <div title="Early attention & traction — not safety.">
                   <p class="text-[10px] uppercase tracking-wide text-muted">Opportunity</p>
                   <p class="text-lg font-bold {oppTone(c.opportunity_score)}">{c.opportunity_score}<span class="text-xs text-muted">/100</span></p>
                   <div class="meter mt-0.5"><div class="meter-fill {oppBar(c.opportunity_score)}" style="width:{c.opportunity_score}%"></div></div>
                 </div>
-                <div>
+                <div title="Danger, noise & uncertainty — lower is fewer warnings, not 'safe'.">
                   <p class="text-[10px] uppercase tracking-wide text-muted">Risk</p>
                   <p class="text-lg font-bold {riskTone(c.risk_score)}">{c.risk_score}<span class="text-xs text-muted">/100</span></p>
                   <div class="meter mt-0.5"><div class="meter-fill {riskBar(c.risk_score)}" style="width:{c.risk_score}%"></div></div>
@@ -261,9 +365,31 @@
                 </div>
               {/if}
               {#if c.risk_flags?.length}
-                <p class="mt-1.5 flex items-center gap-1 text-[11px] text-warn"><AlertTriangle class="h-3 w-3 shrink-0" />{c.risk_flags[0]}{c.risk_flags.length > 1 ? ` +${c.risk_flags.length - 1}` : ''}</p>
+                <p class="mt-1.5 flex items-center gap-1 text-[11px] text-warn" title={flagTip(c.risk_flags[0])}><AlertTriangle class="h-3 w-3 shrink-0" />{c.risk_flags[0]}{c.risk_flags.length > 1 ? ` +${c.risk_flags.length - 1}` : ''}</p>
               {/if}
-            </button>
+
+              <!-- Why this score? -->
+              <button class="mt-2 text-[11px] text-accent hover:underline" onclick={() => toggleWhy(c.id)}>{openWhy[c.id] ? 'Hide' : 'Why this score?'}</button>
+              {#if openWhy[c.id]}
+                <div class="mt-1 grid gap-2 rounded-lg bg-panel-2 p-2 text-[11px] sm:grid-cols-2">
+                  <div>
+                    <p class="mb-0.5 font-medium text-mint">Supports attention</p>
+                    {#each whyPositives(c) as p}<p class="text-muted">+ {p}</p>{:else}<p class="text-muted">Limited positive signals.</p>{/each}
+                  </div>
+                  <div>
+                    <p class="mb-0.5 font-medium text-warn">Adds risk</p>
+                    {#each whyNegatives(c) as n}<p class="cursor-help text-muted" title={flagTip(n)}>− {n}</p>{:else}<p class="text-muted">No major risk flags.</p>{/each}
+                  </div>
+                </div>
+              {/if}
+
+              <!-- Actions -->
+              <div class="mt-2 flex items-center gap-2 border-t border-edge/50 pt-2">
+                <button class="rounded-lg bg-accent/15 px-2.5 py-1 text-xs text-accent transition hover:bg-accent/25" onclick={() => openDetail(c.id)}>View details</button>
+                <button class="cursor-not-allowed rounded-lg bg-panel-2 px-2.5 py-1 text-xs text-muted" disabled title="Coming in Phase 2">+ Watchlist</button>
+                <button class="cursor-not-allowed rounded-lg bg-panel-2 px-2.5 py-1 text-xs text-muted" disabled title="Coming in Phase 2">Alert</button>
+              </div>
+            </div>
           {/each}
         </div>
       {/if}
@@ -315,13 +441,19 @@
       <p class="text-sm text-muted">Loading…</p>
     {:else if detail.id && detail.opportunity_score != null}
       <p class="text-xs text-muted">{detail.asset_name} · {detail.network ?? 'multi-chain'} · {detail.dex_name ?? detail.source_name?.replace(/_/g, ' ')}</p>
+      <div class="mt-1.5 flex flex-wrap gap-1">
+        <span class="rounded bg-accent/10 px-1.5 py-0.5 text-[10px] text-accent">{sourceLabel(detail)}</span>
+        {#if detail.security_checked}<span class="rounded bg-mint/10 px-1.5 py-0.5 text-[10px] text-mint">GoPlus checked</span>{:else if detail.source_type === 'dex_pool'}<span class="rounded bg-warn/10 px-1.5 py-0.5 text-[10px] text-warn">Security unverified</span>{/if}
+        <span class="cursor-help rounded px-1.5 py-0.5 text-[10px] {confPill(detail.confidence)}" title={CONF_TIP[detail.confidence]}>{detail.confidence} confidence</span>
+      </div>
 
       <div class="mt-3 grid grid-cols-2 gap-2">
-        <div class="card p-3"><p class="text-[10px] uppercase tracking-wide text-muted">Opportunity</p><p class="text-xl font-bold {oppTone(detail.opportunity_score)}">{detail.opportunity_score}/100</p></div>
-        <div class="card p-3"><p class="text-[10px] uppercase tracking-wide text-muted">Risk</p><p class="text-xl font-bold {riskTone(detail.risk_score)}">{detail.risk_score}/100</p></div>
+        <div class="card p-3" title="Early attention & traction — not safety."><p class="text-[10px] uppercase tracking-wide text-muted">Opportunity</p><p class="text-xl font-bold {oppTone(detail.opportunity_score)}">{detail.opportunity_score}/100</p></div>
+        <div class="card p-3" title="Danger, noise & uncertainty."><p class="text-[10px] uppercase tracking-wide text-muted">Risk</p><p class="text-xl font-bold {riskTone(detail.risk_score)}">{detail.risk_score}/100</p></div>
       </div>
 
       <p class="mt-3 text-sm leading-relaxed text-soft">{detail.interpretation}</p>
+      <p class="mt-2 text-xs text-muted">{whyAppeared(detail)}</p>
 
       <dl class="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
         <dt class="text-muted">Price</dt><dd class="text-right text-soft">{detail.price_usd != null ? `$${detail.price_usd}` : 'n/a'}</dd>
@@ -340,8 +472,12 @@
       {/if}
       {#if detail.risk_flags?.length}
         <p class="mt-3 text-[11px] uppercase tracking-wide text-muted">Risk flags</p>
-        <ul class="mt-1 space-y-0.5">{#each detail.risk_flags as f}<li class="flex items-center gap-1 text-xs text-warn"><AlertTriangle class="h-3 w-3 shrink-0" />{f}</li>{/each}</ul>
+        <ul class="mt-1 space-y-0.5">{#each detail.risk_flags as f}<li class="flex cursor-help items-center gap-1 text-xs text-warn" title={flagTip(f)}><AlertTriangle class="h-3 w-3 shrink-0" />{f}</li>{/each}</ul>
       {/if}
+
+      <!-- What to watch next -->
+      <p class="mt-3 text-[11px] uppercase tracking-wide text-muted">What to watch next</p>
+      <ul class="mt-1 space-y-0.5 text-xs text-soft">{#each whatToWatch(detail) as w}<li>• {w}</li>{/each}</ul>
 
       {#if detail.contract_address}
         <p class="mt-3 break-all text-[11px] text-muted">Contract: {detail.contract_address}</p>
@@ -350,7 +486,9 @@
         <a href={detail.source_url} target="_blank" rel="noopener" class="mt-3 inline-flex items-center gap-1 text-sm text-accent hover:underline">View source <ExternalLink class="h-3.5 w-3.5" /></a>
       {/if}
 
-      <div class="mt-4 rounded-lg border border-danger/25 bg-danger/5 px-3 py-2 text-[11px] leading-relaxed text-muted">Research candidate only — not a buy signal. New / low-liquidity tokens are highly risky. Always do your own research.</div>
+      <button class="mt-3 w-full cursor-not-allowed rounded-lg bg-panel-2 px-3 py-2 text-sm text-muted" disabled title="Watchlist & alerts arrive in Phase 2">+ Add to Early Watchlist (coming soon)</button>
+
+      <div class="mt-3 rounded-lg border border-danger/25 bg-danger/5 px-3 py-2 text-[11px] leading-relaxed text-muted">Research candidate only — not a buy signal. New / low-liquidity tokens are highly risky. Always do your own research.</div>
     {:else}
       <p class="text-sm text-muted">Candidate details unavailable.</p>
     {/if}
