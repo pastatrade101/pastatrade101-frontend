@@ -305,8 +305,9 @@
       <div class="flex items-start gap-3">
         <span class="icon-badge bg-mint/12 text-mint"><FileText class="h-5 w-5" /></span>
         <div>
-          <h3 class="font-semibold text-strong">Want the full picture?</h3>
-          <p class="mt-0.5 text-sm leading-relaxed text-muted">Read the complete Pastatrade overview — every module, how it works, and the vision — in one PDF.</p>
+          <h3 class="font-semibold text-strong">New to Pastatrade? Start here.</h3>
+          <p class="mt-0.5 text-sm leading-relaxed text-muted">A simple PDF that explains the whole platform in plain language — English &amp; Swahili. It’s not too technical; it answers the everyday crypto questions you already ask.</p>
+          <p class="mt-1 text-sm italic leading-relaxed text-muted/80">Mpya kwa Pastatrade? PDF rahisi inayoeleza platform nzima kwa lugha rahisi — Kiingereza na Kiswahili.</p>
         </div>
       </div>
       <a href="/pastatrade-overview.pdf" download class="btn-primary shrink-0 whitespace-nowrap">
