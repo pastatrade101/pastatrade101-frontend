@@ -3,7 +3,7 @@
   import {
     ArrowRight, Radar, Layers, Waves, Gauge, Star, ShieldCheck, Check, Zap, TrendingUp,
     Coins, Database, RefreshCw, Clock, LayoutGrid, HeartCrack, UserPlus, LineChart, Rocket,
-    PiggyBank, Repeat, Quote, Plus, Activity, BarChart3, User, Compass
+    PiggyBank, Repeat, Quote, Plus, Activity, BarChart3, User, Compass, Download, FileText
   } from '@lucide/svelte';
   import { api } from '$lib/api';
   import { fmtMoney } from '$lib/format';
@@ -297,6 +297,22 @@
         <p class="mt-1.5 text-sm leading-relaxed text-muted">{$t(s.bKey)}</p>
       </div>
     {/each}
+  </div>
+
+  <!-- Download the full overview deck (PDF) -->
+  <div class="mx-auto mt-6 max-w-3xl">
+    <div class="card flex flex-col items-center gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div class="flex items-start gap-3">
+        <span class="icon-badge bg-mint/12 text-mint"><FileText class="h-5 w-5" /></span>
+        <div>
+          <h3 class="font-semibold text-strong">Want the full picture?</h3>
+          <p class="mt-0.5 text-sm leading-relaxed text-muted">Read the complete Pastatrade overview — every module, how it works, and the vision — in one PDF.</p>
+        </div>
+      </div>
+      <a href="/pastatrade-overview.pdf" download class="btn-primary shrink-0 whitespace-nowrap">
+        <Download class="h-4 w-4" /> Download overview (PDF)
+      </a>
+    </div>
   </div>
 </section>
 
