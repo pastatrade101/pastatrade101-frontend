@@ -4,7 +4,8 @@
   import { fly } from 'svelte/transition';
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
-  import { Activity, ChevronDown, CreditCard, DoorOpen, FileText, Languages, LayoutDashboard, LogIn, LogOut, Menu, Moon, Shield, Spline, Sun, Tag, X } from '@lucide/svelte';
+  import { ChevronDown, CreditCard, DoorOpen, FileText, Languages, LayoutDashboard, LogIn, LogOut, Menu, Moon, Shield, Spline, Sun, Tag, X } from '@lucide/svelte';
+  import BrandMark from '$lib/components/BrandMark.svelte';
   import { authReady, initAuth, logout, user } from '$lib/stores/auth';
   import { clearMembership, loadMembership, membership } from '$lib/stores/membership';
   import { sidebarOpen } from '$lib/stores/ui';
@@ -55,8 +56,8 @@
           </button>
         {/if}
         <a href="/" class="flex items-center gap-2 font-semibold text-strong">
-          <Activity class="h-5 w-5 text-mint" />
-          Pasta<span class="text-mint">trade</span>
+          <BrandMark class="h-5 w-5 text-mint" />
+          Pasta<span class="text-mint">trade101</span>
         </a>
       </div>
 

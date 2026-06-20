@@ -3,6 +3,7 @@
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
   import { BarChart3, Bitcoin, DoorOpen, FileText, FlaskConical, Gauge, LayoutDashboard, Layers, Scale, Spline, Star, Users, X } from '@lucide/svelte';
+  import BrandMark from '$lib/components/BrandMark.svelte';
   import { authReady, user } from '$lib/stores/auth';
   import { sidebarOpen } from '$lib/stores/ui';
   import { t } from '$lib/i18n';
@@ -96,7 +97,7 @@
       transition:fly={{ x: -280, duration: 220 }}
     >
       <div class="mb-4 flex items-center justify-between">
-        <span class="font-semibold text-strong">Pasta<span class="text-mint">trade</span></span>
+        <span class="flex items-center gap-1.5 font-semibold text-strong"><BrandMark class="h-5 w-5 text-mint" />Pasta<span class="text-mint">trade101</span></span>
         <button aria-label="Close menu" onclick={() => sidebarOpen.set(false)}><X class="h-5 w-5 text-muted" /></button>
       </div>
       {@render navList()}

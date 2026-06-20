@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { Activity, Check } from '@lucide/svelte';
+  import { Check } from '@lucide/svelte';
+  import BrandMark from '$lib/components/BrandMark.svelte';
   import type { Snippet } from 'svelte';
   import { t } from '$lib/i18n';
 
@@ -37,8 +38,8 @@
 
     <div class="relative z-10 flex flex-1 flex-col">
       <a href="/" class="flex items-center gap-2 text-lg font-semibold text-strong">
-        <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-mint/15"><Activity class="h-5 w-5 text-mint" /></span>
-        Pasta<span class="-ml-1 text-mint">trade</span>
+        <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-mint/15"><BrandMark class="h-5 w-5 text-mint" /></span>
+        Pasta<span class="text-mint">trade101</span>
       </a>
 
       <div class="mt-8 lg:mt-14">

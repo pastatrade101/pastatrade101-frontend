@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { Lock, Copy, Check, Activity, Download } from '@lucide/svelte';
+  import { Lock, Copy, Check, Download } from '@lucide/svelte';
+  import BrandMark from '$lib/components/BrandMark.svelte';
   import { api } from '$lib/api';
   import { openReportPdf } from '$lib/reports/print';
   import ReportStatusBadge from './ReportStatusBadge.svelte';
@@ -83,9 +84,9 @@
   <header class="hero-card">
     <div class="flex items-center justify-between gap-3">
       <div class="flex items-center gap-2">
-        <Activity class="h-5 w-5 text-mint" />
+        <BrandMark class="h-5 w-5 text-mint" />
         <div>
-          <div class="text-sm font-semibold text-strong">Pasta<span class="text-mint">trade</span></div>
+          <div class="text-sm font-semibold text-strong">Pasta<span class="text-mint">trade101</span></div>
           <div class="text-[10px] uppercase tracking-[0.14em] text-muted">Market Intelligence</div>
         </div>
       </div>

@@ -1,9 +1,12 @@
 <script lang="ts">
   // Overlays several ROI series on shared axes (x = day-of-year, y = ROI %).
   interface Series {
-    year: number;
+    year: number | string;
     points: { x: number; y: number }[];
     color: string;
+    width?: number;
+    dash?: string;
+    opacity?: number;
   }
   interface Props {
     series: Series[];
@@ -51,6 +54,6 @@
   {/each}
   <!-- series -->
   {#each series as s}
-    <path d={pathFor(s.points)} fill="none" stroke={s.color} stroke-width="1.8" opacity="0.9" />
+    <path d={pathFor(s.points)} fill="none" stroke={s.color} stroke-width={s.width ?? 1.8} stroke-dasharray={s.dash ?? ''} opacity={s.opacity ?? 0.9} stroke-linecap="round" stroke-linejoin="round" />
   {/each}
 </svg>
