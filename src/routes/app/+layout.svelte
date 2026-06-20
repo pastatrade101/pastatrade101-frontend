@@ -2,7 +2,7 @@
   import { fade, fly } from 'svelte/transition';
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
-  import { BarChart3, Bitcoin, DoorOpen, FileText, Flame, FlaskConical, Gauge, LayoutDashboard, Layers, Scale, Spline, Star, Users, X } from '@lucide/svelte';
+  import { BarChart3, Bitcoin, DoorOpen, FileText, Flame, FlaskConical, Gauge, LayoutDashboard, Layers, Radar, Scale, Spline, Star, Users, X } from '@lucide/svelte';
   import BrandMark from '$lib/components/BrandMark.svelte';
   import { authReady, user } from '$lib/stores/auth';
   import { sidebarOpen } from '$lib/stores/ui';
@@ -41,6 +41,7 @@
     { href: '/app/altcoin-btc-lab', key: 'app.nav.altbtc', icon: Scale },
     { href: '/app/charts/logarithmic-regression', key: 'app.nav.logreg', icon: Spline },
     { href: '/app/ecosystems', key: 'app.nav.ecosystems', icon: Layers },
+    { href: '/app/early-opportunity-radar', key: 'app.nav.radar', icon: Radar },
     { href: '/app/watchlist', key: 'app.nav.watchlist', icon: Star },
     { href: '/app/exit-strategy', key: 'app.nav.exit', icon: DoorOpen },
     { href: '/app/reports', key: 'app.nav.reports', icon: FileText }

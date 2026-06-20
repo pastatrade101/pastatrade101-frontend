@@ -4,12 +4,14 @@
   import { membership, membershipReady, hasFeature } from '$lib/stores/membership';
   import Gauge from '$lib/components/Gauge.svelte';
   import LockedFeature from '$lib/components/LockedFeature.svelte';
-  import { fmtUsd } from '$lib/format';
+  import EChart from '$lib/components/EChart.svelte';
 
   const canDeriv = $derived(hasFeature($membership, 'access_derivatives'));
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let r = $state<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let hist = $state<any[]>([]);
   let loading = $state(true);
   let error = $state('');
   let started = $state(false);
@@ -18,13 +20,44 @@
     loading = true;
     error = '';
     try {
-      r = await api('/derivatives', { auth: true });
+      const [live, h] = await Promise.all([
+        api('/derivatives', { auth: true }),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        api<{ points: any[] }>('/derivatives/history?days=90', { auth: true }).catch(() => ({ points: [] as any[] }))
+      ]);
+      r = live;
+      hist = (h?.points ?? []).filter((p: any) => p.leverage_percent != null);
     } catch (e) {
       error = e instanceof Error ? e.message : 'Failed to load derivatives data.';
     } finally {
       loading = false;
     }
   };
+
+  // Leverage-risk trend chart (grows as the daily sync accumulates rows).
+  const chartOption = $derived.by(() => {
+    if (hist.length < 2) return null;
+    const dates = hist.map((p) => p.date);
+    const lev = hist.map((p) => p.leverage_percent);
+    return {
+      grid: { left: 38, right: 16, top: 16, bottom: 28 },
+      tooltip: { trigger: 'axis', valueFormatter: (v: number) => `${Math.round(v)}/100` },
+      xAxis: { type: 'category', data: dates, axisLabel: { color: '#7d8590', fontSize: 10 }, axisLine: { lineStyle: { color: '#30363d' } } },
+      yAxis: { type: 'value', min: 0, max: 100, axisLabel: { color: '#7d8590', fontSize: 10 }, splitLine: { lineStyle: { color: 'rgba(48,54,61,0.5)' } } },
+      series: [
+        {
+          name: 'Leverage Risk',
+          type: 'line',
+          data: lev,
+          smooth: true,
+          symbol: 'none',
+          lineStyle: { color: '#F59E0B', width: 2 },
+          areaStyle: { color: 'rgba(245,158,11,0.12)' },
+          markLine: { silent: true, symbol: 'none', lineStyle: { color: '#EF4444', type: 'dashed', opacity: 0.5 }, data: [{ yAxis: 75 }], label: { formatter: 'Overheated', color: '#EF4444', fontSize: 9 } }
+        }
+      ]
+    };
+  });
   $effect(() => {
     if (!$membershipReady || started) return;
     started = true;
@@ -110,6 +143,45 @@
         <p class="text-lg font-bold text-strong">{r.eth_open_interest == null ? 'n/a' : `${Math.round(r.eth_open_interest).toLocaleString()} ETH`}</p>
       </div>
     </div>
+
+    <!-- Leverage trend -->
+    <div class="card mb-3">
+      <div class="mb-1 flex items-center justify-between">
+        <p class="stat-label">Leverage risk · last 90 days</p>
+        <span class="text-[11px] text-muted">stored daily sync</span>
+      </div>
+      {#if chartOption}
+        <EChart option={chartOption} height={220} />
+      {:else}
+        <p class="py-6 text-center text-sm text-muted">History is building — the daily sync adds one point per day. The trend chart appears once a few days have accumulated.</p>
+      {/if}
+    </div>
+
+    <!-- Funding extremes -->
+    {#if r.top_funding?.length || r.bottom_funding?.length}
+      <div class="mb-3 grid gap-3 sm:grid-cols-2">
+        <div class="card p-3">
+          <p class="stat-label text-warn">Most crowded longs <span class="font-normal text-muted">· highest funding</span></p>
+          {#if r.top_funding?.length}
+            <ul class="mt-2 space-y-1">
+              {#each r.top_funding as c}
+                <li class="flex items-center justify-between text-sm"><span class="font-medium text-soft">{c.symbol}</span><span class="text-warn">{(c.funding * 100).toFixed(3)}%</span></li>
+              {/each}
+            </ul>
+          {:else}<p class="mt-2 text-sm text-muted">No coins with hot positive funding right now.</p>{/if}
+        </div>
+        <div class="card p-3">
+          <p class="stat-label text-accent">Most fearful <span class="font-normal text-muted">· negative funding</span></p>
+          {#if r.bottom_funding?.length}
+            <ul class="mt-2 space-y-1">
+              {#each r.bottom_funding as c}
+                <li class="flex items-center justify-between text-sm"><span class="font-medium text-soft">{c.symbol}</span><span class="text-accent">{(c.funding * 100).toFixed(3)}%</span></li>
+              {/each}
+            </ul>
+          {:else}<p class="mt-2 text-sm text-muted">No coins with negative funding right now.</p>{/if}
+        </div>
+      </div>
+    {/if}
 
     <!-- How to read -->
     <div class="card mb-3">

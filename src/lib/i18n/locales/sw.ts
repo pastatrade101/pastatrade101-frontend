@@ -24,6 +24,7 @@ export const sw: Record<string, string> = {
   'app.nav.cyclelab': 'Maabara ya Mzunguko',
   'app.nav.altbtc': 'Alt dhidi ya BTC',
   'app.nav.ecosystems': 'Mifumo Ikolojia',
+  'app.nav.radar': 'Rada ya Fursa',
   'app.nav.watchlist': 'Orodha ya Kufuatilia',
   'app.nav.exit': 'Mkakati wa Kutoka',
   'app.nav.logreg': 'Log Regression',

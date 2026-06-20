@@ -4,7 +4,7 @@
   import { fly } from 'svelte/transition';
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
-  import { ChevronDown, CreditCard, DoorOpen, FileText, Languages, LayoutDashboard, LogIn, LogOut, Menu, Moon, Shield, Spline, Sun, Tag, X } from '@lucide/svelte';
+  import { ChevronDown, CreditCard, DoorOpen, FileText, Flame, Languages, LayoutDashboard, LogIn, LogOut, Menu, Moon, Radar, Shield, Spline, Sun, Tag, X } from '@lucide/svelte';
   import BrandMark from '$lib/components/BrandMark.svelte';
   import { authReady, initAuth, logout, user } from '$lib/stores/auth';
   import { clearMembership, loadMembership, membership } from '$lib/stores/membership';
@@ -129,6 +129,12 @@
                     </a>
                     <a href="/admin/charts/log-regression-settings" onclick={() => (menuOpen = false)} class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-body transition hover:bg-panel-2">
                       <Spline class="h-4 w-4" /> Log regression
+                    </a>
+                    <a href="/admin/derivatives" onclick={() => (menuOpen = false)} class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-body transition hover:bg-panel-2">
+                      <Flame class="h-4 w-4" /> Derivatives
+                    </a>
+                    <a href="/admin/early-opportunity-settings" onclick={() => (menuOpen = false)} class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-body transition hover:bg-panel-2">
+                      <Radar class="h-4 w-4" /> Opportunity Radar
                     </a>
                   {/if}
                   <button onclick={handleLogout} class="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-danger transition hover:bg-panel-2">

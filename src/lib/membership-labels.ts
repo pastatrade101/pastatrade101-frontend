@@ -20,6 +20,8 @@ export const FEATURE_LABELS: Record<string, string> = {
   access_exit_strategy: 'Dynamic Exit Strategy',
   access_exit_simulator: 'Portfolio Exit Simulator',
   access_log_regression_charts: 'Log Regression Bands',
+  access_derivatives: 'Derivatives / Leverage Risk',
+  access_early_opportunity_radar: 'Early Opportunity Radar',
   access_export_reports: 'Export / share reports'
 };
 

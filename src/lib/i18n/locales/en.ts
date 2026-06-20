@@ -23,6 +23,7 @@ export const en: Record<string, string> = {
   'app.nav.cyclelab': 'Cycle Lab',
   'app.nav.altbtc': 'Alt vs BTC',
   'app.nav.ecosystems': 'Ecosystems',
+  'app.nav.radar': 'Opportunity Radar',
   'app.nav.watchlist': 'Watchlist',
   'app.nav.exit': 'Exit Strategy',
   'app.nav.logreg': 'Log Regression',
