@@ -145,6 +145,8 @@ export const en: Record<string, string> = {
   'landing.feat.radar.b': 'Instantly know if BTC is in accumulation, cool-off, risk-on, overheated, distribution or capitulation.',
   'landing.feat.alt.t': 'Altcoin vs BTC strength',
   'landing.feat.alt.b': 'Ratio, oscillator and reaction scores show whether your alt is truly outperforming BTC — or quietly bleeding.',
+  'landing.feat.altbottom.t': 'Alt/BTC Bottom Radar',
+  'landing.feat.altbottom.b': 'Track which top altcoins have stopped bleeding against Bitcoin and are rotating back into strength — recovery scores on the ALT/BTC pair, with invalidation risk, before USD pumps become obvious.',
   'landing.feat.eco.t': 'Ecosystem rotation rankings',
   'landing.feat.eco.b': 'Chains ranked by TVL growth, stablecoin depth, DEX volume and native-token momentum, with plain-language signals.',
   'landing.feat.social.t': 'Social & sentiment risk',

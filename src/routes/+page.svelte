@@ -81,6 +81,7 @@
     { icon: Flame, tKey: 'landing.feat.deriv.t', bKey: 'landing.feat.deriv.b' },
     { icon: Compass, tKey: 'landing.feat.eor.t', bKey: 'landing.feat.eor.b' },
     { icon: TrendingUp, tKey: 'landing.feat.alt.t', bKey: 'landing.feat.alt.b' },
+    { icon: Activity, tKey: 'landing.feat.altbottom.t', bKey: 'landing.feat.altbottom.b' },
     { icon: Layers, tKey: 'landing.feat.eco.t', bKey: 'landing.feat.eco.b' },
     { icon: Waves, tKey: 'landing.feat.social.t', bKey: 'landing.feat.social.b' },
     { icon: LayoutGrid, tKey: 'landing.feat.overview.t', bKey: 'landing.feat.overview.b' },

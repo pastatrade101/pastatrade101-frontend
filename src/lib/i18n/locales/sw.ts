@@ -146,6 +146,8 @@ export const sw: Record<string, string> = {
   'landing.feat.radar.b': 'Jua papo hapo kama BTC ipo katika ukusanyaji, kupoa, risk-on, kuzidi joto, usambazaji au kusalimu amri.',
   'landing.feat.alt.t': 'Nguvu ya Altcoin dhidi ya BTC',
   'landing.feat.alt.b': 'Uwiano, oscillator na alama za mwitikio huonyesha kama alt yako inaizidi BTC kweli — au inavuja kimya kimya.',
+  'landing.feat.altbottom.t': 'Rada ya Sakafu ya Alt/BTC',
+  'landing.feat.altbottom.b': 'Fuatilia ni altcoins zipi zimeacha kushuka dhidi ya Bitcoin na zinaanza kupata nguvu tena — alama za kupona kwenye pair ya ALT/BTC, na hatari ya kuvunjika, kabla ya pumps za USD kuwa wazi.',
   'landing.feat.eco.t': 'Orodha ya mzunguko wa mifumo ikolojia',
   'landing.feat.eco.b': 'Mitandao hupangwa kwa ukuaji wa TVL, kina cha stablecoin, ujazo wa DEX na kasi ya tokeni asili, pamoja na ishara za lugha rahisi.',
   'landing.feat.social.t': 'Hatari ya jamii na hisia',
