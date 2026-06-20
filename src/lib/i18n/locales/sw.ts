@@ -23,6 +23,7 @@ export const sw: Record<string, string> = {
   'app.nav.btc': 'Mzunguko wa Bitcoin',
   'app.nav.cyclelab': 'Maabara ya Mzunguko',
   'app.nav.altbtc': 'Alt dhidi ya BTC',
+  'app.nav.altbtcbottom': 'Sakafu ya Alt/BTC',
   'app.nav.ecosystems': 'Mifumo Ikolojia',
   'app.nav.radar': 'Rada ya Fursa',
   'app.nav.watchlist': 'Orodha ya Kufuatilia',
