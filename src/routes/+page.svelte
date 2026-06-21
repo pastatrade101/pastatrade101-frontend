@@ -54,7 +54,8 @@
       /* social-proof count is optional */
     }
   });
-  const topFeatures = (p: Plan) => FEATURE_ORDER.filter((k) => p.features?.[k]).slice(0, 4);
+  // Every feature the plan includes (ordered). No longer truncated to 4.
+  const planFeatures = (p: Plan) => FEATURE_ORDER.filter((k) => p.features?.[k]);
 
   // Real user count → friendly label (e.g. 1240 → "1.2k+", 127 → "120+", 8 → "8").
   const fmtInvestors = (n: number): string =>
@@ -351,8 +352,8 @@
           </div>
           {#if p.description}<p class="mt-1 text-sm text-muted">{p.description}</p>{/if}
           <ul class="my-4 space-y-1.5 text-sm">
-            {#each topFeatures(p) as fk}
-              <li class="flex items-center gap-2 text-soft"><Check class="h-4 w-4 shrink-0 text-mint" />{FEATURE_LABELS[fk]}</li>
+            {#each planFeatures(p) as fk}
+              <li class="flex items-center gap-2 text-soft"><Check class="h-4 w-4 shrink-0 text-mint" />{FEATURE_LABELS[fk] ?? fk}</li>
             {/each}
           </ul>
           <a href="/register" class="{p.is_popular ? 'btn-primary' : 'btn-ghost'} mt-auto w-full">
