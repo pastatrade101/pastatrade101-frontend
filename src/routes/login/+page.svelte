@@ -3,7 +3,7 @@
   import { goto } from '$app/navigation';
   import { page } from '$app/stores';
   import { Mail, Lock, Eye, EyeOff, ArrowRight } from '@lucide/svelte';
-  import { login, user } from '$lib/stores/auth';
+  import { login, user, authReady } from '$lib/stores/auth';
   import { t } from '$lib/i18n';
   import AuthShell from '$lib/components/AuthShell.svelte';
   import Seo from '$lib/components/Seo.svelte';
@@ -17,6 +17,14 @@
 
   // Where the user was trying to go before being bounced to /login.
   const redirectTarget = $derived($page.url.searchParams.get('redirect'));
+
+  // Already signed in (e.g. arriving here from a landing CTA) → skip the form.
+  $effect(() => {
+    if ($authReady && $user) {
+      const dest = redirectTarget && redirectTarget.startsWith('/') ? redirectTarget : $user.role === 'admin' ? '/admin' : '/app';
+      goto(dest);
+    }
+  });
 
   const submit = async (e: Event) => {
     e.preventDefault();

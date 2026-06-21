@@ -1,10 +1,15 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import { User, Mail, Lock, Eye, EyeOff, ArrowRight } from '@lucide/svelte';
-  import { register } from '$lib/stores/auth';
+  import { register, user, authReady } from '$lib/stores/auth';
   import { t } from '$lib/i18n';
   import AuthShell from '$lib/components/AuthShell.svelte';
   import Seo from '$lib/components/Seo.svelte';
+
+  // Already signed in (e.g. a logged-in user clicked "Start free") → go to the app.
+  $effect(() => {
+    if ($authReady && $user) goto($user.role === 'admin' ? '/admin' : '/app');
+  });
 
   let fullName = $state('');
   let email = $state('');
