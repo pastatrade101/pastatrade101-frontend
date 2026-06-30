@@ -45,11 +45,25 @@
     } catch (err) {
       error = err instanceof Error ? err.message : 'Failed to load plans.';
     }
-    // Returning from the hosted checkout.
+    // Returning from the hosted checkout — actively verify instead of waiting on
+    // the webhook (which may be delayed or misconfigured).
     if (new URLSearchParams(window.location.search).get('upgrade') === 'success') {
-      message = 'Payment received — your plan will update as soon as it’s confirmed.';
-      await loadMembership();
       history.replaceState(null, '', '/app/account');
+      message = 'Confirming your payment…';
+      let ok = false;
+      for (let i = 0; i < 4 && !ok; i += 1) {
+        ok = await verifyPayment();
+        if (!ok) await new Promise((r) => setTimeout(r, 2500));
+      }
+      if (!ok) {
+        message = 'Payment received — it’s still being confirmed. It will activate automatically, or use “Verify my payment” below.';
+        await loadMembership();
+        try {
+          pending = (await api<{ attempt: PendingAttempt | null }>('/me/payment-attempts/pending', { auth: true })).attempt;
+        } catch {
+          /* non-critical */
+        }
+      }
       return;
     }
     // Otherwise check for an unfinished upgrade so we can prompt / follow up.
@@ -60,10 +74,29 @@
     }
   });
 
+  // Pull-based verification: ask the backend to check the provider and activate.
+  const verifyPayment = async (): Promise<boolean> => {
+    try {
+      const res = await api<{ activated: boolean; plan_slug?: string }>('/me/verify-payment', { method: 'POST', auth: true });
+      if (res.activated) {
+        await loadMembership();
+        pending = null;
+        error = '';
+        message = 'Payment verified — your plan is now active! 🎉';
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  };
+
   const confirmedPaid = async () => {
-    pending = null;
-    await loadMembership();
-    message = 'Thanks! If your payment is confirmed, your plan will update shortly.';
+    busy = true;
+    error = '';
+    const ok = await verifyPayment();
+    if (!ok) message = 'We couldn’t confirm your payment just yet. If you’ve paid, wait a moment and try again — an admin will also confirm it shortly.';
+    busy = false;
   };
 
   const submitCancel = async () => {
@@ -165,7 +198,7 @@
     <p class="mt-1 text-sm text-soft">That's {fmtMoney(pending.amount, pending.currency)} — but we haven't seen the payment yet. Did you complete it?</p>
     {#if !showCancelForm}
       <div class="mt-3 flex flex-wrap gap-2">
-        <button class="btn-primary" onclick={confirmedPaid} disabled={busy}>Yes, I paid</button>
+        <button class="btn-primary" onclick={confirmedPaid} disabled={busy}>{busy ? 'Verifying…' : 'I’ve paid — verify my access'}</button>
         <button class="btn-ghost" onclick={() => (showCancelForm = true)} disabled={busy}>No, I didn't</button>
       </div>
     {:else}
