@@ -178,6 +178,9 @@
   };
 
   const relatedAssets = (n: any): string[] => (n.top_coins ?? []).filter((x: string) => !/^https?:/i.test(x));
+  // Link a narrative to its CoinGecko category page (the source of this momentum).
+  // Uses the exact CoinGecko slug so links are always valid.
+  const narrativeUrl = (n: any): string | null => (n.category_id ? `https://www.coingecko.com/en/categories/${n.category_id}` : null);
 
   // expandable "why this score" per card
   let openWhy = $state<Record<string, boolean>>({});
@@ -287,13 +290,23 @@
       <!-- Narrative radar -->
       <div class="grid gap-2 sm:grid-cols-2">
         {#each data.narratives as n}
-          <div class="card flex items-center justify-between p-3">
-            <div class="min-w-0">
-              <p class="truncate font-medium text-soft">{n.narrative}</p>
-              <p class="truncate text-xs text-muted">{relatedAssets(n).length ? `Related: ${relatedAssets(n).join(', ')}` : 'Category momentum from CoinGecko'}</p>
+          {#if narrativeUrl(n)}
+            <a href={narrativeUrl(n)} target="_blank" rel="noopener noreferrer" class="card group flex items-center justify-between p-3 transition hover:border-mint/40 hover:bg-panel-2/50">
+              <div class="min-w-0">
+                <p class="flex items-center gap-1 truncate font-medium text-soft">{n.narrative}<ExternalLink class="h-3 w-3 shrink-0 text-muted transition group-hover:text-mint" /></p>
+                <p class="truncate text-xs text-muted">{relatedAssets(n).length ? `Related: ${relatedAssets(n).join(', ')}` : 'View this category on CoinGecko'}</p>
+              </div>
+              <span class="shrink-0 text-sm font-semibold {pctTone(n.market_cap_change_24h)}">{pct(n.market_cap_change_24h)}</span>
+            </a>
+          {:else}
+            <div class="card flex items-center justify-between p-3">
+              <div class="min-w-0">
+                <p class="truncate font-medium text-soft">{n.narrative}</p>
+                <p class="truncate text-xs text-muted">{relatedAssets(n).length ? `Related: ${relatedAssets(n).join(', ')}` : 'Category momentum from CoinGecko'}</p>
+              </div>
+              <span class="shrink-0 text-sm font-semibold {pctTone(n.market_cap_change_24h)}">{pct(n.market_cap_change_24h)}</span>
             </div>
-            <span class="shrink-0 text-sm font-semibold {pctTone(n.market_cap_change_24h)}">{pct(n.market_cap_change_24h)}</span>
-          </div>
+          {/if}
         {/each}
       </div>
     {:else}
@@ -411,10 +424,17 @@
       <div class="card">
         <p class="stat-label mb-2 flex items-center gap-1.5"><Layers class="h-3.5 w-3.5" />Hot narratives today</p>
         {#each data.narratives.slice(0, 6) as n}
-          <div class="flex items-center justify-between border-b border-edge/50 py-1.5 text-sm last:border-0">
-            <span class="truncate text-soft">{n.narrative}</span>
-            <span class="shrink-0 text-sm font-medium {pctTone(n.market_cap_change_24h)}">{pct(n.market_cap_change_24h)}</span>
-          </div>
+          {#if narrativeUrl(n)}
+            <a href={narrativeUrl(n)} target="_blank" rel="noopener noreferrer" class="group flex items-center justify-between border-b border-edge/50 py-1.5 text-sm last:border-0">
+              <span class="flex items-center gap-1 truncate text-soft transition group-hover:text-mint">{n.narrative}<ExternalLink class="h-2.5 w-2.5 shrink-0 text-muted transition group-hover:text-mint" /></span>
+              <span class="shrink-0 text-sm font-medium {pctTone(n.market_cap_change_24h)}">{pct(n.market_cap_change_24h)}</span>
+            </a>
+          {:else}
+            <div class="flex items-center justify-between border-b border-edge/50 py-1.5 text-sm last:border-0">
+              <span class="truncate text-soft">{n.narrative}</span>
+              <span class="shrink-0 text-sm font-medium {pctTone(n.market_cap_change_24h)}">{pct(n.market_cap_change_24h)}</span>
+            </div>
+          {/if}
         {:else}
           <p class="text-sm text-muted">No narrative data yet.</p>
         {/each}

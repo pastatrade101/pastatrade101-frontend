@@ -21,6 +21,7 @@ export interface EcoItem {
   id: string;
   slug: string;
   name: string;
+  defillama_slug: string | null; // links to the DefiLlama chain page (data source)
   metrics: EcoMetrics | null;
 }
 

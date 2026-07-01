@@ -134,6 +134,10 @@
   <button class="btn-ghost" disabled={running} onclick={() => runSync('/admin/alt-btc-bottom/sync', 'Alt/BTC Bottom Radar sync')}>
     Sync Alt/BTC Bottom Radar
   </button>
+  <button class="btn-ghost" disabled={running} onclick={() => runSync('/admin/ico-projects/sync', 'ICO / Early Project sync')}>
+    Sync ICO / Early Projects
+  </button>
+  <a class="btn-ghost" href="/admin/ico-intelligence">Review ICO projects →</a>
   <button class="btn-ghost" disabled={running} onclick={() => runSync('/admin/sync/price-series', 'Lab price-series sync')}>
     Sync Lab price series (top 100)
   </button>

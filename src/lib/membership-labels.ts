@@ -24,6 +24,7 @@ export const FEATURE_LABELS: Record<string, string> = {
   access_macro_regime: 'Macro Regime',
   access_early_opportunity_radar: 'Early Opportunity Radar',
   access_alt_btc_bottom_radar: 'Alt/BTC Bottom Radar',
+  access_early_project_radar: 'Early Project Radar (ICO intelligence)',
   access_export_reports: 'Export / share reports'
 };
 

@@ -3,7 +3,7 @@
   import { api } from '$lib/api';
   import { fmtPct, fmtUsd } from '$lib/format';
   import Disclaimer from '$lib/components/Disclaimer.svelte';
-  import { Lock } from '@lucide/svelte';
+  import { Lock, ExternalLink } from '@lucide/svelte';
   import { membership, hasFeature } from '$lib/stores/membership';
   import {
     enrich,
@@ -88,6 +88,10 @@
   ];
 
   const meterColor = (p: number) => (p >= 50 ? 'bg-mint' : p >= 25 ? 'bg-warn' : 'bg-danger');
+
+  // Link an ecosystem to its DefiLlama chain page — the source of these TVL/DEX/fee
+  // metrics — using the exact slug we already store, so the link is always valid.
+  const ecoUrl = (e: { defillama_slug: string | null }): string | null => (e.defillama_slug ? `https://defillama.com/chain/${e.defillama_slug}` : null);
 </script>
 
 <header class="mb-4">
@@ -155,7 +159,9 @@
           <li class="lead-row">
             <span class="flex items-center gap-2.5 text-sm">
               <span class="rank-badge">{i + 1}</span>
-              <span class="font-medium text-body">{e.name}</span>
+              {#if ecoUrl(e)}
+                <a href={ecoUrl(e)} target="_blank" rel="noopener noreferrer" class="group inline-flex items-center gap-1 font-medium text-body hover:text-mint">{e.name}<ExternalLink class="h-2.5 w-2.5 text-muted transition group-hover:text-mint" /></a>
+              {:else}<span class="font-medium text-body">{e.name}</span>{/if}
             </span>
             <span class="pill {tonePill(e.tone)}">{e.signal}</span>
           </li>
@@ -176,7 +182,9 @@
           <li class="lead-row">
             <span class="flex items-center gap-2.5 text-sm">
               <span class="rank-badge">{i + 1}</span>
-              <span class="font-medium text-body">{e.name}</span>
+              {#if ecoUrl(e)}
+                <a href={ecoUrl(e)} target="_blank" rel="noopener noreferrer" class="group inline-flex items-center gap-1 font-medium text-body hover:text-mint">{e.name}<ExternalLink class="h-2.5 w-2.5 text-muted transition group-hover:text-mint" /></a>
+              {:else}<span class="font-medium text-body">{e.name}</span>{/if}
             </span>
             <span class="pill {tonePill(e.tone)}">{e.signal}</span>
           </li>
@@ -302,7 +310,11 @@
           {@const m = e.metrics}
           <tr class="border-b border-edge/60 last:border-0 hover:bg-panel-2/40">
             <td class="px-3 py-3 text-muted">{e.rank}</td>
-            <td class="px-3 py-3 font-medium text-strong">{e.name}</td>
+            <td class="px-3 py-3 font-medium text-strong">
+              {#if ecoUrl(e)}
+                <a href={ecoUrl(e)} target="_blank" rel="noopener noreferrer" class="group inline-flex items-center gap-1 hover:text-mint">{e.name}<ExternalLink class="h-3 w-3 text-muted transition group-hover:text-mint" /></a>
+              {:else}{e.name}{/if}
+            </td>
             <td class="px-3 py-3 font-semibold text-strong">{m?.strength_score ?? '—'}</td>
             <td class="px-3 py-3 text-soft">{fmtUsd(m?.tvl ?? null, { compact: true })}</td>
             <td class="px-3 py-3 {(m?.tvl_change_30d ?? 0) >= 0 ? 'text-mint' : 'text-danger'}">{fmtPct(m?.tvl_change_30d)}</td>
