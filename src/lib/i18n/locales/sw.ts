@@ -214,6 +214,30 @@ export const sw: Record<string, string> = {
   'landing.faq.6.q': 'Hii inatofautianaje na CoinGecko au DefiLlama?',
   'landing.faq.6.a':
     'Hizo hukupa namba ghafi. Pastatrade huzigeuza kuwa alama moja ya hatari, orodha za mzunguko na ishara za lugha rahisi ili uweze kuamua, si kuangalia tu.',
+  'landing.faq.7.q': 'Pastatrade101 ni nini?',
+  'landing.faq.7.a':
+    'Pastatrade101 ni jukwaa la akili ya soko la crypto. Hugeuza data ghafi ya soko kuwa ishara rahisi kusoma, ripoti na muktadha wa hatari — ili uelewe soko linafanya nini bila kusoma chati nyingi.',
+  'landing.faq.8.q': 'Jukwaa hili ni kwa ajili ya nani?',
+  'landing.faq.8.a':
+    'Kwa wanaoanza na wawekezaji wa crypto wanaotaka kuelewa hatari ya BTC, nguvu ya altcoin, mizunguko ya soko na mipango ya kutoka — bila kutumia masaa kuangalia chati. Kama unataka uwazi badala ya kelele, limejengwa kwa ajili yako.',
+  'landing.faq.9.q': 'Kuna tofauti gani kati ya Bure, Mid na Premium?',
+  'landing.faq.9.a':
+    'Bure hukupa muhtasari wa soko na ladha ya zana. Mid hufungua dashibodi za kina zaidi na muktadha wa macro. Premium hufungua kila kitu — ripoti kamili, Mkakati wa Kutoka, Rada ya Sakafu ya Alt/BTC, Rada ya Fursa za Mapema, vichujio vya kina na msaada wa moja kwa moja wa simu/WhatsApp. Angalia sehemu ya bei kwa maelezo kamili.',
+  'landing.faq.10.q': 'Napata nini na Premium?',
+  'landing.faq.10.a':
+    'Ripoti za Premium, dashibodi za kina, Rada ya Sakafu ya Alt/BTC, Mkakati wa Kutoka wenye Nguvu, Rada ya Fursa za Mapema, muktadha wa on-chain na macro — pamoja na msaada wa moja kwa moja wa simu/WhatsApp kukusaidia kusoma dashibodi na ripoti zako.',
+  'landing.faq.11.q': 'Je, jukwaa hukuambia hasa cha kununua au kuuza?',
+  'landing.faq.11.a':
+    'Hapana. Pastatrade hukupa utafiti, ishara za hatari na muktadha wa soko — kamwe si maagizo ya kununua au kuuza. Hukusaidia kufanya uamuzi wa utulivu na wenye taarifa zaidi, lakini uamuzi wa mwisho daima ni wako.',
+  'landing.faq.12.q': 'Ishara zina usahihi kiasi gani?',
+  'landing.faq.12.a':
+    'Ishara ni zana za utafiti za mtindo wa uwezekano, si dhamana. Zimeundwa kupunguza maamuzi ya kihisia na kukupa muundo — lakini crypto daima ina hatari, hivyo zitumie kama kigezo kimoja, si ahadi.',
+  'landing.faq.13.q': 'Naweza kupiga simu au kuuliza maswali baada ya kujiunga na Premium?',
+  'landing.faq.13.a':
+    'Ndiyo. Watumiaji wa Premium wanaweza kuuliza maswali moja kwa moja kwa simu au WhatsApp kupata msaada wa kuelewa dashibodi na ripoti. Tupigie 0752093014.',
+  'landing.faq.14.q': 'Mnakubali njia gani za malipo?',
+  'landing.faq.14.a':
+    'Unaweza kulipa kwa mobile money kupitia checkout ndani ya programu. Kama ungependa kupanga malipo kwa mkono, wasiliana nasi kwa 0752093014 na tutakusaidia kujiandaa.',
   // Landing — final CTA
   'landing.final.title': 'Acha kuitikia. Anza kusoma soko.',
   'landing.final.sub': 'Fungua akaunti ya bure na upate picha yako ya kwanza ya hatari na orodha ya mzunguko leo. Pandisha tu unapotaka arifa na maabara kamili.',

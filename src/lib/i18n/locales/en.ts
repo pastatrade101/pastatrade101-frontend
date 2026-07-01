@@ -213,6 +213,30 @@ export const en: Record<string, string> = {
   'landing.faq.6.q': 'How is this different from CoinGecko or DefiLlama?',
   'landing.faq.6.a':
     'Those give you raw numbers. Pastatrade turns them into a single risk score, rotation rankings and plain-language signals so you can decide, not just look.',
+  'landing.faq.7.q': 'What is Pastatrade101?',
+  'landing.faq.7.a':
+    'Pastatrade101 is a crypto market intelligence platform. It turns raw market data into easy-to-read signals, reports and risk context — so you understand what the market is doing without reading dozens of charts.',
+  'landing.faq.8.q': 'Who is this platform for?',
+  'landing.faq.8.a':
+    'Beginners and crypto investors who want to understand BTC risk, altcoin strength, market cycles and exit planning — without spending hours staring at charts. If you want clarity over noise, it is built for you.',
+  'landing.faq.9.q': "What's the difference between Free, Mid and Premium?",
+  'landing.faq.9.a':
+    'Free gives you the market overview and a taste of the tools. Mid unlocks the deeper dashboards and macro context. Premium unlocks everything — full reports, Exit Strategy, Alt/BTC Bottom Radar, Early Opportunity Radar, advanced filters and direct call/WhatsApp support. See the pricing section for the full breakdown.',
+  'landing.faq.10.q': 'What do I get with Premium?',
+  'landing.faq.10.a':
+    'Premium reports, the advanced dashboards, Alt/BTC Bottom Radar, Dynamic Exit Strategy, Early Opportunity Radar, on-chain and macro context — plus direct call/WhatsApp support to help you read your dashboard and reports.',
+  'landing.faq.11.q': 'Does the platform tell me exactly what to buy or sell?',
+  'landing.faq.11.a':
+    'No. Pastatrade gives you research, risk signals and market context — never buy or sell instructions. It helps you make a calmer, better-informed decision, but the final decision is always yours.',
+  'landing.faq.12.q': 'How accurate are the signals?',
+  'landing.faq.12.a':
+    'The signals are probability-style research tools, not guarantees. They are designed to reduce emotional, impulsive decisions and give you structure — but crypto is always risky, so use them as one input, not a promise.',
+  'landing.faq.13.q': 'Can I call or ask questions after joining Premium?',
+  'landing.faq.13.a':
+    'Yes. Premium users can ask questions directly via call or WhatsApp for help understanding the dashboard and reports. Reach us on 0752093014.',
+  'landing.faq.14.q': 'What payment methods do you accept?',
+  'landing.faq.14.a':
+    'You can pay with mobile money through the in-app checkout. If you would prefer to arrange payment manually, contact us on 0752093014 and we will help you get set up.',
   // Landing — final CTA
   'landing.final.title': 'Stop reacting. Start reading the market.',
   'landing.final.sub': 'Create a free account and get your first risk read and rotation ranking today. Upgrade only when you want alerts and the full labs.',

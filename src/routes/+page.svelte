@@ -99,13 +99,23 @@
     { icon: Repeat, tKey: 'landing.persona.2.t', bKey: 'landing.persona.2.b' },
     { icon: ShieldCheck, tKey: 'landing.persona.3.t', bKey: 'landing.persona.3.b' }
   ];
+  // Ordered as a funnel: what it is → who it's for → plans/value → trust →
+  // accuracy → support/payment → logistics/safety → differentiation.
   const faqs = [
-    { qKey: 'landing.faq.1.q', aKey: 'landing.faq.1.a' },
-    { qKey: 'landing.faq.2.q', aKey: 'landing.faq.2.a' },
-    { qKey: 'landing.faq.3.q', aKey: 'landing.faq.3.a' },
-    { qKey: 'landing.faq.4.q', aKey: 'landing.faq.4.a' },
-    { qKey: 'landing.faq.5.q', aKey: 'landing.faq.5.a' },
-    { qKey: 'landing.faq.6.q', aKey: 'landing.faq.6.a' }
+    { qKey: 'landing.faq.7.q', aKey: 'landing.faq.7.a' }, // What is Pastatrade101?
+    { qKey: 'landing.faq.8.q', aKey: 'landing.faq.8.a' }, // Who is it for?
+    { qKey: 'landing.faq.9.q', aKey: 'landing.faq.9.a' }, // Free vs Mid vs Premium
+    { qKey: 'landing.faq.10.q', aKey: 'landing.faq.10.a' }, // What do I get with Premium?
+    { qKey: 'landing.faq.2.q', aKey: 'landing.faq.2.a' }, // What do I get for free?
+    { qKey: 'landing.faq.11.q', aKey: 'landing.faq.11.a' }, // Does it tell me what to buy/sell?
+    { qKey: 'landing.faq.1.q', aKey: 'landing.faq.1.a' }, // Is this financial advice?
+    { qKey: 'landing.faq.12.q', aKey: 'landing.faq.12.a' }, // How accurate are the signals?
+    { qKey: 'landing.faq.13.q', aKey: 'landing.faq.13.a' }, // Can I call/ask questions?
+    { qKey: 'landing.faq.14.q', aKey: 'landing.faq.14.a' }, // Payment methods
+    { qKey: 'landing.faq.4.q', aKey: 'landing.faq.4.a' }, // How often is data updated?
+    { qKey: 'landing.faq.3.q', aKey: 'landing.faq.3.a' }, // Do you touch my funds/keys?
+    { qKey: 'landing.faq.5.q', aKey: 'landing.faq.5.a' }, // Cancel/downgrade?
+    { qKey: 'landing.faq.6.q', aKey: 'landing.faq.6.a' } // Different from CoinGecko/DefiLlama?
   ];
 
   // Base structured data + a FAQPage built from the FAQ section (rich-result eligible).
