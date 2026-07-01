@@ -1,10 +1,7 @@
 <script lang="ts">
-  import { Rocket, ExternalLink, Info, Search, AlertTriangle } from '@lucide/svelte';
+  import { Rocket, ExternalLink, Info, Search, AlertTriangle, Lock } from '@lucide/svelte';
   import { api } from '$lib/api';
-  import { membership, membershipReady, hasFeature } from '$lib/stores/membership';
-  import LockedFeature from '$lib/components/LockedFeature.svelte';
-
-  const canUse = $derived(hasFeature($membership, 'access_early_project_radar'));
+  import { membershipReady } from '$lib/stores/membership';
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   type Project = any;
@@ -13,6 +10,9 @@
   let loading = $state(true);
   let error = $state('');
   let started = $state(false);
+  let locked = $state(false); // free tier → single-card preview
+  let total = $state(0);
+  let requiredPlan = $state('Mid');
 
   let fClass = $state('');
   let fStatus = $state('');
@@ -30,8 +30,11 @@
       if (fClass) qs.set('classification', fClass);
       if (fStatus) qs.set('status', fStatus);
       if (search) qs.set('search', search);
-      const data = await api<{ items: Project[]; disclaimer: string }>(`/ico-projects${qs.toString() ? `?${qs}` : ''}`, { auth: true });
+      const data = await api<{ items: Project[]; disclaimer: string; locked?: boolean; total?: number; required_plan?: string }>(`/ico-projects${qs.toString() ? `?${qs}` : ''}`, { auth: true });
       items = data.items ?? [];
+      locked = !!data.locked;
+      total = data.total ?? items.length;
+      if (data.required_plan) requiredPlan = data.required_plan.charAt(0).toUpperCase() + data.required_plan.slice(1);
       if (data.disclaimer) disclaimer = data.disclaimer;
     } catch (e) {
       error = e instanceof Error ? e.message : 'Failed to load projects.';
@@ -42,10 +45,6 @@
   $effect(() => {
     if (!$membershipReady || started) return;
     started = true;
-    if (!canUse) {
-      loading = false;
-      return;
-    }
     void load();
   });
 
@@ -69,12 +68,6 @@
 
 {#if !$membershipReady || loading}
   <p class="text-sm text-muted">Loading early projects…</p>
-{:else if !canUse}
-  <LockedFeature
-    title="Early Project Radar is a Mid & Premium feature"
-    plan="Mid"
-    bullets={['Upcoming & active token projects with a 0–100 research score', 'Backers, raise, tokenomics, vesting and red-flag screening', 'Classified 🟢 Strong Watchlist · 🟡 Needs Research · 🔴 High Risk']}
-  />
 {:else if error}
   <div class="card border-danger/30 bg-danger/5 text-danger">{error}</div>
 {:else}
@@ -83,7 +76,8 @@
     <span>Score rates <span class="text-soft">backer strength, narrative, tokenomics, vesting, community, docs, timing</span> and red flags. A high score is not a recommendation — new tokens are highly risky.</span>
   </div>
 
-  <!-- Filters -->
+  <!-- Filters (hidden in the free preview) -->
+  {#if !locked}
   <div class="mb-3 flex flex-wrap items-center gap-2">
     <select bind:value={fClass} onchange={load} class="input-sm">
       <option value="">All classifications</option>
@@ -108,6 +102,7 @@
       <input bind:value={search} onkeydown={(e) => e.key === 'Enter' && load()} placeholder="Search project…" class="input-sm pl-7" />
     </div>
   </div>
+  {/if}
 
   {#if !shown.length}
     <div class="card text-center text-sm text-muted">{items.length ? 'No projects in this category.' : "No projects published yet. Once the team reviews and publishes candidates, they'll appear here."}</div>
@@ -172,6 +167,15 @@
           </div>
         </div>
       {/each}
+    </div>
+  {/if}
+
+  {#if locked}
+    <div class="mt-3 flex flex-col items-center gap-2 rounded-xl border border-accent/30 bg-accent/[0.06] px-4 py-6 text-center">
+      <Lock class="h-6 w-6 text-accent" />
+      <p class="text-sm font-semibold text-strong">{total > 1 ? `${total - 1}+ more early projects are locked` : 'Unlock the full Early Project Radar'}</p>
+      <p class="max-w-md text-xs text-muted">Upgrade to <span class="font-medium text-soft">{requiredPlan}</span> to see every scored project with backers, raise, tokenomics, vesting, rounds and red-flag screening — plus filters and search.</p>
+      <a href="/pricing" class="btn-primary mt-1 text-sm">Upgrade to {requiredPlan}</a>
     </div>
   {/if}
 
