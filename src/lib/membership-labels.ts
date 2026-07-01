@@ -35,7 +35,8 @@ export const LIMIT_LABELS: Record<string, string> = {
   max_saved_reports: 'Saved reports',
   max_compared_coins: 'Compared coins',
   max_history_years: 'Historical data (years)',
-  data_refresh_minutes: 'Data delay (minutes)'
+  data_refresh_minutes: 'Data delay (minutes)',
+  max_early_project_preview: 'Early Project preview cards (locked plans)'
 };
 
 // Display order for feature lists on pricing/account cards.
