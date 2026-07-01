@@ -19,6 +19,7 @@ export const sw: Record<string, string> = {
   'app.nav.risk': 'Hatari',
   'app.nav.social': 'Jamii',
   'app.nav.derivatives': 'Hatari ya Leverage',
+  'app.nav.macro': 'Mwelekeo wa Macro',
   'app.nav.charts': 'Chati',
   'app.nav.btc': 'Mzunguko wa Bitcoin',
   'app.nav.cyclelab': 'Maabara ya Mzunguko',

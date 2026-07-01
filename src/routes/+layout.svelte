@@ -4,7 +4,7 @@
   import { fly } from 'svelte/transition';
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
-  import { ChevronDown, CreditCard, DoorOpen, FileText, Flame, Languages, LayoutDashboard, LogIn, LogOut, Menu, Moon, Radar, Shield, Spline, Sun, Tag, X } from '@lucide/svelte';
+  import { ChevronDown, CreditCard, DoorOpen, FileText, Flame, Languages, LayoutDashboard, LogIn, LogOut, Mail, Menu, Moon, Phone, Radar, Shield, Spline, Sun, Tag, X } from '@lucide/svelte';
   import BrandMark from '$lib/components/BrandMark.svelte';
   import { authReady, initAuth, logout, user } from '$lib/stores/auth';
   import { clearMembership, loadMembership, membership } from '$lib/stores/membership';
@@ -192,6 +192,7 @@
       <a href="/insights" class="transition hover:text-soft">Insights</a>
       <a href="/pricing" class="transition hover:text-soft">{$t('nav.pricing')}</a>
       <a href="/journey" class="transition hover:text-soft">My Journey</a>
+      <a href="/methodology" class="transition hover:text-soft">Methodology</a>
       <a href="https://www.youtube.com/@pastatrade101" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 transition hover:text-soft" aria-label="Pastatrade on YouTube">
         <svg viewBox="0 0 24 24" fill="currentColor" class="h-3.5 w-3.5" aria-hidden="true"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2 31 31 0 0 0 0 12a31 31 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1A31 31 0 0 0 24 12a31 31 0 0 0-.5-5.8zM9.5 15.5v-7l6.3 3.5-6.3 3.5z"/></svg>
         YouTube
@@ -205,6 +206,14 @@
         X
       </a>
     </nav>
+    <div class="mb-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
+      <a href="tel:+255752093014" class="inline-flex items-center gap-1 transition hover:text-soft" aria-label="Call Pastatrade">
+        <Phone class="h-3.5 w-3.5" /> 0752 093 014
+      </a>
+      <a href="mailto:pastatrade101@gmail.com" class="inline-flex items-center gap-1 transition hover:text-soft" aria-label="Email Pastatrade">
+        <Mail class="h-3.5 w-3.5" /> pastatrade101@gmail.com
+      </a>
+    </div>
     {$t('footer.tagline')}
   </footer>
 </div>

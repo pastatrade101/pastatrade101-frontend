@@ -61,3 +61,20 @@ export async function apiUpload<T = unknown>(path: string, text: string, content
 
   return payload.data as T;
 }
+
+// POST raw binary (e.g. an image file). Sends the blob as-is with its own
+// content-type. Always authenticated.
+export async function apiUploadBinary<T = unknown>(path: string, blob: Blob): Promise<T> {
+  const token = getToken();
+  const headers: Record<string, string> = { 'Content-Type': blob.type || 'application/octet-stream' };
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  const response = await fetch(`${API_BASE}${path}`, { method: 'POST', headers, body: blob });
+  const payload = await response.json().catch(() => ({}));
+
+  if (!response.ok || payload.success === false) {
+    throw new ApiError(payload.message ?? `Request failed (${response.status})`, response.status);
+  }
+
+  return payload.data as T;
+}

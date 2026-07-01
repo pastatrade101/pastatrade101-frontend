@@ -3,7 +3,7 @@
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
   import { ArrowLeft, Copy, Check, Download } from '@lucide/svelte';
-  import { api } from '$lib/api';
+  import { api, apiUploadBinary } from '$lib/api';
   import { openReportPdf } from '$lib/reports/print';
   import { authReady, user } from '$lib/stores/auth';
   import ReportStatusBadge from '$lib/components/ReportStatusBadge.svelte';
@@ -88,6 +88,35 @@
       error = e instanceof Error ? e.message : 'Save failed.';
     } finally {
       busy = '';
+    }
+  };
+
+  const uploadCover = async (e: Event) => {
+    const input = e.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file || !report) return;
+    if (!['image/png', 'image/jpeg', 'image/webp', 'image/gif'].includes(file.type)) {
+      error = 'Unsupported image type. Use PNG, JPG, WebP or GIF.';
+      input.value = '';
+      return;
+    }
+    if (file.size > 6 * 1024 * 1024) {
+      error = 'Image is too large (max 6MB).';
+      input.value = '';
+      return;
+    }
+    busy = 'cover';
+    message = '';
+    error = '';
+    try {
+      const { url } = await apiUploadBinary<{ url: string }>('/admin/reports/cover-upload', file);
+      report.cover_image_url = url;
+      message = 'Cover image uploaded — remember to Save.';
+    } catch (err) {
+      error = err instanceof Error ? err.message : 'Cover upload failed.';
+    } finally {
+      busy = '';
+      input.value = '';
     }
   };
 
@@ -177,6 +206,16 @@
     <label class="block text-xs text-muted">Cover image URL (optional)
       <input class="mt-1 w-full rounded-lg border border-edge bg-panel-2 px-3 py-2 text-sm text-soft" placeholder="https://…/cover.jpg" bind:value={report.cover_image_url} />
     </label>
+    <div class="flex flex-wrap items-center gap-3">
+      <label class="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-edge bg-panel-2 px-3 py-2 text-xs text-soft transition hover:bg-panel-2/60">
+        <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" class="hidden" onchange={uploadCover} disabled={busy === 'cover'} />
+        {busy === 'cover' ? 'Uploading…' : 'Upload from file'}
+      </label>
+      <span class="text-[11px] text-muted">…or paste a URL above. PNG/JPG/WebP/GIF, max 6MB.</span>
+      {#if report.cover_image_url}
+        <button type="button" class="text-[11px] text-danger hover:underline" onclick={() => report && (report.cover_image_url = null)}>Remove</button>
+      {/if}
+    </div>
     {#if report.cover_image_url}
       <img src={report.cover_image_url} alt="cover preview" class="max-h-48 w-full rounded-lg border border-edge object-cover" />
     {/if}

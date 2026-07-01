@@ -98,17 +98,26 @@
 {#if error}<div class="card mb-4 border-danger/30 bg-danger/5 text-danger">{error}</div>{/if}
 
 <div class="card mb-6 flex flex-wrap gap-3">
-  <button class="btn-primary" disabled={running} title="Runs every stage: coins, BTC, global, ecosystems, Lab price series, social, on-chain (incl. supply P/L) and the risk model" onclick={() => runSync('/admin/sync', 'Full sync')}>
+  <button class="btn-primary" disabled={running} title="Runs every stage in order: macro regime, coins, BTC + global, ecosystems, derivatives, social, on-chain (incl. supply P/L), risk model, Early Opportunity, Alt/BTC Bottom, Lab price series and Exit Strategy" onclick={() => runSync('/admin/sync', 'Full sync')}>
     <RefreshCw class="h-4 w-4 {running ? 'animate-spin' : ''}" /> Run full sync
+  </button>
+  <button class="btn-ghost" disabled={running} onclick={() => runSync('/admin/sync/macro-regime', 'Macro regime sync')}>
+    Sync macro regime (Twelve Data)
   </button>
   <button class="btn-ghost" disabled={running} onclick={() => runSync('/admin/sync/coingecko', 'CoinGecko sync')}>
     Sync coins (CoinGecko)
   </button>
+  <button class="btn-ghost" disabled={running} onclick={() => runSync('/admin/sync/market', 'BTC + global market sync')}>
+    Sync BTC + global market
+  </button>
   <button class="btn-ghost" disabled={running} onclick={() => runSync('/admin/sync/defillama', 'DefiLlama sync')}>
     Sync ecosystems (DefiLlama)
   </button>
-  <button class="btn-ghost" disabled={running} onclick={() => runSync('/admin/sync/risk', 'Risk model sync')}>
-    Rebuild risk model
+  <button class="btn-ghost" disabled={running} onclick={() => runSync('/admin/derivatives/sync', 'Derivatives sync')}>
+    Sync derivatives (Bitget)
+  </button>
+  <button class="btn-ghost" disabled={running} onclick={() => runSync('/admin/sync/social-metrics', 'Social metrics sync')}>
+    Sync social metrics (Trends/Wiki/F&amp;G)
   </button>
   <button class="btn-ghost" disabled={running} onclick={() => runSync('/admin/sync/onchain', 'On-chain metrics sync')}>
     Sync on-chain metrics (BGeometrics)
@@ -116,17 +125,26 @@
   <button class="btn-ghost" disabled={running} onclick={() => runSync('/admin/sync/onchain-supply', 'Supply profit/loss sync')}>
     Sync supply profit/loss only (2 req)
   </button>
+  <button class="btn-ghost" disabled={running} onclick={() => runSync('/admin/sync/risk', 'Risk model sync')}>
+    Rebuild risk model
+  </button>
+  <button class="btn-ghost" disabled={running} onclick={() => runSync('/admin/early-opportunity/sync', 'Early Opportunity Radar sync')}>
+    Sync Early Opportunity Radar
+  </button>
+  <button class="btn-ghost" disabled={running} onclick={() => runSync('/admin/alt-btc-bottom/sync', 'Alt/BTC Bottom Radar sync')}>
+    Sync Alt/BTC Bottom Radar
+  </button>
   <button class="btn-ghost" disabled={running} onclick={() => runSync('/admin/sync/price-series', 'Lab price-series sync')}>
     Sync Lab price series (top 100)
   </button>
-  <button class="btn-ghost" disabled={running} onclick={() => runSync('/admin/sync/social-metrics', 'Social metrics sync')}>
-    Sync social metrics (Trends/Wiki/F&amp;G)
+  <button class="btn-ghost" disabled={running} onclick={() => runSync('/admin/exit-strategy/sync', 'Exit Strategy sync')}>
+    Sync Exit Strategy
   </button>
 </div>
 <p class="mb-4 text-xs text-muted">
-  <span class="font-medium text-soft">“Run full sync”</span> runs the entire pipeline in order — coins, BTC, global, ecosystems, Lab price series,
-  social, on-chain (incl. supply profit/loss) and the risk model. Each stage is independent, so one failure won't stop the rest;
-  it's heavy (several minutes on free tiers). The individual buttons re-run a single stage.
+  <span class="font-medium text-soft">“Run full sync”</span> runs the entire pipeline in order — macro regime, coins, BTC + global, ecosystems,
+  derivatives, social, on-chain (incl. supply profit/loss), risk model, Early Opportunity Radar, Alt/BTC Bottom Radar, Lab price series and Exit Strategy.
+  Each stage is independent, so one failure won't stop the rest; it's heavy (several minutes on free tiers). The individual buttons re-run a single stage.
   <br />
   “Sync Lab price series” prebakes BTC + top-100 daily history so Charts, Cycle Lab and Alt vs BTC read saved data
   (no live CoinGecko calls from users). It’s heavy — ~100 throttled calls, a few minutes. Run it on a schedule, or via

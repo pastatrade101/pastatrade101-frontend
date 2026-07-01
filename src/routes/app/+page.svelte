@@ -60,7 +60,8 @@
     exit_strategy: DoorOpen,
     ecosystem_rotation: Layers,
     stablecoin_liquidity: CircleDollarSign,
-    derivatives: Flame
+    derivatives: Flame,
+    macro_regime: Globe
   };
 
   const metricDefs = $derived(
@@ -126,7 +127,7 @@
 {#if loading}
   <div class="space-y-3">
     <div class="card h-28 animate-pulse"></div>
-    <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">{#each Array(6) as _}<div class="card h-20 animate-pulse"></div>{/each}</div>
+    <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">{#each Array(8) as _}<div class="card h-20 animate-pulse"></div>{/each}</div>
     <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">{#each Array(8) as _}<div class="card h-20 animate-pulse"></div>{/each}</div>
   </div>
 {:else if error}
@@ -172,7 +173,7 @@
 
   <!-- ── Signal row ── -->
   {#if data.signals}
-    <div class="mb-4 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
+    <div class="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
       {#each Object.values(data.signals) as sig}
         {@const s = sig as { key: string; name: string; label: string; value: string | null; meaning: string; tone: string; link: string }}
         {@const Icon = SIGNAL_ICON[s.key] ?? Activity}
@@ -190,7 +191,7 @@
     </div>
   {:else}
     <div class="relative mb-4">
-      <div class="grid grid-cols-2 gap-3 blur-[3px] md:grid-cols-3 lg:grid-cols-6" aria-hidden="true">
+      <div class="grid grid-cols-2 gap-3 blur-[3px] sm:grid-cols-3 lg:grid-cols-4" aria-hidden="true">
         {#each SAMPLE_SIGNALS as s}
           <div class="card border-l-4 {toneBorder[s.tone]} p-3">
             <span class="text-[11px] font-semibold uppercase tracking-wide text-muted">{s.name}</span>
