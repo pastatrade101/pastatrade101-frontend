@@ -129,6 +129,7 @@
               <div class="mt-1 flex flex-wrap items-center gap-1.5">
                 {#if p.category}<span class="pill bg-edge text-muted">{p.category}</span>{/if}
                 <span class="pill {statusPill(p.sale_status)}">{p.sale_status}</span>
+                {#if p.source_rank}<span class="pill bg-edge text-muted">#{p.source_rank}</span>{/if}
               </div>
               </div>
             </div>
@@ -142,6 +143,19 @@
             <div class="text-xs text-muted">
               {#if p.raise_amount_text}<span>Raised <span class="font-medium text-soft">{p.raise_amount_text}</span></span>{/if}
               {#if p.backers?.length}<span class="block">Backers: <span class="text-soft">{p.backers.slice(0, 3).join(', ')}</span>{p.backers.length > 3 ? ` +${p.backers.length - 3}` : ''}</span>{/if}
+            </div>
+          {/if}
+
+          {#if p.rounds?.length}
+            <div class="space-y-0.5 rounded-lg bg-panel-2 px-2.5 py-1.5 text-[11px]">
+              {#each p.rounds as r}
+                <div class="flex items-center justify-between gap-2">
+                  <span class="truncate text-soft">{r.name}{#if r.type} · <span class="text-muted">{r.type}</span>{/if}</span>
+                  <span class="shrink-0 {r.status === 'Active' ? 'font-medium text-mint' : 'text-muted'}">
+                    {#if r.status}{r.status}{r.when ? ` · ${r.when}` : ''}{:else}{r.amount || r.when || ''}{/if}
+                  </span>
+                </div>
+              {/each}
             </div>
           {/if}
 
