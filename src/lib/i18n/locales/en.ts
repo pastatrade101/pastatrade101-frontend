@@ -26,6 +26,7 @@ export const en: Record<string, string> = {
   'app.nav.altbtcbottom': 'Alt/BTC Bottom',
   'app.nav.ecosystems': 'Ecosystems',
   'app.nav.radar': 'Opportunity Radar',
+  'app.nav.projectradar': 'Early Projects',
   'app.nav.watchlist': 'Watchlist',
   'app.nav.exit': 'Exit Strategy',
   'app.nav.logreg': 'Log Regression',

@@ -27,6 +27,7 @@ export const sw: Record<string, string> = {
   'app.nav.altbtcbottom': 'Sakafu ya Alt/BTC',
   'app.nav.ecosystems': 'Mifumo Ikolojia',
   'app.nav.radar': 'Rada ya Fursa',
+  'app.nav.projectradar': 'Miradi ya Mapema',
   'app.nav.watchlist': 'Orodha ya Kufuatilia',
   'app.nav.exit': 'Mkakati wa Kutoka',
   'app.nav.logreg': 'Log Regression',
