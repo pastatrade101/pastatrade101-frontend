@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
-  import { RefreshCw, ExternalLink, Download, Check, X, Eye, EyeOff } from '@lucide/svelte';
+  import { RefreshCw, ExternalLink, Download, Check, X, EyeOff } from '@lucide/svelte';
   import { api, getToken } from '$lib/api';
   import { authReady, user } from '$lib/stores/auth';
 
@@ -239,12 +239,10 @@
             </td>
             <td class="px-3 py-3">
               <div class="flex flex-wrap gap-1.5">
-                <button class="btn-ghost px-2 py-1 text-[11px]" title="Approve" onclick={() => review(it, { admin_status: 'approved' })}><Check class="h-3 w-3" /></button>
+                <button class="btn-ghost px-2 py-1 text-[11px]" title="Approve &amp; publish (make live)" onclick={() => review(it, { admin_status: 'approved', is_published: true })}><Check class="h-3 w-3" /></button>
                 <button class="btn-ghost px-2 py-1 text-[11px]" title="Reject" onclick={() => review(it, { admin_status: 'rejected' })}><X class="h-3 w-3" /></button>
                 {#if it.is_published}
-                  <button class="btn-ghost px-2 py-1 text-[11px]" title="Unpublish" onclick={() => review(it, { is_published: false })}><EyeOff class="h-3 w-3" /></button>
-                {:else}
-                  <button class="btn-ghost px-2 py-1 text-[11px]" title="Publish (approves too)" onclick={() => review(it, { admin_status: 'approved', is_published: true })}><Eye class="h-3 w-3" /></button>
+                  <button class="btn-ghost px-2 py-1 text-[11px]" title="Unpublish (hide from users)" onclick={() => review(it, { is_published: false })}><EyeOff class="h-3 w-3" /></button>
                 {/if}
               </div>
             </td>
