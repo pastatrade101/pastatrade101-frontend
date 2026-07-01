@@ -213,7 +213,10 @@
           {@const meta = CLASS_META[it.classification] ?? { light: '', label: it.classification ?? '—', cls: 'text-muted' }}
           <tr class="border-b border-edge/60 align-top last:border-0 hover:bg-panel-2/40">
             <td class="px-3 py-3">
-              <div class="font-medium text-strong">{it.project_name}{#if it.token_symbol}<span class="ml-1 text-xs text-muted">{it.token_symbol}</span>{/if}</div>
+              <div class="flex items-center gap-2 font-medium text-strong">
+                {#if it.image_url}<img src={it.image_url} alt="" loading="lazy" class="h-6 w-6 shrink-0 rounded-full border border-edge bg-panel-2 object-cover" />{/if}
+                <span>{it.project_name}{#if it.token_symbol}<span class="ml-1 text-xs text-muted">{it.token_symbol}</span>{/if}</span>
+              </div>
               <div class="mt-0.5 flex flex-wrap gap-2 text-[11px] text-muted">
                 {#if it.website}<a href={it.website} target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-0.5 hover:text-mint">site<ExternalLink class="h-2.5 w-2.5" /></a>{/if}
                 {#if it.whitepaper_url}<a href={it.whitepaper_url} target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-0.5 hover:text-mint">docs<ExternalLink class="h-2.5 w-2.5" /></a>{/if}

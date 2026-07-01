@@ -107,7 +107,11 @@
         {@const m = meta(p.classification)}
         <div class="card flex flex-col gap-2 p-4">
           <div class="flex items-start justify-between gap-2">
-            <div class="min-w-0">
+            <div class="flex min-w-0 items-start gap-2.5">
+              {#if p.image_url}
+                <img src={p.image_url} alt="" loading="lazy" class="mt-0.5 h-8 w-8 shrink-0 rounded-full border border-edge bg-panel-2 object-cover" />
+              {/if}
+              <div class="min-w-0">
               <p class="flex items-center gap-1.5 font-semibold text-strong">
                 {p.project_name}{#if p.token_symbol}<span class="text-xs text-muted">{p.token_symbol}</span>{/if}
                 {#if p.source_url}<a href={p.source_url} target="_blank" rel="noopener noreferrer" class="text-muted hover:text-mint"><ExternalLink class="h-3 w-3" /></a>{/if}
@@ -115,6 +119,7 @@
               <div class="mt-1 flex flex-wrap items-center gap-1.5">
                 {#if p.category}<span class="pill bg-edge text-muted">{p.category}</span>{/if}
                 <span class="pill {statusPill(p.sale_status)}">{p.sale_status}</span>
+              </div>
               </div>
             </div>
             <div class="shrink-0 text-right">
