@@ -17,6 +17,10 @@
   let fClass = $state('');
   let fStatus = $state('');
   let search = $state('');
+  let category = $state(''); // client-side filter over loaded items (ICO Drops-style)
+
+  const categories = $derived([...new Set(items.map((p) => p.category).filter(Boolean))].sort());
+  const shown = $derived(category ? items.filter((p) => p.category === category) : items);
 
   const load = async () => {
     loading = true;
@@ -93,17 +97,23 @@
       <option value="active">Active</option>
       <option value="ended">Ended</option>
     </select>
+    {#if categories.length}
+      <select bind:value={category} class="input-sm">
+        <option value="">All categories</option>
+        {#each categories as c}<option value={c}>{c}</option>{/each}
+      </select>
+    {/if}
     <div class="relative">
       <Search class="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted" />
       <input bind:value={search} onkeydown={(e) => e.key === 'Enter' && load()} placeholder="Search project…" class="input-sm pl-7" />
     </div>
   </div>
 
-  {#if !items.length}
-    <div class="card text-center text-sm text-muted">No projects published yet. Once the team reviews and publishes candidates, they'll appear here.</div>
+  {#if !shown.length}
+    <div class="card text-center text-sm text-muted">{items.length ? 'No projects in this category.' : "No projects published yet. Once the team reviews and publishes candidates, they'll appear here."}</div>
   {:else}
     <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-      {#each items as p (p.id)}
+      {#each shown as p (p.id)}
         {@const m = meta(p.classification)}
         <div class="card flex flex-col gap-2 p-4">
           <div class="flex items-start justify-between gap-2">
