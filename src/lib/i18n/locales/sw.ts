@@ -28,6 +28,7 @@ export const sw: Record<string, string> = {
   'app.nav.ecosystems': 'Mifumo Ikolojia',
   'app.nav.radar': 'Rada ya Fursa',
   'app.nav.projectradar': 'Miradi ya Mapema',
+  'app.nav.tokenradar': 'Rada ya Token',
   'app.nav.watchlist': 'Orodha ya Kufuatilia',
   'app.nav.exit': 'Mkakati wa Kutoka',
   'app.nav.logreg': 'Log Regression',

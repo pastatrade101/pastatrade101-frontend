@@ -138,6 +138,7 @@
     Sync ICO / Early Projects
   </button>
   <a class="btn-ghost" href="/admin/ico-intelligence">Review ICO projects →</a>
+  <a class="btn-ghost" href="/admin/token-radar">Token Radar stats →</a>
   <button class="btn-ghost" disabled={running} onclick={() => runSync('/admin/sync/price-series', 'Lab price-series sync')}>
     Sync Lab price series (top 100)
   </button>

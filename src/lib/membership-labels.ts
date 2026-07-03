@@ -25,6 +25,7 @@ export const FEATURE_LABELS: Record<string, string> = {
   access_early_opportunity_radar: 'Early Opportunity Radar',
   access_alt_btc_bottom_radar: 'Alt/BTC Bottom Radar',
   access_early_project_radar: 'Early Project Radar (ICO intelligence)',
+  access_token_radar: 'Token Position Radar',
   access_export_reports: 'Export / share reports'
 };
 
@@ -36,7 +37,8 @@ export const LIMIT_LABELS: Record<string, string> = {
   max_compared_coins: 'Compared coins',
   max_history_years: 'Historical data (years)',
   data_refresh_minutes: 'Data delay (minutes)',
-  max_early_project_preview: 'Early Project preview cards (locked plans)'
+  max_early_project_preview: 'Early Project preview cards (locked plans)',
+  max_token_scans_daily: 'Token Radar scans / day'
 };
 
 // Display order for feature lists on pricing/account cards.
