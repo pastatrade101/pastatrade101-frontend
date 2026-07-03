@@ -612,12 +612,22 @@
       <div in:fly={{ y: 18, duration: 450, delay: 740 }} class={PREMIUM_CARD}>
         <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
           <p class="stat-label flex items-center gap-1.5"><Timer class="h-3.5 w-3.5 text-accent" />Market Timing Context</p>
-          <div class="flex items-center gap-2 text-xs">
+          <div class="flex flex-wrap items-center gap-2 text-xs">
+            {#if report.market_regime}
+              <span class="pill {report.market_regime.score >= 60 ? 'bg-mint/15 text-mint' : report.market_regime.score >= 45 ? 'bg-warn/15 text-warn' : 'bg-danger/15 text-danger'}">{report.market_regime.label} · {report.market_regime.score}/100</span>
+            {/if}
             <span class="pill bg-panel-2 text-soft">Timing {report.scores.timing ?? '—'}/100</span>
             <span class="pill bg-panel-2 {textCls(state3(report.scores.momentum))}">Momentum {interp('Momentum', report.scores.momentum)}</span>
           </div>
         </div>
         <p class="text-sm leading-relaxed text-soft">{report.timing_view}</p>
+        {#if report.market_regime?.warnings?.length}
+          <ul class="mt-2 space-y-1 border-t border-edge/60 pt-2 text-xs text-soft">
+            {#each report.market_regime.warnings as w}
+              <li class="flex gap-1.5"><span class={sevIcon(w.severity)}>⚠</span><span><span class="font-medium {sevIcon(w.severity)}">{w.label}:</span> {w.message}</span></li>
+            {/each}
+          </ul>
+        {/if}
       </div>
     {/if}
 
