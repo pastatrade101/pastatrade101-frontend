@@ -247,15 +247,17 @@
 {/snippet}
 
 {#if $authReady && $user}
-  <!-- Desktop: fixed-height shell under the header — sidebar and content are two
-       INDEPENDENT scroll areas (each scrolls itself, the page never scrolls).
-       The sidebar collapses to a 72px icons-only rail via the header toggle. -->
-  <div class="lg:grid lg:h-[calc(100vh-61px)] lg:overflow-hidden {$sidebarCollapsed ? 'lg:grid-cols-[72px_1fr]' : 'lg:grid-cols-[272px_1fr]'}">
-    <aside class="hidden lg:block lg:h-full lg:overflow-y-auto lg:overscroll-contain lg:border-r lg:border-edge lg:bg-panel {$sidebarCollapsed ? 'lg:p-2 lg:pt-4' : 'lg:p-4'}">
+  <!-- Desktop: the shell fills the remaining viewport exactly (parent main is a
+       min-h-0 flex column inside an h-screen wrapper — no hardcoded header px, so
+       the panes can never be taller than the space they have). Sidebar and content
+       are two INDEPENDENT scroll areas; overscroll-none stops the elastic bounce
+       from showing blank space past the end of the content. -->
+  <div class="lg:grid lg:min-h-0 lg:flex-1 lg:overflow-hidden {$sidebarCollapsed ? 'lg:grid-cols-[72px_1fr]' : 'lg:grid-cols-[272px_1fr]'}">
+    <aside class="hidden lg:block lg:h-full lg:min-h-0 lg:overflow-y-auto lg:overscroll-none lg:border-r lg:border-edge lg:bg-panel {$sidebarCollapsed ? 'lg:p-2 lg:pt-4' : 'lg:p-4'}">
       {@render sidebarContent($sidebarCollapsed)}
     </aside>
 
-    <div class="min-w-0 px-4 py-6 lg:h-full lg:overflow-y-auto lg:overscroll-contain lg:px-8">
+    <div class="min-w-0 px-4 py-6 lg:h-full lg:min-h-0 lg:overflow-y-auto lg:overscroll-none lg:px-8">
       {@render children()}
     </div>
   </div>

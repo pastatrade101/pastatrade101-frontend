@@ -42,7 +42,8 @@
   const initial = $derived(($user?.name || $user?.email || '?').trim().charAt(0).toUpperCase());
 </script>
 
-<div class="flex min-h-screen flex-col">
+<!-- App desktop: exact-viewport shell (no body scroll) so the panes own all scrolling. -->
+<div class="flex min-h-screen flex-col {onApp && $user ? 'lg:h-screen lg:overflow-hidden' : ''}">
   <header class="sticky top-0 z-20 border-b border-edge bg-ink/80 backdrop-blur">
     <!-- App pages: full-width bar so the brand aligns with the left-edge sidebar.
          Marketing pages keep the centered container. -->
@@ -196,7 +197,7 @@
 
   <!-- App routes get a full-width shell (the sidebar hugs the left edge and the
        content pads itself); marketing pages keep the centered container. -->
-  <main class={onApp && $user ? 'w-full flex-1' : 'mx-auto w-full max-w-[1440px] flex-1 px-4 py-6 lg:px-8'}>
+  <main class={onApp && $user ? 'flex w-full flex-1 flex-col lg:min-h-0' : 'mx-auto w-full max-w-[1440px] flex-1 px-4 py-6 lg:px-8'}>
     {@render children()}
   </main>
 
