@@ -324,9 +324,12 @@
             <ul class="space-y-1.5">
               {#each ex.dexListings as l}
                 <li class="flex items-center justify-between gap-2 rounded-lg bg-panel-2 px-2.5 py-1.5 text-xs">
-                  <div class="min-w-0">
-                    <p class="truncate font-medium text-soft">{l.exchangeName} <span class="text-muted">{l.pair}</span>{#if l.url}<a href={l.url} target="_blank" rel="noopener noreferrer" class="ml-1 inline-flex text-muted hover:text-mint"><ExternalLink class="h-3 w-3" /></a>{/if}</p>
-                    <p class="text-[10px] text-muted">Source: {l.source}</p>
+                  <div class="flex min-w-0 items-center gap-2">
+                    {#if l.logoUrl}<img src={l.logoUrl} alt="" loading="lazy" class="h-5 w-5 shrink-0 rounded-full border border-edge bg-panel object-cover" onerror={(e) => ((e.currentTarget as HTMLImageElement).style.display = 'none')} />{/if}
+                    <div class="min-w-0">
+                      <p class="truncate font-medium text-soft">{l.exchangeName} <span class="text-muted">{l.pair}</span>{#if l.url}<a href={l.url} target="_blank" rel="noopener noreferrer" class="ml-1 inline-flex text-muted hover:text-mint"><ExternalLink class="h-3 w-3" /></a>{/if}</p>
+                      <p class="text-[10px] text-muted">Source: {l.source}</p>
+                    </div>
                   </div>
                   <div class="shrink-0 text-right"><div class="text-soft">Vol {fmtUsd(l.volume24h)}</div><div class="text-muted">Liq {fmtUsd(l.liquidityUsd)}</div></div>
                 </li>
@@ -340,9 +343,12 @@
             <ul class="space-y-1.5">
               {#each ex.cexListings as l}
                 <li class="flex items-center justify-between gap-2 rounded-lg bg-panel-2 px-2.5 py-1.5 text-xs">
-                  <div class="min-w-0">
-                    <p class="truncate font-medium text-soft"><span class="{trustDot(l.trustScore)}">●</span> {l.exchangeName} <span class="text-muted">{l.pair}</span>{#if l.url}<a href={l.url} target="_blank" rel="noopener noreferrer" class="ml-1 inline-flex text-muted hover:text-mint"><ExternalLink class="h-3 w-3" /></a>{/if}</p>
-                    <p class="text-[10px] text-muted">Source: {l.source}{l.trustScore ? ` · trust ${l.trustScore}` : ''}</p>
+                  <div class="flex min-w-0 items-center gap-2">
+                    {#if l.logoUrl}<img src={l.logoUrl} alt="" loading="lazy" class="h-5 w-5 shrink-0 rounded-full border border-edge bg-panel object-cover" onerror={(e) => ((e.currentTarget as HTMLImageElement).style.display = 'none')} />{:else}<span class="{trustDot(l.trustScore)}">●</span>{/if}
+                    <div class="min-w-0">
+                      <p class="truncate font-medium text-soft">{l.exchangeName} <span class="text-muted">{l.pair}</span>{#if l.url}<a href={l.url} target="_blank" rel="noopener noreferrer" class="ml-1 inline-flex text-muted hover:text-mint"><ExternalLink class="h-3 w-3" /></a>{/if}</p>
+                      <p class="text-[10px] text-muted">Source: {l.source}{l.trustScore ? ` · trust ${l.trustScore}` : ''}</p>
+                    </div>
                   </div>
                   <div class="shrink-0 text-right text-soft">Vol {fmtUsd(l.volume24h)}</div>
                 </li>
