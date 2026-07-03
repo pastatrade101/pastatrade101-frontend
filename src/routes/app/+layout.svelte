@@ -31,15 +31,28 @@
     }
   });
 
-  // Lock the page scroll while the mobile drawer is open — otherwise the app
-  // behind the menu keeps scrolling (and iOS rubber-banding drags it around).
+  // Lock the page scroll while the mobile drawer is open. iOS-safe technique:
+  // fix the body at its current scroll offset (plain overflow-hidden makes the
+  // browser drop the scroll position → page jumps to top / shows blank space),
+  // then restore the exact position when the drawer closes.
   $effect(() => {
-    const lock = $sidebarOpen;
-    document.documentElement.classList.toggle('overflow-hidden', lock);
-    document.body.classList.toggle('overflow-hidden', lock);
+    if (!$sidebarOpen) return;
+    const y = window.scrollY;
+    const b = document.body;
+    b.style.position = 'fixed';
+    b.style.top = `-${y}px`;
+    b.style.left = '0';
+    b.style.right = '0';
+    b.style.width = '100%';
+    b.style.overflow = 'hidden';
     return () => {
-      document.documentElement.classList.remove('overflow-hidden');
-      document.body.classList.remove('overflow-hidden');
+      b.style.position = '';
+      b.style.top = '';
+      b.style.left = '';
+      b.style.right = '';
+      b.style.width = '';
+      b.style.overflow = '';
+      window.scrollTo(0, y);
     };
   });
 
