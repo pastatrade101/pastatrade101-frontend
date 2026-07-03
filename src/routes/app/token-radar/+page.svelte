@@ -89,7 +89,9 @@
       });
       if (d.status === 'completed') {
         report = d.report;
-        allowance = allowance ? { ...allowance, used: allowance.used + (report.cached ? 0 : 1), remaining: allowance.remaining == null ? null : Math.max(0, allowance.remaining - (report.cached ? 0 : 1)) } : allowance;
+        // Quota counts distinct coins/day (cached hits of a new coin consume too)
+        // — refresh the allowance from the server instead of guessing locally.
+        void api<{ allowance: typeof allowance }>('/token-radar/chains', { auth: true }).then((r) => (allowance = r.allowance)).catch(() => {});
       } else if (d.status === 'matches') {
         matches = d.matches ?? [];
       } else if (d.status === 'chains') {
