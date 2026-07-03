@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { Crosshair, Search, ExternalLink, AlertTriangle, Info, ShieldCheck, Loader, TrendingUp, Activity, Wallet, Landmark, BarChart3, Globe, Timer, Coins, Users, Sparkles, Gauge, Zap } from '@lucide/svelte';
+  import { Crosshair, Search, ExternalLink, AlertTriangle, Info, ShieldCheck, Loader, TrendingUp, Activity, Wallet, Landmark, BarChart3, Globe, Timer, Coins, Users, Sparkles, Gauge, Zap, Lock } from '@lucide/svelte';
   import { api } from '$lib/api';
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -19,6 +19,7 @@
   let report = $state<Any>(null);
   let matches = $state<Any[] | null>(null);
   let chainChoices = $state<{ slug: string; name: string; liquidity_usd: number }[] | null>(null);
+  let limitInfo = $state<{ limit: number; used: number; required_plan: string } | null>(null);
 
   // ── Searchable grouped network selector ──
   let pickerOpen = $state(false);
@@ -78,11 +79,12 @@
     report = null;
     matches = null;
     chainChoices = null;
+    limitInfo = null;
     exTab = 'all';
     exShowAll = false;
     runSteps();
     try {
-      const d = await api<{ status: string; report?: Any; matches?: Any[]; options?: Any[]; message?: string }>('/token-radar/analyze', {
+      const d = await api<{ status: string; report?: Any; matches?: Any[]; options?: Any[]; limit?: number; used?: number; required_plan?: string; message?: string }>('/token-radar/analyze', {
         method: 'POST',
         auth: true,
         body: { chain, input: value, fresh }
@@ -96,6 +98,8 @@
         matches = d.matches ?? [];
       } else if (d.status === 'chains') {
         chainChoices = d.options ?? [];
+      } else if (d.status === 'limit') {
+        limitInfo = { limit: d.limit ?? 1, used: d.used ?? 0, required_plan: d.required_plan ?? 'premium' };
       } else {
         error = d.message ?? 'Token not found.';
       }
@@ -317,6 +321,37 @@
     </div>
   {/if}
 
+  <!-- Daily limit reached → upgrade CTA -->
+  {#if limitInfo}
+    <div class="relative overflow-hidden rounded-2xl p-[1px] shadow-[0_18px_40px_-20px_rgba(2,6,23,0.4)]" style="background: linear-gradient(135deg, rgba(55,224,166,0.55), rgba(91,140,255,0.55))">
+      <div class="rounded-2xl bg-panel px-5 py-6">
+        <div class="flex flex-col items-center gap-4 text-center sm:flex-row sm:text-left">
+          <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-mint/20 to-accent/20 ring-1 ring-mint/30">
+            <Lock class="h-6 w-6 text-mint" />
+          </div>
+          <div class="min-w-0 flex-1">
+            <p class="text-lg font-bold text-strong">You've used today's {limitInfo.limit === 1 ? 'free scan' : `${limitInfo.limit} scans`} 🎯</p>
+            <p class="mt-1 text-sm leading-relaxed text-soft">
+              Your plan includes <span class="font-semibold text-strong">{limitInfo.limit} token scan{limitInfo.limit === 1 ? '' : 's'} per day</span> — and today's {limitInfo.limit === 1 ? 'is' : 'are'} already working for you.
+              Upgrade to <span class="font-semibold capitalize text-mint">{limitInfo.required_plan}</span> and keep scanning: more coins, deeper holder intelligence, and full market access on every report.
+            </p>
+            <div class="mt-2.5 flex flex-wrap justify-center gap-1.5 sm:justify-start">
+              {#each ['Up to 30 scans / day', 'All 24 networks', 'Verified holder data', 'Exchange listings & market access'] as perk}
+                <span class="pill bg-panel-2 text-soft"><span class="mr-1 text-mint">✓</span>{perk}</span>
+              {/each}
+            </div>
+          </div>
+          <div class="flex shrink-0 flex-col items-center gap-1.5">
+            <a href="/pricing" class="btn-primary bg-gradient-to-r from-mint to-accent px-5 py-2.5 text-sm font-semibold shadow-lg">
+              <Zap class="h-4 w-4" /> Upgrade to <span class="capitalize">{limitInfo.required_plan}</span>
+            </a>
+            <span class="text-[10px] text-muted">Resets at midnight UTC · re-scanning today's coin stays free</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  {/if}
+
   <!-- Multi-chain chooser -->
   {#if chainChoices}
     <div class={PREMIUM_CARD}>
@@ -349,7 +384,7 @@
   {/if}
 
   <!-- Empty state -->
-  {#if !report && !analyzing && !matches && !chainChoices}
+  {#if !report && !analyzing && !matches && !chainChoices && !limitInfo}
     <div class="rounded-2xl border border-dashed border-edge bg-panel-2/40 px-6 py-10 text-center">
       <div class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-accent/10 text-accent"><Crosshair class="h-6 w-6" /></div>
       <p class="text-sm font-medium text-soft">Paste a token address to generate a full Token Position Radar report.</p>
