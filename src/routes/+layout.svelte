@@ -190,6 +190,7 @@
     {@render children()}
   </main>
 
+  {#if !(onApp && $user)}
   <footer class="border-t border-edge px-4 py-6 text-center text-xs text-muted">
     <nav class="mb-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
       <a href="/insights" class="transition hover:text-soft">Insights</a>
@@ -219,4 +220,5 @@
     </div>
     {$t('footer.tagline')}
   </footer>
+  {/if}
 </div>

@@ -230,13 +230,14 @@
 {/snippet}
 
 {#if $authReady && $user}
-  <div class="lg:grid lg:grid-cols-[272px_1fr]">
-    <!-- Desktop sidebar — flush to the left viewport edge, full height under the header -->
-    <aside class="hidden lg:sticky lg:top-[61px] lg:block lg:h-[calc(100vh-61px)] lg:overflow-y-auto lg:border-r lg:border-edge lg:bg-panel lg:p-4">
+  <!-- Desktop: fixed-height shell under the header — sidebar and content are two
+       INDEPENDENT scroll areas (each scrolls itself, the page never scrolls). -->
+  <div class="lg:grid lg:h-[calc(100vh-61px)] lg:grid-cols-[272px_1fr] lg:overflow-hidden">
+    <aside class="hidden lg:block lg:h-full lg:overflow-y-auto lg:overscroll-contain lg:border-r lg:border-edge lg:bg-panel lg:p-4">
       {@render sidebarContent()}
     </aside>
 
-    <div class="min-w-0 px-4 py-6 lg:px-8">
+    <div class="min-w-0 px-4 py-6 lg:h-full lg:overflow-y-auto lg:overscroll-contain lg:px-8">
       {@render children()}
     </div>
   </div>
