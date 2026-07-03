@@ -4,6 +4,7 @@
   // One consistent sub-navigation for the whole admin membership section, so the
   // tabs look and behave identically on every page and always show where you are.
   const tabs = [
+    { href: '/admin/revenue', label: 'Revenue' },
     { href: '/admin/users', label: 'Users' },
     { href: '/admin/subscriptions', label: 'Subscriptions' },
     { href: '/admin/payments', label: 'Payments' },
