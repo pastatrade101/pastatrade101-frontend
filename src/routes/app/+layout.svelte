@@ -31,6 +31,18 @@
     }
   });
 
+  // Lock the page scroll while the mobile drawer is open — otherwise the app
+  // behind the menu keeps scrolling (and iOS rubber-banding drags it around).
+  $effect(() => {
+    const lock = $sidebarOpen;
+    document.documentElement.classList.toggle('overflow-hidden', lock);
+    document.body.classList.toggle('overflow-hidden', lock);
+    return () => {
+      document.documentElement.classList.remove('overflow-hidden');
+      document.body.classList.remove('overflow-hidden');
+    };
+  });
+
   // ── Grouped navigation (same routes/keys as before, now organised) ──
   interface NavItem { href: string; key: string; icon: typeof Gauge; badge?: { text: string; cls: string } }
   const groups: { key: string; items: NavItem[] }[] = [
@@ -244,7 +256,7 @@
       transition:fade={{ duration: 150 }}
     ></button>
     <aside
-      class="fixed inset-y-0 left-0 z-50 w-72 overflow-y-auto border-r border-edge bg-panel p-4 lg:hidden"
+      class="fixed inset-y-0 left-0 z-50 w-72 touch-pan-y overflow-y-auto overscroll-contain border-r border-edge bg-panel p-4 lg:hidden"
       transition:fly={{ x: -300, duration: 220 }}
     >
       <button aria-label="Close menu" class="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-lg border border-edge bg-panel text-muted" onclick={() => sidebarOpen.set(false)}><X class="h-4 w-4" /></button>
