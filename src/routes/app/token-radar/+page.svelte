@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { fly } from 'svelte/transition';
   import { Crosshair, Search, ExternalLink, AlertTriangle, Info, ShieldCheck, Loader, TrendingUp, Activity, Wallet, Landmark, BarChart3, Globe, Timer, Coins, Users, Sparkles, Gauge, Zap, Lock } from '@lucide/svelte';
   import { api } from '$lib/api';
 
@@ -235,6 +236,26 @@
   const CIRC = 2 * Math.PI * R;
   const dash = (v: number | null) => `${(CIRC * (v ?? 0)) / 100} ${CIRC}`;
 
+  // Count-up for the big score number (syncs with the donut draw-in).
+  let displayOpp = $state(0);
+  $effect(() => {
+    const target = report?.scores?.opportunity;
+    if (target == null) {
+      displayOpp = 0;
+      return;
+    }
+    let raf = 0;
+    const t0 = performance.now();
+    const dur = 900;
+    const tick = (t: number) => {
+      const p = Math.min(1, (t - t0) / dur);
+      displayOpp = Math.round(target * (1 - Math.pow(1 - p, 3))); // ease-out cubic
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  });
+
   const HERO_GRAD = 'background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 55%, #047857 100%)';
   const PREMIUM_CARD = 'card rounded-2xl shadow-[0_14px_34px_-18px_rgba(2,6,23,0.35)]';
 </script>
@@ -400,7 +421,7 @@
     {@const rt = ratingTheme(report.rating)}
 
     <!-- 3 · Token Overview + Final Rating -->
-    <div class="{PREMIUM_CARD} grid gap-4 bg-gradient-to-br from-panel to-panel-2/70 lg:grid-cols-[1fr_auto] lg:items-center">
+    <div in:fly={{ y: 18, duration: 450 }} class="{PREMIUM_CARD} grid gap-4 bg-gradient-to-br from-panel to-panel-2/70 lg:grid-cols-[1fr_auto] lg:items-center">
       <div class="flex items-center gap-3">
         <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-accent/12 text-lg font-bold text-accent ring-1 ring-accent/20">{(t.symbol ?? t.name ?? '?').slice(0, 3).toUpperCase()}</div>
         <div class="min-w-0">
@@ -422,7 +443,7 @@
 
     <!-- Data quality warning -->
     {#if report.data_quality_warnings?.length}
-      <div class="{PREMIUM_CARD} border-warn/40 bg-warn/[0.06]">
+      <div in:fly={{ y: 18, duration: 450, delay: 80 }} class="{PREMIUM_CARD} border-warn/40 bg-warn/[0.06]">
         <p class="stat-label flex items-center gap-1.5 text-warn"><AlertTriangle class="h-3.5 w-3.5" />Data Quality Warning</p>
         <ul class="mt-1.5 space-y-1 text-sm text-soft">{#each report.data_quality_warnings as w}<li class="flex gap-1.5">⚠️ <span>{w}</span></li>{/each}</ul>
       </div>
@@ -430,7 +451,7 @@
 
     <!-- 4 · Why this rating -->
     {#if report.rating_explanation}
-      <div class="{PREMIUM_CARD} border-l-[3px] {rt.tone === 'good' ? 'border-l-mint/60' : rt.tone === 'mid' ? 'border-l-warn/60' : 'border-l-danger/60'}">
+      <div in:fly={{ y: 18, duration: 450, delay: 140 }} class="{PREMIUM_CARD} border-l-[3px] {rt.tone === 'good' ? 'border-l-mint/60' : rt.tone === 'mid' ? 'border-l-warn/60' : 'border-l-danger/60'}">
         <p class="stat-label flex items-center gap-1.5"><Info class="h-3.5 w-3.5 text-accent" />Why this rating</p>
         <p class="mt-1.5 text-sm leading-relaxed text-soft">{report.rating_explanation}</p>
         <div class="mt-2.5 flex flex-wrap gap-1.5">
@@ -440,12 +461,12 @@
     {/if}
 
     <!-- 5 · Market Snapshot -->
-    <div>
+    <div in:fly={{ y: 18, duration: 450, delay: 200 }}>
       <p class="stat-label mb-2 px-1">Market Snapshot</p>
       <div class="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
-        {#each METRICS as m}
+        {#each METRICS as m, i}
           {@const Icon = m.icon}
-          <div class="{PREMIUM_CARD} p-3.5">
+          <div in:fly={{ y: 14, duration: 400, delay: 260 + i * 50 }} class="{PREMIUM_CARD} p-3.5">
             <div class="flex items-center justify-between text-muted"><Icon class="h-3.5 w-3.5" />{#if m.st !== 'na'}<span class="h-1.5 w-1.5 rounded-full {dotCls(m.st)}"></span>{/if}</div>
             <div class="mt-1.5 text-[11px] uppercase tracking-wide text-muted">{m.label}</div>
             <div class="mt-0.5 text-lg font-bold text-strong">{m.value}</div>
@@ -457,17 +478,17 @@
 
     <div class="grid gap-4 lg:grid-cols-2">
       <!-- 6 · Score Intelligence -->
-      <div class={PREMIUM_CARD}>
+      <div in:fly={{ y: 18, duration: 450, delay: 420 }} class={PREMIUM_CARD}>
         <p class="stat-label mb-3 flex items-center gap-1.5"><Gauge class="h-3.5 w-3.5 text-accent" />Score Intelligence</p>
         <div class="flex flex-col items-center gap-4 sm:flex-row sm:items-center">
           <!-- Opportunity donut -->
           <div class="relative h-32 w-32 shrink-0">
             <svg viewBox="0 0 120 120" class="h-32 w-32 -rotate-90">
               <circle cx="60" cy="60" r={R} fill="none" class="text-muted/25" stroke="currentColor" stroke-width="10" />
-              <circle cx="60" cy="60" r={R} fill="none" stroke-width="10" stroke-linecap="round" stroke-dasharray={dash(report.scores.opportunity)} class={textCls(state3(report.scores.opportunity))} stroke="currentColor" />
+              <circle cx="60" cy="60" r={R} fill="none" stroke-width="10" stroke-linecap="round" stroke-dasharray={dash(report.scores.opportunity)} class="donut-anim {textCls(state3(report.scores.opportunity))}" stroke="currentColor" />
             </svg>
             <div class="absolute inset-0 flex flex-col items-center justify-center">
-              <span class="text-2xl font-extrabold {textCls(state3(report.scores.opportunity))}">{report.scores.opportunity ?? '—'}</span>
+              <span class="text-2xl font-extrabold {textCls(state3(report.scores.opportunity))}">{report.scores.opportunity != null ? displayOpp : '—'}</span>
               <span class="text-[10px] text-muted">/100</span>
             </div>
           </div>
@@ -479,21 +500,21 @@
           </div>
         </div>
         <div class="mt-4 space-y-2.5 border-t border-edge pt-4">
-          {#each SUB_SCORES as row}
+          {#each SUB_SCORES as row, i}
             {@const st = state3(row.v, row.invert)}
             <div>
               <div class="mb-0.5 flex items-center justify-between text-xs">
                 <span class="cursor-help text-muted" title={TIP[row.label] ?? ''}>{row.label}</span>
                 <span class="font-semibold {textCls(st)}">{row.v ?? 'n/a'}{row.v != null ? '/100' : ''} {#if row.v != null}<span class="ml-1 font-normal text-muted">· {interp(row.label, row.v, row.invert)}</span>{/if}</span>
               </div>
-              <div class="meter"><div class="meter-fill {barCls(st)}" style="width: {row.v ?? 0}%"></div></div>
+              <div class="meter"><div class="meter-fill bar-anim {barCls(st)}" style="width: {row.v ?? 0}%; animation-delay: {520 + i * 80}ms"></div></div>
             </div>
           {/each}
         </div>
       </div>
 
       <!-- 10 · Radar Summary / Insights -->
-      <div class="space-y-3">
+      <div in:fly={{ y: 18, duration: 450, delay: 500 }} class="space-y-3">
         <div class="{PREMIUM_CARD} border-l-[3px] border-l-accent/50">
           <p class="stat-label flex items-center gap-1.5"><Sparkles class="h-3.5 w-3.5 text-accent" />Radar Summary</p>
           <p class="mt-1.5 text-sm leading-relaxed text-soft">{report.summary}</p>
@@ -516,13 +537,13 @@
 
     <div class="grid gap-4 lg:grid-cols-[5fr_7fr]">
       <!-- 7 · Confidence + 8 · Holder Intelligence -->
-      <div class="space-y-3">
+      <div in:fly={{ y: 18, duration: 450, delay: 580 }} class="space-y-3">
         <div class={PREMIUM_CARD}>
           <p class="stat-label mb-3 flex items-center gap-1.5"><ShieldCheck class="h-3.5 w-3.5 text-accent" />Confidence Intelligence</p>
-          {#each [{ k: 'Data Availability', v: report.confidence.data_availability, tip: 'Whether the required data providers responded.' }, { k: 'Analysis Quality', v: report.confidence.analysis_quality, tip: 'Whether the data is healthy, complete, and reliable enough to trust the conclusion.' }, { k: 'Combined Confidence', v: report.confidence.combined, tip: 'Weighted blend of availability and quality.' }] as c}
+          {#each [{ k: 'Data Availability', v: report.confidence.data_availability, tip: 'Whether the required data providers responded.' }, { k: 'Analysis Quality', v: report.confidence.analysis_quality, tip: 'Whether the data is healthy, complete, and reliable enough to trust the conclusion.' }, { k: 'Combined Confidence', v: report.confidence.combined, tip: 'Weighted blend of availability and quality.' }] as c, i}
             <div class="mb-2.5 last:mb-0">
               <div class="mb-0.5 flex items-center justify-between text-xs"><span class="cursor-help text-muted" title={c.tip}>{c.k}</span><span class="font-semibold {textCls(state3(c.v))}">{c.v}/100</span></div>
-              <div class="meter"><div class="meter-fill {barCls(state3(c.v))}" style="width: {c.v}%"></div></div>
+              <div class="meter"><div class="meter-fill bar-anim {barCls(state3(c.v))}" style="width: {c.v}%; animation-delay: {680 + i * 90}ms"></div></div>
             </div>
           {/each}
           {#if report.confidence.note}<p class="mt-2 text-[11px] leading-relaxed text-muted">{report.confidence.note}</p>{/if}
@@ -547,7 +568,7 @@
       <!-- 9 · Exchange Listings & Market Access -->
       {#if report.exchanges}
         {@const ex = report.exchanges}
-        <div class={PREMIUM_CARD}>
+        <div in:fly={{ y: 18, duration: 450, delay: 660 }} class={PREMIUM_CARD}>
           <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
             <p class="stat-label flex items-center gap-1.5"><Globe class="h-3.5 w-3.5 text-accent" />Exchange Listings & Market Access</p>
             <span class="pill {ex.listingStrengthScore >= 65 ? 'bg-mint/15 text-mint' : ex.listingStrengthScore >= 45 ? 'bg-warn/15 text-warn' : 'bg-danger/15 text-danger'}">{ex.listingStrengthLabel} · {ex.listingStrengthScore}/100</span>
@@ -588,7 +609,7 @@
 
     <!-- 11 · Market Timing Context -->
     {#if report.timing_view}
-      <div class={PREMIUM_CARD}>
+      <div in:fly={{ y: 18, duration: 450, delay: 740 }} class={PREMIUM_CARD}>
         <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
           <p class="stat-label flex items-center gap-1.5"><Timer class="h-3.5 w-3.5 text-accent" />Market Timing Context</p>
           <div class="flex items-center gap-2 text-xs">
@@ -601,9 +622,32 @@
     {/if}
 
     <!-- Disclaimer -->
-    <div class="flex items-start gap-2 rounded-xl border border-warn/30 bg-warn/[0.06] px-3.5 py-2.5 text-xs leading-relaxed text-warn">
+    <div in:fly={{ y: 18, duration: 450, delay: 820 }} class="flex items-start gap-2 rounded-xl border border-warn/30 bg-warn/[0.06] px-3.5 py-2.5 text-xs leading-relaxed text-warn">
       <AlertTriangle class="mt-0.5 h-3.5 w-3.5 shrink-0" />
       <span><span class="font-semibold">Educational analysis only.</span> {report.disclaimer} Token markets are volatile, and data can be incomplete or delayed.{report.cached ? ' Cached result (analyzed within the last 30 min).' : ''}</span>
     </div>
   {/if}
 </div>
+
+<style>
+  /* Report entrance polish: bars grow to their value, the donut draws itself.
+     Both respect prefers-reduced-motion (users who opt out get instant state). */
+  @media (prefers-reduced-motion: no-preference) {
+    .bar-anim {
+      animation: bar-in 900ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+    .donut-anim {
+      animation: donut-in 1100ms cubic-bezier(0.22, 1, 0.36, 1) 200ms both;
+    }
+  }
+  @keyframes bar-in {
+    from {
+      width: 0;
+    }
+  }
+  @keyframes donut-in {
+    from {
+      stroke-dasharray: 0 327; /* 2π × r(52) ≈ 326.7 */
+    }
+  }
+</style>
