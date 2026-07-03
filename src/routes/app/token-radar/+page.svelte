@@ -260,7 +260,7 @@
   const PREMIUM_CARD = 'card rounded-2xl shadow-[0_14px_34px_-18px_rgba(2,6,23,0.35)]';
 </script>
 
-<div class="mx-auto max-w-6xl space-y-4">
+<div class="max-w-7xl space-y-4">
   <!-- 1 · Hero -->
   <div class="relative overflow-hidden rounded-2xl px-5 py-6 text-white shadow-[0_18px_40px_-20px_rgba(2,6,23,0.5)]" style={HERO_GRAD}>
     <div class="pointer-events-none absolute -right-10 -top-10 h-48 w-48 rounded-full bg-white/5 blur-2xl"></div>

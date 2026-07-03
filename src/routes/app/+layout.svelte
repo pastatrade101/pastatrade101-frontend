@@ -3,8 +3,7 @@
   import { fade, fly } from 'svelte/transition';
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
-  import { Activity, BarChart3, Bitcoin, Crosshair, DoorOpen, FileText, Flame, FlaskConical, Gauge, Globe, LayoutDashboard, Layers, Radar, Rocket, Scale, Search, SlidersHorizontal, Spline, Star, Users, X } from '@lucide/svelte';
-  import BrandMark from '$lib/components/BrandMark.svelte';
+  import { Activity, BarChart3, Bitcoin, Crosshair, DoorOpen, FileText, Flame, FlaskConical, Gauge, Globe, LayoutDashboard, Layers, Radar, Rocket, Scale, Search, Spline, Star, Users, X } from '@lucide/svelte';
   import { api } from '$lib/api';
   import { authReady, user } from '$lib/stores/auth';
   import { sidebarOpen } from '$lib/stores/ui';
@@ -148,21 +147,7 @@
 <Seo title="Dashboard" description="Your Pastatrade market-intelligence dashboard." noindex />
 
 {#snippet sidebarContent()}
-  <!-- Brand -->
-  <div class="mb-4 flex items-center gap-2.5">
-    <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-mint/25 to-accent/20 ring-1 ring-mint/30">
-      <BrandMark class="h-5 w-5 text-mint" />
-    </div>
-    <div class="min-w-0 flex-1">
-      <p class="truncate text-[17px] font-bold leading-tight text-strong">Pasta<span class="text-mint">trade101</span></p>
-      <p class="text-[9px] font-semibold uppercase tracking-[0.28em] text-muted">Crypto Intelligence</p>
-    </div>
-    <a href="/app/account" aria-label="Account settings" class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-edge text-muted transition hover:border-mint/40 hover:text-soft">
-      <SlidersHorizontal class="h-4 w-4" />
-    </a>
-  </div>
-
-  <!-- Live market widget -->
+  <!-- Live market widget (brand lives in the top header) -->
   {#if snap}
     <div class="mb-3 rounded-xl border border-edge bg-panel-2/50 p-3">
       <div class="flex items-center justify-between gap-2">

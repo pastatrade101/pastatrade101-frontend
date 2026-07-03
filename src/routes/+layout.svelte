@@ -55,8 +55,7 @@
             <Menu class="h-5 w-5" />
           </button>
         {/if}
-        <!-- On desktop app pages the sidebar owns the brand — avoid stacking it twice. -->
-        <a href="/" class="flex items-center gap-2 font-semibold text-strong {onApp && $user ? 'lg:hidden' : ''}">
+        <a href="/" class="flex items-center gap-2 font-semibold text-strong">
           <BrandMark class="h-5 w-5 text-mint" />
           Pasta<span class="text-mint">trade101</span>
         </a>
