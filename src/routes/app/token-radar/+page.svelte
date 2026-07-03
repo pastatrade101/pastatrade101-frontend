@@ -103,6 +103,15 @@
     return good ? 'bg-mint' : mid ? 'bg-warn' : 'bg-danger';
   };
 
+  const TIP: Record<string, string> = {
+    'Opportunity Score': 'Whether the token has a favorable setup based on liquidity, momentum, holder health, safety, and market timing.',
+    'Risk Score': 'Downside risk from weak liquidity, poor holder distribution, suspicious contract features, low activity, and bad market conditions.',
+    Momentum: 'Whether price, volume, and transaction activity are improving.',
+    Liquidity: 'Available trading liquidity — but must be confirmed by real activity.',
+    'Holder Health': 'Holder count, wallet concentration, and ownership distribution. Weight depends on holder-data source confidence.',
+    'Contract Safety': 'Contract risks such as honeypot, tax, mint, blacklist, owner control, and verification.',
+    Timing: 'Broader market support from BTC regime, altcoin environment, and macro conditions.'
+  };
   const SCORE_ROWS = $derived(
     report
       ? [
@@ -112,11 +121,13 @@
           { label: 'Liquidity', v: report.scores.liquidity, invert: false },
           { label: 'Holder Health', v: report.scores.holder_health, invert: false },
           { label: 'Contract Safety', v: report.scores.contract_safety, invert: false },
-          { label: 'Timing', v: report.scores.timing, invert: false },
-          { label: 'Confidence', v: report.scores.confidence, invert: false }
+          { label: 'Timing', v: report.scores.timing, invert: false }
         ]
       : []
   );
+  const sevStyle = (s: string) =>
+    s === 'critical' ? 'text-danger' : s === 'high' ? 'text-orange-400' : s === 'medium' ? 'text-warn' : 'text-muted';
+  const cap = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 </script>
 
 <header class="mb-4 flex items-center gap-2">
@@ -205,11 +216,39 @@
     <span class="pill border {ratingColor(report.rating)} px-3 py-1.5 text-sm font-semibold">{report.rating}</span>
   </div>
 
+  {#if report.rating_explanation}
+    <div class="card mb-3 border-l-2 border-accent/40">
+      <p class="text-[11px] uppercase tracking-wide text-muted">Why this rating</p>
+      <p class="mt-0.5 text-sm text-soft">{report.rating_explanation}</p>
+    </div>
+  {/if}
+
+  <!-- Data Quality Warning (only when abnormal data detected) -->
+  {#if report.data_quality_warnings?.length}
+    <div class="card mb-3 border-warn/40 bg-warn/[0.07]">
+      <p class="stat-label flex items-center gap-1.5 text-warn"><AlertTriangle class="h-3.5 w-3.5" />Data Quality Warning</p>
+      <ul class="mt-1.5 space-y-1 text-sm text-soft">{#each report.data_quality_warnings as w}<li class="flex gap-1.5">⚠️ <span>{w}</span></li>{/each}</ul>
+    </div>
+  {/if}
+
   <!-- token stats -->
   <div class="card mb-3 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4 lg:grid-cols-7">
     {#each [['Price', fmtPrice(t.price)], ['Market cap', fmtUsd(t.market_cap)], ['FDV', fmtUsd(t.fdv)], ['Liquidity', fmtUsd(t.liquidity)], ['24h volume', fmtUsd(t.volume_24h)], ['Holders', t.holders != null ? Number(t.holders).toLocaleString() : '—'], ['Age', t.age_days != null ? `${t.age_days}d` : '—']] as [k, v]}
       <div><div class="text-[11px] uppercase tracking-wide text-muted">{k}</div><div class="mt-0.5 font-semibold text-strong">{v}</div></div>
     {/each}
+  </div>
+
+  <!-- Holder data provenance -->
+  <div class="card mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+    <span class="text-muted">Holders: <span class="font-semibold text-strong">{report.holder.count != null ? Number(report.holder.count).toLocaleString() : '—'}</span></span>
+    <span class="text-muted">Source: <span class="text-soft">{report.holder.source}</span></span>
+    <span class="text-muted">Confidence: <span class="text-soft">{cap(report.holder.confidence)}</span></span>
+    {#if report.holder.verified}
+      <span class="pill bg-mint/15 text-mint">Holder data verified</span>
+    {:else}
+      <span class="pill bg-warn/15 text-warn">Holder data unverified</span>
+    {/if}
+    {#if !report.holder.used_in_final_score && report.holder.count != null}<span class="text-[11px] text-muted">(low weight — not used as a severe override)</span>{/if}
   </div>
 
   <div class="mb-3 grid gap-3 lg:grid-cols-[1.1fr_1fr]">
@@ -220,12 +259,22 @@
         {#each SCORE_ROWS as row}
           <div>
             <div class="mb-0.5 flex items-center justify-between text-xs">
-              <span class="text-muted">{row.label}</span>
+              <span class="cursor-help text-muted" title={TIP[row.label] ?? ''}>{row.label}</span>
               <span class="font-semibold {scoreColor(row.v, row.invert)}">{row.v ?? 'n/a'}{row.v != null ? '/100' : ''}</span>
             </div>
             <div class="meter"><div class="meter-fill {barColor(row.v, row.invert)}" style="width: {row.v ?? 0}%"></div></div>
           </div>
         {/each}
+      </div>
+      <!-- Confidence (availability vs quality) -->
+      <div class="mt-4 border-t border-edge pt-3">
+        <p class="stat-label mb-2">Confidence</p>
+        <div class="space-y-2 text-xs">
+          <div class="flex items-center justify-between"><span class="cursor-help text-muted" title="Whether the required data providers responded.">Data availability</span><span class="font-semibold {scoreColor(report.confidence.data_availability)}">{report.confidence.data_availability}/100</span></div>
+          <div class="flex items-center justify-between"><span class="cursor-help text-muted" title="Whether the data is healthy, complete, and reliable enough to trust the conclusion.">Analysis quality</span><span class="font-semibold {scoreColor(report.confidence.analysis_quality)}">{report.confidence.analysis_quality}/100</span></div>
+          <div class="flex items-center justify-between border-t border-edge/60 pt-2"><span class="text-soft">Combined</span><span class="font-bold {scoreColor(report.confidence.combined)}">{report.confidence.combined}/100</span></div>
+        </div>
+        {#if report.confidence.note}<p class="mt-2 text-[11px] leading-relaxed text-muted">{report.confidence.note}</p>{/if}
       </div>
     </div>
 
@@ -245,7 +294,14 @@
       {#if report.warnings?.length}
         <div class="card border-warn/25 bg-warn/[0.04]">
           <p class="stat-label flex items-center gap-1.5 text-warn"><AlertTriangle class="h-3.5 w-3.5" />Main risks</p>
-          <ul class="mt-1.5 space-y-1 text-sm text-soft">{#each report.warnings as w}<li class="flex gap-1.5">⚠️ <span>{w}</span></li>{/each}</ul>
+          <ul class="mt-1.5 space-y-1.5 text-sm text-soft">
+            {#each report.warnings as w}
+              <li class="flex gap-1.5">
+                <span class="{sevStyle(w.severity)}">⚠️</span>
+                <span><span class="font-medium {sevStyle(w.severity)}">{w.label}:</span> {w.message}</span>
+              </li>
+            {/each}
+          </ul>
         </div>
       {/if}
     </div>
@@ -255,7 +311,6 @@
     <div class="card mb-3">
       <p class="stat-label">Timing view</p>
       <p class="mt-1 text-sm leading-relaxed text-soft">{report.timing_view}</p>
-      {#if report.confidence_note}<p class="mt-1.5 text-xs text-muted">{report.confidence_note}</p>{/if}
     </div>
   {/if}
 
