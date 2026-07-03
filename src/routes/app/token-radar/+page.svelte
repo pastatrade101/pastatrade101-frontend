@@ -128,6 +128,8 @@
   const sevStyle = (s: string) =>
     s === 'critical' ? 'text-danger' : s === 'high' ? 'text-orange-400' : s === 'medium' ? 'text-warn' : 'text-muted';
   const cap = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
+  const listingPill = (n: number) => (n >= 65 ? 'bg-mint/15 text-mint' : n >= 45 ? 'bg-warn/15 text-warn' : n >= 25 ? 'bg-orange-500/15 text-orange-400' : 'bg-danger/15 text-danger');
+  const trustDot = (t?: string) => (t === 'high' ? 'text-mint' : t === 'medium' ? 'text-warn' : t === 'low' ? 'text-danger' : 'text-muted');
 </script>
 
 <header class="mb-4 flex items-center gap-2">
@@ -306,6 +308,52 @@
       {/if}
     </div>
   </div>
+
+  <!-- Exchange Listings -->
+  {#if report.exchanges}
+    {@const ex = report.exchanges}
+    <div class="card mb-3">
+      <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <p class="stat-label">Exchange Listings</p>
+        <span class="pill {listingPill(ex.listingStrengthScore)}">{ex.listingStrengthLabel} · {ex.listingStrengthScore}/100</span>
+      </div>
+      <div class="grid gap-4 sm:grid-cols-2">
+        <div>
+          <p class="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted">DEX · {ex.totalDexListings}</p>
+          {#if ex.dexListings.length}
+            <ul class="space-y-1.5">
+              {#each ex.dexListings as l}
+                <li class="flex items-center justify-between gap-2 rounded-lg bg-panel-2 px-2.5 py-1.5 text-xs">
+                  <div class="min-w-0">
+                    <p class="truncate font-medium text-soft">{l.exchangeName} <span class="text-muted">{l.pair}</span>{#if l.url}<a href={l.url} target="_blank" rel="noopener noreferrer" class="ml-1 inline-flex text-muted hover:text-mint"><ExternalLink class="h-3 w-3" /></a>{/if}</p>
+                    <p class="text-[10px] text-muted">Source: {l.source}</p>
+                  </div>
+                  <div class="shrink-0 text-right"><div class="text-soft">Vol {fmtUsd(l.volume24h)}</div><div class="text-muted">Liq {fmtUsd(l.liquidityUsd)}</div></div>
+                </li>
+              {/each}
+            </ul>
+          {:else}<p class="text-xs text-muted">No DEX pairs found.</p>{/if}
+        </div>
+        <div>
+          <p class="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted">CEX · {ex.totalCexListings}</p>
+          {#if ex.cexListings.length}
+            <ul class="space-y-1.5">
+              {#each ex.cexListings as l}
+                <li class="flex items-center justify-between gap-2 rounded-lg bg-panel-2 px-2.5 py-1.5 text-xs">
+                  <div class="min-w-0">
+                    <p class="truncate font-medium text-soft"><span class="{trustDot(l.trustScore)}">●</span> {l.exchangeName} <span class="text-muted">{l.pair}</span>{#if l.url}<a href={l.url} target="_blank" rel="noopener noreferrer" class="ml-1 inline-flex text-muted hover:text-mint"><ExternalLink class="h-3 w-3" /></a>{/if}</p>
+                    <p class="text-[10px] text-muted">Source: {l.source}{l.trustScore ? ` · trust ${l.trustScore}` : ''}</p>
+                  </div>
+                  <div class="shrink-0 text-right text-soft">Vol {fmtUsd(l.volume24h)}</div>
+                </li>
+              {/each}
+            </ul>
+          {:else}<p class="text-xs text-muted">No confirmed CEX listings found.</p>{/if}
+        </div>
+      </div>
+      <p class="mt-2 text-[11px] text-muted">Listing presence informs analysis confidence — it does not confirm a token is safe. Educational only, not financial advice.</p>
+    </div>
+  {/if}
 
   {#if report.timing_view}
     <div class="card mb-3">
