@@ -6,7 +6,7 @@
   import { Activity, BarChart3, Bitcoin, Crosshair, DoorOpen, FileText, Flame, FlaskConical, Gauge, Globe, LayoutDashboard, Layers, Radar, Rocket, Scale, Search, Spline, Star, Users, X } from '@lucide/svelte';
   import { api } from '$lib/api';
   import { authReady, user } from '$lib/stores/auth';
-  import { sidebarOpen } from '$lib/stores/ui';
+  import { sidebarCollapsed, sidebarOpen } from '$lib/stores/ui';
   import { t } from '$lib/i18n';
   import Seo from '$lib/components/Seo.svelte';
 
@@ -146,9 +146,9 @@
 
 <Seo title="Dashboard" description="Your Pastatrade market-intelligence dashboard." noindex />
 
-{#snippet sidebarContent()}
+{#snippet sidebarContent(collapsed: boolean)}
   <!-- Live market widget (brand lives in the top header) -->
-  {#if snap}
+  {#if snap && !collapsed}
     <div class="mb-3 rounded-xl border border-edge bg-panel-2/50 p-3">
       <div class="flex items-center justify-between gap-2">
         <div class="min-w-0">
@@ -173,7 +173,7 @@
   {/if}
 
   <!-- Menu search -->
-  <div class="relative mb-4">
+  <div class="relative mb-4 {collapsed ? 'hidden' : ''}">
     <Search class="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted" />
     <input
       bind:this={searchEl}
@@ -185,25 +185,32 @@
     <kbd class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded border border-edge bg-panel px-1.5 py-0.5 text-[10px] text-muted">/</kbd>
   </div>
 
-  <!-- Grouped nav -->
-  <nav class="flex flex-col gap-4">
-    {#each visibleGroups as g (g.key)}
+  <!-- Grouped nav (collapsed = icons-only rail with tooltips) -->
+  <nav class="flex flex-col {collapsed ? 'gap-3' : 'gap-4'}">
+    {#each visibleGroups as g, gi (g.key)}
       <div>
-        <p class="mb-1.5 px-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-muted">{$t(g.key)}</p>
-        <div class="flex flex-col gap-0.5">
+        {#if collapsed}
+          {#if gi > 0}<div class="mx-2 mb-3 border-t border-edge/60"></div>{/if}
+        {:else}
+          <p class="mb-1.5 px-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-muted">{$t(g.key)}</p>
+        {/if}
+        <div class="flex flex-col {collapsed ? 'items-center gap-1' : 'gap-0.5'}">
           {#each g.items as item (item.href)}
             {@const active = isActive(item.href)}
             <a
               href={item.href}
               onclick={() => sidebarOpen.set(false)}
-              class="group relative flex items-center gap-2.5 rounded-xl px-2 py-1.5 transition {active ? 'bg-mint/10' : 'hover:bg-panel-2/60'}"
+              title={collapsed ? $t(item.key) : undefined}
+              class="group relative flex items-center rounded-xl transition {collapsed ? 'justify-center p-1' : 'gap-2.5 px-2 py-1.5'} {active ? (collapsed ? '' : 'bg-mint/10') : collapsed ? '' : 'hover:bg-panel-2/60'}"
             >
-              {#if active}<span class="absolute -left-2 top-1/2 h-6 w-[3px] -translate-y-1/2 rounded-full bg-mint"></span>{/if}
+              {#if active}<span class="absolute {collapsed ? '-left-3' : '-left-2'} top-1/2 h-6 w-[3px] -translate-y-1/2 rounded-full bg-mint"></span>{/if}
               <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition {active ? 'bg-mint/15 text-mint' : 'bg-panel-2 text-muted group-hover:text-soft'}">
                 <item.icon class="h-4 w-4" />
               </span>
-              <span class="min-w-0 flex-1 truncate text-sm {active ? 'font-semibold text-strong' : 'text-soft'}">{$t(item.key)}</span>
-              {#if item.badge}<span class="shrink-0 {item.badge.cls}">{item.badge.text}</span>{/if}
+              {#if !collapsed}
+                <span class="min-w-0 flex-1 truncate text-sm {active ? 'font-semibold text-strong' : 'text-soft'}">{$t(item.key)}</span>
+                {#if item.badge}<span class="shrink-0 {item.badge.cls}">{item.badge.text}</span>{/if}
+              {/if}
             </a>
           {/each}
         </div>
@@ -216,10 +223,11 @@
 
 {#if $authReady && $user}
   <!-- Desktop: fixed-height shell under the header — sidebar and content are two
-       INDEPENDENT scroll areas (each scrolls itself, the page never scrolls). -->
-  <div class="lg:grid lg:h-[calc(100vh-61px)] lg:grid-cols-[272px_1fr] lg:overflow-hidden">
-    <aside class="hidden lg:block lg:h-full lg:overflow-y-auto lg:overscroll-contain lg:border-r lg:border-edge lg:bg-panel lg:p-4">
-      {@render sidebarContent()}
+       INDEPENDENT scroll areas (each scrolls itself, the page never scrolls).
+       The sidebar collapses to a 72px icons-only rail via the header toggle. -->
+  <div class="lg:grid lg:h-[calc(100vh-61px)] lg:overflow-hidden {$sidebarCollapsed ? 'lg:grid-cols-[72px_1fr]' : 'lg:grid-cols-[272px_1fr]'}">
+    <aside class="hidden lg:block lg:h-full lg:overflow-y-auto lg:overscroll-contain lg:border-r lg:border-edge lg:bg-panel {$sidebarCollapsed ? 'lg:p-2 lg:pt-4' : 'lg:p-4'}">
+      {@render sidebarContent($sidebarCollapsed)}
     </aside>
 
     <div class="min-w-0 px-4 py-6 lg:h-full lg:overflow-y-auto lg:overscroll-contain lg:px-8">
@@ -240,7 +248,7 @@
       transition:fly={{ x: -300, duration: 220 }}
     >
       <button aria-label="Close menu" class="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-lg border border-edge bg-panel text-muted" onclick={() => sidebarOpen.set(false)}><X class="h-4 w-4" /></button>
-      {@render sidebarContent()}
+      {@render sidebarContent(false)}
     </aside>
   {/if}
 {:else}

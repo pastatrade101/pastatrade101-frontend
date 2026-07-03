@@ -4,11 +4,11 @@
   import { fly } from 'svelte/transition';
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
-  import { ChevronDown, CreditCard, DoorOpen, FileText, Flame, Languages, LayoutDashboard, LogIn, LogOut, Mail, Menu, Moon, Phone, Radar, Shield, Spline, Sun, Tag, X } from '@lucide/svelte';
+  import { ChevronDown, CreditCard, DoorOpen, FileText, Flame, Languages, LayoutDashboard, LogIn, LogOut, Mail, Menu, Moon, PanelLeftClose, PanelLeftOpen, Phone, Radar, Shield, Spline, Sun, Tag, X } from '@lucide/svelte';
   import BrandMark from '$lib/components/BrandMark.svelte';
   import { authReady, initAuth, logout, user } from '$lib/stores/auth';
   import { clearMembership, loadMembership, membership } from '$lib/stores/membership';
-  import { sidebarOpen } from '$lib/stores/ui';
+  import { sidebarCollapsed, sidebarOpen } from '$lib/stores/ui';
   import { initTheme, theme, toggleTheme } from '$lib/stores/theme';
   import { initLocale, locale, setLocale, t } from '$lib/i18n';
 
@@ -44,15 +44,26 @@
 
 <div class="flex min-h-screen flex-col">
   <header class="sticky top-0 z-20 border-b border-edge bg-ink/80 backdrop-blur">
-    <div class="mx-auto flex w-full max-w-[1440px] items-center justify-between px-4 py-3 lg:px-8">
+    <!-- App pages: full-width bar so the brand aligns with the left-edge sidebar.
+         Marketing pages keep the centered container. -->
+    <div class={onApp && $user ? 'flex w-full items-center justify-between px-4 py-3 lg:px-5' : 'mx-auto flex w-full max-w-[1440px] items-center justify-between px-4 py-3 lg:px-8'}>
       <div class="flex items-center gap-2">
         {#if $authReady && $user && onApp}
+          <!-- Mobile: drawer toggle -->
           <button
             class="rounded-lg border border-edge p-2 text-body transition hover:bg-panel-2 lg:hidden"
             aria-label="Toggle menu"
             onclick={() => sidebarOpen.update((v) => !v)}
           >
             <Menu class="h-5 w-5" />
+          </button>
+          <!-- Desktop: collapse sidebar to an icons-only rail -->
+          <button
+            class="hidden rounded-lg border border-edge p-2 text-muted transition hover:bg-panel-2 hover:text-strong lg:flex"
+            aria-label={$sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            onclick={() => sidebarCollapsed.update((v) => !v)}
+          >
+            {#if $sidebarCollapsed}<PanelLeftOpen class="h-4 w-4" />{:else}<PanelLeftClose class="h-4 w-4" />{/if}
           </button>
         {/if}
         <a href="/" class="flex items-center gap-2 font-semibold text-strong">
