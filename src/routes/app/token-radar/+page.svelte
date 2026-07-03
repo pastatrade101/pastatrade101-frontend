@@ -5,7 +5,7 @@
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   type Any = any;
-  interface Chain { slug: string; name: string; native: string }
+  interface Chain { slug: string; name: string; native: string; type: string; status: 'active' | 'limited' | 'coming_soon'; popular: boolean }
 
   let chains = $state<Chain[]>([]);
   let allowance = $state<{ limit: number | null; used: number; remaining: number | null } | null>(null);
@@ -17,6 +17,27 @@
   let stepIdx = $state(0);
   let report = $state<Any>(null);
   let matches = $state<Any[] | null>(null);
+  let chainChoices = $state<{ slug: string; name: string; liquidity_usd: number }[] | null>(null);
+
+  // ── Searchable grouped network selector ──
+  let pickerOpen = $state(false);
+  let pickerSearch = $state('');
+  const selected = $derived(chain === 'auto' ? null : chains.find((c) => c.slug === chain) ?? null);
+  const filtered = $derived(pickerSearch ? chains.filter((c) => c.name.toLowerCase().includes(pickerSearch.toLowerCase()) || c.slug.includes(pickerSearch.toLowerCase())) : chains);
+  const groups = $derived([
+    { label: 'Popular', items: filtered.filter((c) => c.popular) },
+    { label: 'EVM Chains', items: filtered.filter((c) => !c.popular && c.type === 'evm' && c.status !== 'coming_soon') },
+    { label: 'Non-EVM Chains', items: filtered.filter((c) => !c.popular && c.type !== 'evm' && c.status !== 'coming_soon') },
+    { label: 'Coming Soon', items: filtered.filter((c) => !c.popular && c.status === 'coming_soon') }
+  ].filter((g) => g.items.length));
+  const badge = (s: Chain['status']) => (s === 'active' ? 'Full support' : s === 'limited' ? 'Limited support' : 'Coming soon');
+  const badgeCls = (s: Chain['status']) => (s === 'active' ? 'bg-mint/15 text-mint' : s === 'limited' ? 'bg-warn/15 text-warn' : 'bg-edge text-muted');
+  const pickChainSlug = (c: Chain) => {
+    if (c.status === 'coming_soon') return;
+    chain = c.slug;
+    pickerOpen = false;
+    pickerSearch = '';
+  };
 
   const STEPS = ['Detecting token', 'Checking liquidity', 'Reading holder data', 'Checking contract risk', 'Calculating score', 'Preparing report'];
   let stepTimer: ReturnType<typeof setInterval> | null = null;
@@ -51,9 +72,10 @@
     analyzing = true;
     report = null;
     matches = null;
+    chainChoices = null;
     runSteps();
     try {
-      const d = await api<{ status: string; report?: Any; matches?: Any[]; message?: string }>('/token-radar/analyze', {
+      const d = await api<{ status: string; report?: Any; matches?: Any[]; options?: Any[]; message?: string }>('/token-radar/analyze', {
         method: 'POST',
         auth: true,
         body: { chain, input: value, fresh }
@@ -63,6 +85,8 @@
         allowance = allowance ? { ...allowance, used: allowance.used + (report.cached ? 0 : 1), remaining: allowance.remaining == null ? null : Math.max(0, allowance.remaining - (report.cached ? 0 : 1)) } : allowance;
       } else if (d.status === 'matches') {
         matches = d.matches ?? [];
+      } else if (d.status === 'chains') {
+        chainChoices = d.options ?? [];
       } else {
         error = d.message ?? 'Token not found.';
       }
@@ -143,11 +167,39 @@
 <!-- Input -->
 <div class="card mb-4">
   <div class="grid gap-3 sm:grid-cols-[180px_1fr_auto]">
-    <label class="block text-xs text-muted">Network
-      <select bind:value={chain} class="input mt-1 w-full">
-        {#each chains as c}<option value={c.slug}>{c.name}</option>{/each}
-      </select>
-    </label>
+    <div class="relative block text-xs text-muted">
+      Network
+      <button type="button" class="input mt-1 flex w-full items-center justify-between gap-2 text-left" onclick={() => (pickerOpen = !pickerOpen)}>
+        <span class="truncate text-sm text-strong">{chain === 'auto' ? '🔍 Auto-detect' : (selected?.name ?? 'Select network')}</span>
+        {#if selected}<span class="pill shrink-0 {badgeCls(selected.status)} text-[10px]">{badge(selected.status)}</span>{/if}
+      </button>
+      {#if pickerOpen}
+        <!-- click-away backdrop -->
+        <button type="button" aria-label="Close" class="fixed inset-0 z-10 cursor-default" onclick={() => (pickerOpen = false)}></button>
+        <div class="absolute z-20 mt-1 max-h-80 w-full min-w-[260px] overflow-y-auto rounded-lg border border-edge bg-panel shadow-xl">
+          <div class="sticky top-0 bg-panel p-2">
+            <input bind:value={pickerSearch} placeholder="Search network…" class="input-sm w-full" />
+          </div>
+          <button type="button" class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-soft hover:bg-panel-2" onclick={() => { chain = 'auto'; pickerOpen = false; pickerSearch = ''; }}>
+            🔍 Auto-detect <span class="text-[10px] text-muted">paste an address, we find the network</span>
+          </button>
+          {#each groups as g}
+            <p class="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-muted">{g.label}</p>
+            {#each g.items as c}
+              <button
+                type="button"
+                class="flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-sm {c.status === 'coming_soon' ? 'cursor-not-allowed opacity-50' : 'hover:bg-panel-2'} {c.slug === chain ? 'bg-panel-2' : ''}"
+                disabled={c.status === 'coming_soon'}
+                onclick={() => pickChainSlug(c)}
+              >
+                <span class="truncate text-soft">{c.name} <span class="text-[10px] text-muted">{c.native}</span></span>
+                <span class="pill shrink-0 {badgeCls(c.status)} text-[10px]">{badge(c.status)}</span>
+              </button>
+            {/each}
+          {/each}
+        </div>
+      {/if}
+    </div>
     <label class="block text-xs text-muted">Token address or ticker
       <input bind:value={input} onkeydown={(e) => e.key === 'Enter' && analyze()} placeholder="0x… / PEPE" class="input mt-1 w-full font-mono" />
     </label>
@@ -158,6 +210,9 @@
     </div>
   </div>
   <p class="mt-2 flex items-center gap-1.5 text-[11px] text-muted"><Info class="h-3 w-3" />For accurate analysis, paste the token contract address. Tickers can have fake duplicates.</p>
+  {#if selected?.status === 'limited'}
+    <p class="mt-1.5 rounded-lg border border-warn/30 bg-warn/5 px-3 py-1.5 text-[11px] text-warn">Some analysis fields may be unavailable on this network. The report will use available data and reduce confidence where data is missing.</p>
+  {/if}
   {#if allowance && allowance.limit !== null}
     <p class="mt-1 text-[11px] text-muted">Scans today: <span class="text-soft">{allowance.used}/{allowance.limit}</span>{allowance.remaining === 0 ? ' — limit reached, upgrade for more.' : ''}</p>
   {/if}
@@ -176,6 +231,22 @@
         </li>
       {/each}
     </ul>
+  </div>
+{/if}
+
+<!-- Multi-chain address chooser (auto-detect found several networks) -->
+{#if chainChoices}
+  <div class="card mb-4">
+    <p class="stat-label mb-2">This address exists on multiple networks — pick one</p>
+    <p class="mb-3 text-xs text-muted">The same contract address can be deployed on several chains (sometimes by copycats). The network with real liquidity is usually the original.</p>
+    <div class="flex flex-wrap gap-2">
+      {#each chainChoices as o}
+        <button type="button" class="rounded-lg border border-edge bg-panel-2 px-3 py-2 text-left text-sm transition hover:border-mint/40" onclick={() => { chain = o.slug; void analyze(); }}>
+          <span class="font-medium text-strong">{o.name}</span>
+          <span class="block text-[11px] text-muted">top liquidity {fmtUsd(o.liquidity_usd)}</span>
+        </button>
+      {/each}
+    </div>
   </div>
 {/if}
 
