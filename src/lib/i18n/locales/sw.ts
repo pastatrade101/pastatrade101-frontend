@@ -16,8 +16,13 @@ export const sw: Record<string, string> = {
 
   // App sidebar
   'app.nav.overview': 'Muhtasari',
-  'app.nav.risk': 'Hatari',
-  'app.nav.social': 'Jamii',
+  'app.nav.risk': 'Dashibodi ya Hatari',
+  'app.nav.social': 'Ishara za Jamii',
+  'app.nav.group.market': 'Soko',
+  'app.nav.group.cycle': 'Mzunguko & Chati',
+  'app.nav.group.discovery': 'Ugunduzi',
+  'app.nav.group.strategy': 'Mkakati',
+  'app.nav.search': 'Tafuta zana…',
   'app.nav.derivatives': 'Hatari ya Leverage',
   'app.nav.macro': 'Mwelekeo wa Macro',
   'app.nav.charts': 'Chati',

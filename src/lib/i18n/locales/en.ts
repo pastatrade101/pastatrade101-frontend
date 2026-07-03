@@ -15,8 +15,13 @@ export const en: Record<string, string> = {
 
   // App sidebar
   'app.nav.overview': 'Overview',
-  'app.nav.risk': 'Risk',
-  'app.nav.social': 'Social',
+  'app.nav.risk': 'Risk Dashboard',
+  'app.nav.social': 'Social Signals',
+  'app.nav.group.market': 'Market',
+  'app.nav.group.cycle': 'Cycle & Charts',
+  'app.nav.group.discovery': 'Discovery',
+  'app.nav.group.strategy': 'Strategy',
+  'app.nav.search': 'Search tools…',
   'app.nav.derivatives': 'Leverage Risk',
   'app.nav.macro': 'Macro Regime',
   'app.nav.charts': 'Charts',
