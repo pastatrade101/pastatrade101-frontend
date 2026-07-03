@@ -55,7 +55,8 @@
             <Menu class="h-5 w-5" />
           </button>
         {/if}
-        <a href="/" class="flex items-center gap-2 font-semibold text-strong">
+        <!-- On desktop app pages the sidebar owns the brand — avoid stacking it twice. -->
+        <a href="/" class="flex items-center gap-2 font-semibold text-strong {onApp && $user ? 'lg:hidden' : ''}">
           <BrandMark class="h-5 w-5 text-mint" />
           Pasta<span class="text-mint">trade101</span>
         </a>
@@ -183,7 +184,9 @@
     </div>
   </header>
 
-  <main class="mx-auto w-full max-w-[1440px] flex-1 px-4 py-6 lg:px-8">
+  <!-- App routes get a full-width shell (the sidebar hugs the left edge and the
+       content pads itself); marketing pages keep the centered container. -->
+  <main class={onApp && $user ? 'w-full flex-1' : 'mx-auto w-full max-w-[1440px] flex-1 px-4 py-6 lg:px-8'}>
     {@render children()}
   </main>
 

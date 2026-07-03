@@ -230,13 +230,13 @@
 {/snippet}
 
 {#if $authReady && $user}
-  <div class="grid gap-6 lg:grid-cols-[260px_1fr]">
-    <!-- Desktop sidebar -->
-    <aside class="hidden lg:sticky lg:top-20 lg:block lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:rounded-2xl lg:border lg:border-edge lg:bg-panel lg:p-4">
+  <div class="lg:grid lg:grid-cols-[272px_1fr]">
+    <!-- Desktop sidebar — flush to the left viewport edge, full height under the header -->
+    <aside class="hidden lg:sticky lg:top-[61px] lg:block lg:h-[calc(100vh-61px)] lg:overflow-y-auto lg:border-r lg:border-edge lg:bg-panel lg:p-4">
       {@render sidebarContent()}
     </aside>
 
-    <div class="min-w-0">
+    <div class="min-w-0 px-4 py-6 lg:px-8">
       {@render children()}
     </div>
   </div>
