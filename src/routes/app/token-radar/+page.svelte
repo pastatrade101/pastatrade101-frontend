@@ -83,6 +83,7 @@
     limitInfo = null;
     exTab = 'all';
     exShowAll = false;
+    chartTf = '90d';
     runSteps();
     try {
       const d = await api<{ status: string; report?: Any; matches?: Any[]; options?: Any[]; limit?: number; used?: number; required_plan?: string; message?: string }>('/token-radar/analyze', {
@@ -230,6 +231,41 @@
   const setTab = (t: 'all' | 'dex' | 'cex') => { exTab = t; exShowAll = false; };
   const trustDot = (t?: string) => (t === 'high' ? 'text-mint' : t === 'medium' ? 'text-warn' : t === 'low' ? 'text-danger' : 'text-muted');
   const sevIcon = (s: string) => (s === 'critical' ? 'text-danger' : s === 'high' ? 'text-orange-400' : s === 'medium' ? 'text-warn' : 'text-muted');
+
+  // ── Chart Intelligence ──
+  let chartTf = $state<'7d' | '30d' | '90d' | '180d' | '1y'>('90d');
+  const TF_DAYS: Record<string, number> = { '7d': 7, '30d': 30, '90d': 90, '180d': 180, '1y': 365 };
+  const chartSeries = $derived.by(() => {
+    const s = report?.chart?.series ?? [];
+    return s.slice(-TF_DAYS[chartTf]);
+  });
+  const tfChange = $derived.by(() => {
+    if (chartSeries.length < 2) return null;
+    const first = chartSeries[0].c;
+    return first > 0 ? ((chartSeries[chartSeries.length - 1].c - first) / first) * 100 : null;
+  });
+  const sparg = $derived.by(() => {
+    const pts = chartSeries;
+    if (pts.length < 2) return null;
+    const w = 600;
+    const h = 120;
+    const closes = pts.map((p: Any) => p.c);
+    const min = Math.min(...closes);
+    const max = Math.max(...closes);
+    const span = max - min || 1;
+    const xy = closes.map((c: number, idx: number) => `${((idx / (closes.length - 1)) * w).toFixed(1)},${(h - 8 - ((c - min) / span) * (h - 16)).toFixed(1)}`);
+    return { line: `M${xy.join(' L')}`, area: `M0,${h} L${xy.join(' L')} L${w},${h} Z` };
+  });
+  const structWord = (s: string) => (s === 'bullish' ? 'Bullish' : s === 'recovering' ? 'Recovering' : s === 'bearish' ? 'Bearish' : s === 'overextended' ? 'Overextended' : 'Unknown');
+  const structTone = (s: string) => (s === 'bullish' ? 'good' : s === 'recovering' ? 'mid' : s === 'unknown' ? 'na' : 'bad');
+  const rsWord = (s: string) => (s === 'outperforming_btc' ? 'Outperforming BTC' : s === 'underperforming_btc' ? 'Underperforming BTC' : s === 'matching_btc' ? 'Matching BTC' : 'Unknown');
+  const rsExplain = (rs: Any) => {
+    if (!rs || rs.status === 'unknown') return 'Not enough overlapping history to compare this token with BTC yet.';
+    const tok = rs.tokenReturn30d ?? 0;
+    if (rs.status === 'underperforming_btc') return tok > 0 ? 'The token has gained in USD terms, but it is still underperforming BTC — relative strength is weak.' : 'The token is lagging BTC over 30 days — capital is favouring BTC over this token.';
+    if (rs.status === 'outperforming_btc') return 'The token is beating BTC over 30 days — genuine relative strength, not just a market-wide move.';
+    return 'The token is moving roughly in line with BTC — no independent strength or weakness yet.';
+  };
 
   // Donut geometry for the main opportunity score
   const R = 52;
@@ -534,6 +570,71 @@
         {/if}
       </div>
     </div>
+
+    <!-- Chart Intelligence -->
+    {#if report.chart}
+      {@const ch = report.chart}
+      {@const st = structTone(ch.maStructure)}
+      <div in:fly={{ y: 18, duration: 450, delay: 540 }} class={PREMIUM_CARD}>
+        <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <p class="stat-label flex items-center gap-1.5"><BarChart3 class="h-3.5 w-3.5 text-accent" />Chart Intelligence</p>
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="pill bg-panel-2 {textCls(st)}">{structWord(ch.maStructure)} structure</span>
+            <span class="pill bg-panel-2 text-soft">Trend {ch.chartTrendScore}/100</span>
+            <span class="pill bg-panel-2 text-muted">Source: {ch.source}</span>
+          </div>
+        </div>
+
+        <!-- Timeframe selector + sparkline -->
+        <div class="mb-1 flex items-center justify-between gap-2">
+          <div class="inline-flex rounded-lg border border-edge p-0.5 text-xs">
+            {#each ['7d', '30d', '90d', '180d', '1y'] as tf}
+              <button type="button" class="rounded-md px-2 py-0.5 font-medium transition {chartTf === tf ? 'bg-accent/15 text-accent' : 'text-muted hover:text-soft'}" onclick={() => (chartTf = tf as Any)}>{tf}</button>
+            {/each}
+          </div>
+          {#if tfChange != null}<span class="text-sm font-bold {tfChange >= 0 ? 'text-mint' : 'text-danger'}">{tfChange >= 0 ? '+' : ''}{tfChange.toFixed(1)}% <span class="text-[10px] font-normal text-muted">{chartTf}</span></span>{/if}
+        </div>
+        {#if sparg}
+          <svg viewBox="0 0 600 120" preserveAspectRatio="none" class="h-28 w-full">
+            <path d={sparg.area} class="{tfChange != null && tfChange < 0 ? 'text-danger' : 'text-mint'} opacity-10" fill="currentColor" />
+            <path d={sparg.line} class={tfChange != null && tfChange < 0 ? 'text-danger' : 'text-mint'} fill="none" stroke="currentColor" stroke-width="2" />
+          </svg>
+        {:else}
+          <p class="py-6 text-center text-xs text-muted">Not enough candles for this timeframe.</p>
+        {/if}
+
+        <!-- Metrics -->
+        <div class="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-3 lg:grid-cols-6">
+          <div class="rounded-lg bg-panel-2 px-2.5 py-1.5"><div class="text-[10px] text-muted">30d change</div><div class="font-semibold {(ch.priceChange30d ?? 0) >= 0 ? 'text-mint' : 'text-danger'}">{ch.priceChange30d != null ? `${ch.priceChange30d >= 0 ? '+' : ''}${ch.priceChange30d.toFixed(1)}%` : '—'}</div></div>
+          <div class="rounded-lg bg-panel-2 px-2.5 py-1.5"><div class="text-[10px] text-muted">From 90d high</div><div class="font-semibold {(ch.drawdownFrom90dHigh ?? 0) <= -30 ? 'text-danger' : 'text-soft'}">{ch.drawdownFrom90dHigh != null ? `${ch.drawdownFrom90dHigh.toFixed(0)}%` : '—'}</div></div>
+          <div class="rounded-lg bg-panel-2 px-2.5 py-1.5"><div class="text-[10px] text-muted">MA20</div><div class="font-semibold text-strong">{fmtPrice(ch.ma20)}</div><div class="text-[9px] {ch.priceVsMa20 === 'above' ? 'text-mint' : ch.priceVsMa20 === 'below' ? 'text-danger' : 'text-muted'}">price {ch.priceVsMa20}</div></div>
+          <div class="rounded-lg bg-panel-2 px-2.5 py-1.5"><div class="text-[10px] text-muted">MA50</div><div class="font-semibold text-strong">{fmtPrice(ch.ma50)}</div><div class="text-[9px] {ch.priceVsMa50 === 'above' ? 'text-mint' : ch.priceVsMa50 === 'below' ? 'text-danger' : 'text-muted'}">price {ch.priceVsMa50}</div></div>
+          <div class="rounded-lg bg-panel-2 px-2.5 py-1.5"><div class="text-[10px] text-muted">Volume trend</div><div class="font-semibold {ch.volumeTrend === 'rising' ? 'text-mint' : ch.volumeTrend === 'inactive' ? 'text-danger' : ch.volumeTrend === 'falling' ? 'text-warn' : 'text-soft'}">{cap(ch.volumeTrend)}</div></div>
+          <div class="rounded-lg bg-panel-2 px-2.5 py-1.5"><div class="text-[10px] text-muted">Breakout</div><div class="font-semibold {textCls(state3(ch.breakoutScore))}">{ch.breakoutScore}/100</div></div>
+        </div>
+
+        <!-- Relative strength vs BTC -->
+        <div class="mt-3 rounded-xl border border-edge bg-panel-2/50 px-3.5 py-2.5">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <p class="text-xs font-semibold uppercase tracking-wide text-muted">Relative Strength vs BTC</p>
+            <span class="pill {ch.relativeStrengthVsBtc.status === 'outperforming_btc' ? 'bg-mint/15 text-mint' : ch.relativeStrengthVsBtc.status === 'underperforming_btc' ? 'bg-danger/15 text-danger' : 'bg-warn/15 text-warn'}">{rsWord(ch.relativeStrengthVsBtc.status)}</span>
+          </div>
+          <div class="mt-1.5 flex flex-wrap gap-4 text-sm">
+            <span class="text-muted">Token 30d: <span class="font-semibold {(ch.relativeStrengthVsBtc.tokenReturn30d ?? 0) >= 0 ? 'text-mint' : 'text-danger'}">{ch.relativeStrengthVsBtc.tokenReturn30d != null ? `${ch.relativeStrengthVsBtc.tokenReturn30d >= 0 ? '+' : ''}${ch.relativeStrengthVsBtc.tokenReturn30d.toFixed(1)}%` : '—'}</span></span>
+            <span class="text-muted">BTC 30d: <span class="font-semibold {(ch.relativeStrengthVsBtc.btcReturn30d ?? 0) >= 0 ? 'text-mint' : 'text-danger'}">{ch.relativeStrengthVsBtc.btcReturn30d != null ? `${ch.relativeStrengthVsBtc.btcReturn30d >= 0 ? '+' : ''}${ch.relativeStrengthVsBtc.btcReturn30d.toFixed(1)}%` : '—'}</span></span>
+            <span class="text-muted">Token/BTC: <span class="font-semibold {textCls(state3(ch.relativeStrengthVsBtc.score))}">{ch.relativeStrengthVsBtc.tokenBtcReturn30d != null ? `${ch.relativeStrengthVsBtc.tokenBtcReturn30d >= 0 ? '+' : ''}${ch.relativeStrengthVsBtc.tokenBtcReturn30d.toFixed(1)}pp` : '—'}</span></span>
+          </div>
+          <p class="mt-1 text-[11px] leading-relaxed text-muted">{rsExplain(ch.relativeStrengthVsBtc)}</p>
+        </div>
+
+        <p class="mt-2.5 text-sm leading-relaxed text-soft">{ch.summary}</p>
+        {#if ch.warnings?.length}
+          <ul class="mt-2 space-y-1 border-t border-edge/60 pt-2 text-xs text-soft">
+            {#each ch.warnings as w}<li class="flex gap-1.5"><span class={sevIcon(w.severity)}>⚠</span><span><span class="font-medium {sevIcon(w.severity)}">{w.label}:</span> {w.message}</span></li>{/each}
+          </ul>
+        {/if}
+      </div>
+    {/if}
 
     <div class="grid gap-4 lg:grid-cols-[5fr_7fr]">
       <!-- 7 · Confidence + 8 · Holder Intelligence -->
