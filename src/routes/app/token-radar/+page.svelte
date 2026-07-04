@@ -553,6 +553,19 @@
       <div in:fly={{ y: 18, duration: 450, delay: 500 }} class="space-y-3">
         <div class="{PREMIUM_CARD} border-l-[3px] border-l-accent/50">
           <p class="stat-label flex items-center gap-1.5"><Sparkles class="h-3.5 w-3.5 text-accent" />Radar Summary</p>
+          {#if report.setup_type || report.chart}
+            <div class="mt-1.5 flex flex-wrap gap-1.5">
+              {#if report.setup_type && report.setup_type !== 'Unknown setup'}
+                <span class="pill bg-accent/15 text-accent">{report.setup_type}</span>
+              {/if}
+              {#if report.warnings?.some((w: Any) => w.label === 'Momentum vs Liquidity Mismatch')}
+                <span class="pill bg-warn/15 text-warn">Liquidity not confirmed</span>
+              {/if}
+              {#if report.chart?.relativeStrengthVsBtc?.status === 'outperforming_btc'}
+                <span class="pill bg-mint/15 text-mint">Outperforming BTC</span>
+              {/if}
+            </div>
+          {/if}
           <p class="mt-1.5 text-sm leading-relaxed text-soft">{report.summary}</p>
           <p class="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-panel-2 px-2.5 py-1 text-xs"><Zap class="h-3 w-3 text-accent" />Suggested action: <span class="font-medium text-soft">{report.action_label}</span></p>
         </div>
@@ -581,8 +594,17 @@
           <div class="flex flex-wrap items-center gap-2">
             <span class="pill bg-panel-2 {textCls(st)}">{structWord(ch.maStructure)} structure</span>
             <span class="pill bg-panel-2 text-soft">Trend {ch.chartTrendScore}/100</span>
-            <span class="pill bg-panel-2 text-muted">Source: {ch.source}</span>
           </div>
+        </div>
+
+        <!-- Chart source provenance (chart data now influences Momentum) -->
+        <div class="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg bg-panel-2/60 px-3 py-1.5 text-[11px]">
+          <span class="text-muted">Chart source: <span class="font-medium capitalize text-soft">{ch.source}</span></span>
+          {#if ch.sourceConfidence}
+            <span class="pill {ch.sourceConfidence.level === 'high' ? 'bg-mint/15 text-mint' : 'bg-warn/15 text-warn'} text-[10px]">Confidence: {cap(ch.sourceConfidence.level)}</span>
+            <span class="pill {ch.sourceConfidence.verified ? 'bg-mint/15 text-mint' : 'bg-warn/15 text-warn'} text-[10px]">{ch.sourceConfidence.verified ? '✓ Verified' : 'Unverified'}</span>
+            <span class="text-muted">{ch.sourceConfidence.reason}</span>
+          {/if}
         </div>
 
         <!-- Timeframe selector + sparkline -->
