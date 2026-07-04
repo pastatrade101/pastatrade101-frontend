@@ -1,12 +1,12 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { fly } from 'svelte/transition';
-  import { Crosshair, Search, ExternalLink, AlertTriangle, Info, ShieldCheck, Loader, TrendingUp, Activity, Wallet, Landmark, BarChart3, Globe, Timer, Coins, Users, Sparkles, Gauge, Zap, Lock } from '@lucide/svelte';
+  import { Crosshair, Search, ExternalLink, AlertTriangle, Info, ShieldCheck, Loader, TrendingUp, Activity, Wallet, Landmark, BarChart3, Globe, Timer, Coins, Users, Sparkles, Gauge, Zap, Lock, Network } from '@lucide/svelte';
   import { api } from '$lib/api';
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   type Any = any;
-  interface Chain { slug: string; name: string; native: string; type: string; status: 'active' | 'limited' | 'coming_soon'; popular: boolean }
+  interface Chain { slug: string; name: string; native: string; type: string; status: 'active' | 'limited' | 'coming_soon'; popular: boolean; icon: string | null }
 
   let chains = $state<Chain[]>([]);
   let allowance = $state<{ limit: number | null; used: number; remaining: number | null } | null>(null);
@@ -70,6 +70,7 @@
 
   let exTab = $state<'all' | 'dex' | 'cex'>('all');
   let exShowAll = $state(false);
+  let mcShowAll = $state(false);
 
   const analyze = async (chosen?: string, fresh = false) => {
     const value = (chosen ?? input).trim();
@@ -83,6 +84,7 @@
     limitInfo = null;
     exTab = 'all';
     exShowAll = false;
+    mcShowAll = false;
     chartTf = '90d';
     runSteps();
     try {
@@ -296,6 +298,13 @@
   const PREMIUM_CARD = 'card rounded-2xl shadow-[0_14px_34px_-18px_rgba(2,6,23,0.35)]';
 </script>
 
+{#snippet chainAvatar(c: Chain, size: string)}
+  <span class="relative inline-flex {size} shrink-0 items-center justify-center overflow-hidden rounded-full bg-panel-2 text-[9px] font-bold uppercase text-muted ring-1 ring-edge">
+    {c.name.slice(0, 1)}
+    {#if c.icon}<img src={c.icon} alt="" loading="lazy" class="absolute inset-0 h-full w-full object-cover" onerror={(e) => ((e.currentTarget as HTMLImageElement).style.display = 'none')} />{/if}
+  </span>
+{/snippet}
+
 <div class="max-w-7xl space-y-4">
   <!-- 1 · Hero -->
   <div class="relative overflow-hidden rounded-2xl px-5 py-6 text-white shadow-[0_18px_40px_-20px_rgba(2,6,23,0.5)]" style={HERO_GRAD}>
@@ -327,7 +336,10 @@
       <div class="relative block text-xs text-muted">
         Network
         <button type="button" class="input mt-1 flex w-full items-center justify-between gap-2 text-left" onclick={() => (pickerOpen = !pickerOpen)}>
-          <span class="truncate text-sm text-strong">{chain === 'auto' ? '🔍 Auto-detect' : (selected?.name ?? 'Select network')}</span>
+          <span class="flex min-w-0 items-center gap-2">
+            {#if chain === 'auto'}<span class="text-sm">🔍</span>{:else if selected}{@render chainAvatar(selected, 'h-5 w-5')}{/if}
+            <span class="truncate text-sm text-strong">{chain === 'auto' ? 'Auto-detect' : (selected?.name ?? 'Select network')}</span>
+          </span>
           {#if selected}<span class="pill shrink-0 {badgeCls(selected.status)} text-[10px]">{badge(selected.status)}</span>{/if}
         </button>
         {#if pickerOpen}
@@ -339,7 +351,10 @@
               <p class="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-muted">{g.label}</p>
               {#each g.items as c}
                 <button type="button" class="flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-sm {c.status === 'coming_soon' ? 'cursor-not-allowed opacity-50' : 'hover:bg-panel-2'} {c.slug === chain ? 'bg-panel-2' : ''}" disabled={c.status === 'coming_soon'} onclick={() => pickChainSlug(c)}>
-                  <span class="truncate text-soft">{c.name} <span class="text-[10px] text-muted">{c.native}</span></span>
+                  <span class="flex min-w-0 items-center gap-2">
+                    {@render chainAvatar(c, 'h-5 w-5')}
+                    <span class="truncate text-soft">{c.name} <span class="text-[10px] text-muted">{c.native}</span></span>
+                  </span>
                   <span class="pill shrink-0 {badgeCls(c.status)} text-[10px]">{badge(c.status)}</span>
                 </button>
               {/each}
@@ -459,7 +474,10 @@
     <!-- 3 · Token Overview + Final Rating -->
     <div in:fly={{ y: 18, duration: 450 }} class="{PREMIUM_CARD} grid gap-4 bg-gradient-to-br from-panel to-panel-2/70 lg:grid-cols-[1fr_auto] lg:items-center">
       <div class="flex items-center gap-3">
-        <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-accent/12 text-lg font-bold text-accent ring-1 ring-accent/20">{(t.symbol ?? t.name ?? '?').slice(0, 3).toUpperCase()}</div>
+        <div class="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-accent/12 text-lg font-bold text-accent ring-1 ring-accent/20">
+          {(t.symbol ?? t.name ?? '?').slice(0, 3).toUpperCase()}
+          {#if t.logo}<img src={t.logo} alt="{t.symbol ?? ''} logo" loading="lazy" class="absolute inset-0 h-full w-full object-cover" onerror={(e) => ((e.currentTarget as HTMLImageElement).style.display = 'none')} />{/if}
+        </div>
         <div class="min-w-0">
           <h2 class="truncate text-xl font-bold text-strong">{t.name ?? 'Unknown'} <span class="text-sm font-medium text-muted">{t.symbol ?? ''}</span></h2>
           <div class="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted">
@@ -676,9 +694,12 @@
           <p class="stat-label mb-2 flex items-center gap-1.5"><Users class="h-3.5 w-3.5 text-accent" />Holder Intelligence</p>
           <div class="grid grid-cols-2 gap-2 text-xs">
             <div class="rounded-lg bg-panel-2 px-2.5 py-1.5"><div class="text-[10px] text-muted">Holders</div><div class="font-semibold text-strong">{report.holder?.count != null ? Number(report.holder.count).toLocaleString() : '—'}</div></div>
+            <div class="rounded-lg bg-panel-2 px-2.5 py-1.5" title="Share of supply held by the top 10 wallets, excluding pools/burn/locked contracts. Lower is healthier.">
+              <div class="text-[10px] text-muted">Top-10 concentration</div>
+              <div class="font-semibold {report.holder?.top10_percent == null ? 'text-muted' : textCls(report.holder.top10_percent > 60 ? 'bad' : report.holder.top10_percent > 35 ? 'mid' : 'good')}">{report.holder?.top10_percent != null ? `${Number(report.holder.top10_percent).toFixed(1)}%` : '—'}</div>
+            </div>
             <div class="rounded-lg bg-panel-2 px-2.5 py-1.5"><div class="text-[10px] text-muted">Source</div><div class="font-semibold text-strong">{cap(report.holder?.source ?? '—')}</div></div>
             <div class="rounded-lg bg-panel-2 px-2.5 py-1.5"><div class="text-[10px] text-muted">Confidence</div><div class="font-semibold {textCls(report.holder?.confidence === 'high' ? 'good' : report.holder?.confidence === 'medium' ? 'mid' : 'bad')}">{cap(report.holder?.confidence ?? '—')}</div></div>
-            <div class="rounded-lg bg-panel-2 px-2.5 py-1.5"><div class="text-[10px] text-muted">Score weight</div><div class="font-semibold text-strong">{Math.round((report.holder?.weight_used ?? 0) * 100)}%</div></div>
           </div>
           <div class="mt-2 flex flex-wrap gap-1.5">
             {#if report.holder?.verified}<span class="pill bg-mint/15 text-mint">Verified holder data</span>{:else if report.holder?.count != null}<span class="pill bg-warn/15 text-warn">Unverified — not used as severe override</span>{/if}
@@ -729,6 +750,71 @@
         </div>
       {/if}
     </div>
+
+    <!-- 10 · Multi-Chain Token Context -->
+    {#if report.multi_chain && (report.multi_chain.otherChains.length > 0 || report.multi_chain.globalMetrics.totalCexMarkets > 0 || report.multi_chain.biasDetected)}
+      {@const mc = report.multi_chain}
+      {@const sev = mc.warning?.severity}
+      <div in:fly={{ y: 18, duration: 450, delay: 700 }} class="{PREMIUM_CARD} {mc.biasDetected ? (sev === 'high' ? 'border-danger/40' : 'border-warn/40') : ''}">
+        <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <p class="stat-label flex items-center gap-1.5"><Network class="h-3.5 w-3.5 text-accent" />Multi-Chain Token Context</p>
+          {#if mc.biasDetected}
+            <span class="pill {sev === 'high' ? 'bg-danger/15 text-danger' : 'bg-warn/15 text-warn'}">Scanned-chain bias detected</span>
+          {:else}
+            <span class="pill bg-mint/15 text-mint">Single-chain read is representative</span>
+          {/if}
+        </div>
+
+        <div class="mb-3 grid grid-cols-2 gap-2 text-center sm:grid-cols-4">
+          <div class="rounded-lg bg-panel-2 px-2 py-1.5"><div class="truncate text-sm font-bold text-strong">{fmtUsd(mc.scannedChainMetrics.liquidityUsd)}</div><div class="text-[10px] text-muted">Scanned liq ({cap(mc.scannedChain)})</div></div>
+          <div class="rounded-lg bg-panel-2 px-2 py-1.5"><div class="truncate text-sm font-bold text-strong">{fmtUsd(mc.globalMetrics.totalDexLiquidityUsd)}</div><div class="text-[10px] text-muted">Global DEX liq</div></div>
+          <div class="rounded-lg bg-panel-2 px-2 py-1.5"><div class="truncate text-sm font-bold text-strong">{fmtUsd(mc.globalMetrics.totalGlobalVolume24hUsd)}</div><div class="text-[10px] text-muted">Global vol 24h</div></div>
+          <div class="rounded-lg bg-panel-2 px-2 py-1.5"><div class="text-sm font-bold text-strong">{mc.otherChains.length + 1}<span class="text-muted text-[11px]"> · {mc.globalMetrics.totalCexMarkets} CEX</span></div><div class="text-[10px] text-muted">chains traded</div></div>
+        </div>
+
+        <div class="mb-3 grid grid-cols-2 gap-3">
+          <div>
+            <div class="mb-0.5 flex items-center justify-between text-[11px]"><span class="text-muted">This chain's activity</span><span class="font-semibold {textCls(state3(mc.scannedChainMetrics.chainActivityScore))}">{mc.scannedChainMetrics.chainActivityScore}/100</span></div>
+            <div class="meter"><div class="meter-fill {barCls(state3(mc.scannedChainMetrics.chainActivityScore))}" style="width: {mc.scannedChainMetrics.chainActivityScore}%"></div></div>
+          </div>
+          <div>
+            <div class="mb-0.5 flex items-center justify-between text-[11px]"><span class="text-muted">Global market presence</span><span class="font-semibold {textCls(state3(mc.globalMetrics.globalMarketPresenceScore))}">{mc.globalMetrics.globalMarketPresenceScore}/100</span></div>
+            <div class="meter"><div class="meter-fill {barCls(state3(mc.globalMetrics.globalMarketPresenceScore))}" style="width: {mc.globalMetrics.globalMarketPresenceScore}%"></div></div>
+          </div>
+        </div>
+
+        {#if mc.warning}
+          <div class="mb-3 flex items-start gap-2 rounded-lg border {sev === 'high' ? 'border-danger/30 bg-danger/[0.06] text-danger' : 'border-warn/30 bg-warn/[0.06] text-warn'} px-3 py-2 text-xs leading-relaxed">
+            <AlertTriangle class="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            <span><span class="font-semibold">{mc.warning.label}.</span> {mc.warning.message}</span>
+          </div>
+        {/if}
+
+        {#if mc.otherChains.length}
+          <p class="stat-label mb-1.5">Also trades on</p>
+          <ul class="space-y-1.5">
+            {#each mc.otherChains.slice(0, mcShowAll ? mc.otherChains.length : 5) as oc}
+              <li class="flex items-center justify-between gap-2 rounded-lg bg-panel-2 px-2.5 py-1.5 text-xs">
+                <div class="min-w-0">
+                  <p class="truncate font-medium text-soft">{oc.chain}{#if oc.topDex} <span class="text-muted">· {cap(oc.topDex)}</span>{/if}</p>
+                  <p class="text-[10px] text-muted">{oc.pairCount ? `${oc.pairCount} pair${oc.pairCount === 1 ? '' : 's'} · ` : ''}source: {oc.source}</p>
+                </div>
+                <div class="shrink-0 text-right">
+                  {#if oc.liquidityUsd != null || oc.volume24hUsd != null}
+                    <div class="text-soft">Liq {fmtUsd(oc.liquidityUsd)}</div><div class="text-muted">Vol {fmtUsd(oc.volume24hUsd)}</div>
+                  {:else}<div class="text-muted">Present (no DEX pair found)</div>{/if}
+                </div>
+              </li>
+            {/each}
+          </ul>
+          {#if mc.otherChains.length > 5}
+            <button type="button" class="mt-2 text-xs font-medium text-accent hover:underline" onclick={() => (mcShowAll = !mcShowAll)}>{mcShowAll ? 'Show less' : `Show all ${mc.otherChains.length} chains`}</button>
+          {/if}
+        {/if}
+
+        <p class="mt-3 rounded-lg bg-panel-2/60 px-3 py-2 text-[11px] leading-relaxed text-muted"><span class="font-medium text-soft">Interpretation:</span> {mc.summary}</p>
+      </div>
+    {/if}
 
     <!-- 11 · Market Timing Context -->
     {#if report.timing_view}
