@@ -74,20 +74,31 @@
     { icon: LayoutGrid, tKey: 'landing.prob.2.t', bKey: 'landing.prob.2.b', fixKey: 'landing.prob.2.fix' },
     { icon: HeartCrack, tKey: 'landing.prob.3.t', bKey: 'landing.prob.3.b', fixKey: 'landing.prob.3.fix' }
   ];
-  const features = [
-    { icon: Gauge, tKey: 'landing.feat.risk.t', bKey: 'landing.feat.risk.b' },
-    { icon: Radar, tKey: 'landing.feat.radar.t', bKey: 'landing.feat.radar.b' },
-    { icon: DoorOpen, tKey: 'landing.feat.exit.t', bKey: 'landing.feat.exit.b' },
-    { icon: Spline, tKey: 'landing.feat.logreg.t', bKey: 'landing.feat.logreg.b' },
-    { icon: Flame, tKey: 'landing.feat.deriv.t', bKey: 'landing.feat.deriv.b' },
-    { icon: Compass, tKey: 'landing.feat.eor.t', bKey: 'landing.feat.eor.b' },
-    { icon: TrendingUp, tKey: 'landing.feat.alt.t', bKey: 'landing.feat.alt.b' },
-    { icon: Activity, tKey: 'landing.feat.altbottom.t', bKey: 'landing.feat.altbottom.b' },
-    { icon: Layers, tKey: 'landing.feat.eco.t', bKey: 'landing.feat.eco.b' },
-    { icon: Waves, tKey: 'landing.feat.social.t', bKey: 'landing.feat.social.b' },
-    { icon: LayoutGrid, tKey: 'landing.feat.overview.t', bKey: 'landing.feat.overview.b' },
-    { icon: FileText, tKey: 'landing.feat.reports.t', bKey: 'landing.feat.reports.b' },
-    { icon: Star, tKey: 'landing.feat.watch.t', bKey: 'landing.feat.watch.b' }
+  const commandFeature = { icon: LayoutGrid, tKey: 'landing.feat.overview.t', bKey: 'landing.feat.overview.b' };
+  const featurePreviewStats = [
+    { labelKey: 'landing.preview.btcrisk', valueKey: 'landing.preview.gooddca', level: '32%', color: '--c-mint' },
+    { labelKey: 'landing.preview.altmarket', valueKey: 'landing.preview.selective', level: '58%', color: '--c-accent' },
+    { labelKey: 'landing.preview.socialrisk', valueKey: 'landing.preview.normalatt', level: '42%', color: '--c-warn' }
+  ];
+  const riskSignals = [
+    { icon: Gauge, tKey: 'landing.feat.risk.t', bKey: 'landing.feat.risk.b', level: '32%', color: '--c-mint' },
+    { icon: Radar, tKey: 'landing.feat.radar.t', bKey: 'landing.feat.radar.b', level: '64%', color: '--c-accent' },
+    { icon: DoorOpen, tKey: 'landing.feat.exit.t', bKey: 'landing.feat.exit.b', level: '28%', color: '--c-warn' }
+  ];
+  const rotationSignals = [
+    { icon: TrendingUp, tKey: 'landing.feat.alt.t', bKey: 'landing.feat.alt.b', level: '56%', color: '--c-accent' },
+    { icon: Activity, tKey: 'landing.feat.altbottom.t', bKey: 'landing.feat.altbottom.b', level: '46%', color: '--c-mint' },
+    { icon: Layers, tKey: 'landing.feat.eco.t', bKey: 'landing.feat.eco.b', level: '68%', color: '--c-mint' },
+    { icon: Compass, tKey: 'landing.feat.eor.t', bKey: 'landing.feat.eor.b', level: '52%', color: '--c-warn' }
+  ];
+  const contextSignals = [
+    { icon: Spline, tKey: 'landing.feat.logreg.t', bKey: 'landing.feat.logreg.b', level: '62%', color: '--c-accent' },
+    { icon: Flame, tKey: 'landing.feat.deriv.t', bKey: 'landing.feat.deriv.b', level: '38%', color: '--c-danger' },
+    { icon: Waves, tKey: 'landing.feat.social.t', bKey: 'landing.feat.social.b', level: '42%', color: '--c-warn' }
+  ];
+  const deliverySignals = [
+    { icon: FileText, tKey: 'landing.feat.reports.t', bKey: 'landing.feat.reports.b', color: '--c-accent' },
+    { icon: Star, tKey: 'landing.feat.watch.t', bKey: 'landing.feat.watch.b', color: '--c-mint' }
   ];
   const steps = [
     { n: '01', icon: UserPlus, tKey: 'landing.steps.1.t', bKey: 'landing.steps.1.b' },
@@ -102,21 +113,32 @@
   // Ordered as a funnel: what it is → who it's for → plans/value → trust →
   // accuracy → support/payment → logistics/safety → differentiation.
   const faqs = [
-    { qKey: 'landing.faq.7.q', aKey: 'landing.faq.7.a' }, // What is Pastatrade101?
-    { qKey: 'landing.faq.8.q', aKey: 'landing.faq.8.a' }, // Who is it for?
-    { qKey: 'landing.faq.9.q', aKey: 'landing.faq.9.a' }, // Free vs Mid vs Premium
-    { qKey: 'landing.faq.10.q', aKey: 'landing.faq.10.a' }, // What do I get with Premium?
-    { qKey: 'landing.faq.2.q', aKey: 'landing.faq.2.a' }, // What do I get for free?
-    { qKey: 'landing.faq.11.q', aKey: 'landing.faq.11.a' }, // Does it tell me what to buy/sell?
-    { qKey: 'landing.faq.1.q', aKey: 'landing.faq.1.a' }, // Is this financial advice?
-    { qKey: 'landing.faq.12.q', aKey: 'landing.faq.12.a' }, // How accurate are the signals?
-    { qKey: 'landing.faq.13.q', aKey: 'landing.faq.13.a' }, // Can I call/ask questions?
-    { qKey: 'landing.faq.14.q', aKey: 'landing.faq.14.a' }, // Payment methods
-    { qKey: 'landing.faq.4.q', aKey: 'landing.faq.4.a' }, // How often is data updated?
-    { qKey: 'landing.faq.3.q', aKey: 'landing.faq.3.a' }, // Do you touch my funds/keys?
-    { qKey: 'landing.faq.5.q', aKey: 'landing.faq.5.a' }, // Cancel/downgrade?
-    { qKey: 'landing.faq.6.q', aKey: 'landing.faq.6.a' } // Different from CoinGecko/DefiLlama?
+    { qKey: 'landing.faq.7.q', aKey: 'landing.faq.7.a', groupKey: 'landing.faq.group.platform' }, // What is Pastatrade101?
+    { qKey: 'landing.faq.8.q', aKey: 'landing.faq.8.a', groupKey: 'landing.faq.group.platform' }, // Who is it for?
+    { qKey: 'landing.faq.9.q', aKey: 'landing.faq.9.a', groupKey: 'landing.faq.group.plans' }, // Free vs Mid vs Premium
+    { qKey: 'landing.faq.10.q', aKey: 'landing.faq.10.a', groupKey: 'landing.faq.group.plans' }, // What do I get with Premium?
+    { qKey: 'landing.faq.2.q', aKey: 'landing.faq.2.a', groupKey: 'landing.faq.group.plans' }, // What do I get for free?
+    { qKey: 'landing.faq.11.q', aKey: 'landing.faq.11.a', groupKey: 'landing.faq.group.risk' }, // Does it tell me what to buy/sell?
+    { qKey: 'landing.faq.1.q', aKey: 'landing.faq.1.a', groupKey: 'landing.faq.group.risk' }, // Is this financial advice?
+    { qKey: 'landing.faq.12.q', aKey: 'landing.faq.12.a', groupKey: 'landing.faq.group.risk' }, // How accurate are the signals?
+    { qKey: 'landing.faq.13.q', aKey: 'landing.faq.13.a', groupKey: 'landing.faq.group.support' }, // Can I call/ask questions?
+    { qKey: 'landing.faq.14.q', aKey: 'landing.faq.14.a', groupKey: 'landing.faq.group.support' }, // Payment methods
+    { qKey: 'landing.faq.4.q', aKey: 'landing.faq.4.a', groupKey: 'landing.faq.group.data' }, // How often is data updated?
+    { qKey: 'landing.faq.3.q', aKey: 'landing.faq.3.a', groupKey: 'landing.faq.group.safety' }, // Do you touch my funds/keys?
+    { qKey: 'landing.faq.5.q', aKey: 'landing.faq.5.a', groupKey: 'landing.faq.group.plans' }, // Cancel/downgrade?
+    { qKey: 'landing.faq.6.q', aKey: 'landing.faq.6.a', groupKey: 'landing.faq.group.compare' } // Different from CoinGecko/DefiLlama?
   ];
+  const faqHighlights = [
+    { icon: ShieldCheck, tKey: 'landing.faq.highlight.1.t', bKey: 'landing.faq.highlight.1.b', color: '--c-mint' },
+    { icon: Coins, tKey: 'landing.faq.highlight.2.t', bKey: 'landing.faq.highlight.2.b', color: '--c-accent' },
+    { icon: User, tKey: 'landing.faq.highlight.3.t', bKey: 'landing.faq.highlight.3.b', color: '--c-warn' }
+  ];
+  const finalProofs = [
+    { icon: Gauge, labelKey: 'landing.preview.btcrisk', valueKey: 'landing.preview.gooddca', level: '32%', color: '--c-mint' },
+    { icon: Activity, labelKey: 'landing.preview.altbtcsignal', valueKey: 'landing.preview.confirmed', level: '58%', color: '--c-accent' },
+    { icon: FileText, labelKey: 'landing.final.preview.report', valueKey: 'landing.final.preview.ready', level: '78%', color: '--c-warn' }
+  ];
+  const finalTrust = ['landing.trust.free', 'landing.trust.noexchange', 'landing.trust.readonly'];
 
   // Base structured data + a FAQPage built from the FAQ section (rich-result eligible).
   const seoJsonLd = $derived([
@@ -284,19 +306,128 @@
 </section>
 
 <!-- ── 4 · FEATURES ───────────────────────────────────────────────────────── -->
-<section class="py-6">
-  <div class="mx-auto mb-8 max-w-2xl text-center">
-    <span class="pill bg-mint/10 text-mint">{$t('landing.feat.eyebrow')}</span>
-    <h2 class="mt-3 text-2xl font-semibold text-strong sm:text-3xl">{$t('landing.feat.title')}</h2>
-  </div>
-  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-    {#each features as f, i}
-      <div class="card rail-card" use:inview={{ delay: i * 70 }}>
-        <span class="icon-badge bg-mint/12 text-mint"><f.icon class="h-5 w-5" /></span>
-        <h3 class="mt-3 font-semibold text-strong">{$t(f.tKey)}</h3>
-        <p class="mt-1.5 text-sm leading-relaxed text-muted">{$t(f.bKey)}</p>
+<section class="py-10 sm:py-14">
+  <div class="feature-map">
+    <div class="feature-map-grid"></div>
+    <div class="relative z-[1] grid gap-8 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)] lg:gap-10">
+      <div class="min-w-0">
+        <span class="pill bg-mint/10 text-mint">{$t('landing.feat.eyebrow')}</span>
+        <h2 class="mt-4 text-2xl font-semibold leading-tight text-strong sm:text-3xl lg:text-4xl">{$t('landing.feat.title')}</h2>
+        <p class="mt-3 max-w-xl text-sm leading-relaxed text-muted sm:text-base">{$t(commandFeature.bKey)}</p>
+
+        <div class="feature-preview mt-7" use:inview>
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-wider text-muted">{$t('landing.feat.map.command')}</p>
+              <h3 class="mt-1 text-lg font-semibold text-strong">{$t(commandFeature.tKey)}</h3>
+            </div>
+            <span class="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-mint/25 bg-mint/10 px-2.5 py-1 text-xs font-medium text-mint">
+              <span class="h-1.5 w-1.5 rounded-full bg-mint"></span>
+              {$t('landing.preview.synced')}
+            </span>
+          </div>
+
+          <div class="mt-5 grid gap-3 sm:grid-cols-3">
+            {#each featurePreviewStats as stat}
+              <div class="feature-metric" style="--signal: var({stat.color}); --level: {stat.level};">
+                <p class="text-xs text-muted">{$t(stat.labelKey)}</p>
+                <p class="mt-1 text-sm font-semibold text-strong">{$t(stat.valueKey)}</p>
+                <div class="feature-meter mt-3"><span></span></div>
+              </div>
+            {/each}
+          </div>
+
+          <div class="market-tape mt-5" aria-hidden="true">
+            {#each [52, 68, 44, 74, 58, 82, 63, 90, 70, 78, 61, 84] as h, i}
+              <span style="height: {h}%; --bar-delay: {i * 60}ms"></span>
+            {/each}
+          </div>
+        </div>
       </div>
-    {/each}
+
+      <div class="min-w-0 space-y-4">
+        <div class="feature-cluster feature-cluster-risk" use:inview={{ delay: 80 }}>
+          <div class="flex items-center justify-between gap-3">
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-wider text-muted">{$t('landing.feat.map.risk')}</p>
+              <h3 class="mt-1 text-lg font-semibold text-strong">{$t('landing.feat.radar.t')}</h3>
+            </div>
+            <span class="icon-badge bg-mint/12 text-mint"><Radar class="h-5 w-5" /></span>
+          </div>
+
+          <div class="mt-4 space-y-3">
+            {#each riskSignals as item, i}
+              <div class="signal-row" style="--signal: var({item.color}); --level: {item.level};" use:inview={{ delay: 120 + i * 70 }}>
+                <span class="signal-icon"><item.icon class="h-4 w-4" /></span>
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-center justify-between gap-3">
+                    <h4 class="truncate text-sm font-semibold text-strong">{$t(item.tKey)}</h4>
+                    <div class="signal-line"><span></span></div>
+                  </div>
+                  <p class="mt-1 line-clamp-2 text-xs leading-relaxed text-muted">{$t(item.bKey)}</p>
+                </div>
+              </div>
+            {/each}
+          </div>
+        </div>
+
+        <div class="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
+          <div class="feature-stack" use:inview={{ delay: 160 }}>
+            <div class="mb-4 flex items-center justify-between gap-3">
+              <p class="text-xs font-semibold uppercase tracking-wider text-muted">{$t('landing.feat.map.rotation')}</p>
+              <span class="h-px flex-1 bg-edge/70"></span>
+            </div>
+            <div class="space-y-3">
+              {#each rotationSignals as item, i}
+                <div class="compact-signal" style="--signal: var({item.color}); --level: {item.level};" use:inview={{ delay: 180 + i * 60 }}>
+                  <span class="signal-icon"><item.icon class="h-4 w-4" /></span>
+                  <div class="min-w-0">
+                    <h4 class="text-sm font-semibold text-strong">{$t(item.tKey)}</h4>
+                    <p class="mt-1 line-clamp-2 text-xs leading-relaxed text-muted">{$t(item.bKey)}</p>
+                  </div>
+                </div>
+              {/each}
+            </div>
+          </div>
+
+          <div class="feature-stack" use:inview={{ delay: 220 }}>
+            <div class="mb-4 flex items-center justify-between gap-3">
+              <p class="text-xs font-semibold uppercase tracking-wider text-muted">{$t('landing.feat.map.context')}</p>
+              <span class="h-px flex-1 bg-edge/70"></span>
+            </div>
+            <div class="space-y-3">
+              {#each contextSignals as item, i}
+                <div class="compact-signal" style="--signal: var({item.color}); --level: {item.level};" use:inview={{ delay: 240 + i * 60 }}>
+                  <span class="signal-icon"><item.icon class="h-4 w-4" /></span>
+                  <div class="min-w-0">
+                    <h4 class="text-sm font-semibold text-strong">{$t(item.tKey)}</h4>
+                    <p class="mt-1 line-clamp-2 text-xs leading-relaxed text-muted">{$t(item.bKey)}</p>
+                  </div>
+                </div>
+              {/each}
+            </div>
+          </div>
+        </div>
+
+        <div class="delivery-strip" use:inview={{ delay: 260 }}>
+          <div class="mb-4 flex items-center justify-between gap-3">
+            <p class="text-xs font-semibold uppercase tracking-wider text-muted">{$t('landing.feat.map.delivery')}</p>
+            <span class="h-px flex-1 bg-edge/70"></span>
+          </div>
+          <div class="grid gap-3 md:grid-cols-2">
+            {#each deliverySignals as item}
+              <div class="delivery-item" style="--signal: var({item.color});">
+                <span class="signal-icon"><item.icon class="h-4 w-4" /></span>
+                <div>
+                  <h4 class="text-sm font-semibold text-strong">{$t(item.tKey)}</h4>
+                  <p class="mt-1 text-xs leading-relaxed text-muted">{$t(item.bKey)}</p>
+                </div>
+              </div>
+            {/each}
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -399,43 +530,612 @@
 </section>
 
 <!-- ── 8 · FAQ ────────────────────────────────────────────────────────────── -->
-<section class="py-6">
-  <div class="mx-auto mb-8 max-w-2xl text-center">
-    <span class="pill bg-mint/10 text-mint">{$t('landing.faq.eyebrow')}</span>
-    <h2 class="mt-3 text-2xl font-semibold text-strong sm:text-3xl">{$t('landing.faq.title')}</h2>
-  </div>
-  <div class="mx-auto max-w-3xl space-y-2.5">
-    {#each faqs as f, i}
-      <details class="card group transition-colors hover:border-mint/30" use:inview={{ delay: i * 60 }}>
-        <summary class="flex cursor-pointer list-none items-center justify-between gap-3 font-medium text-strong">
-          {$t(f.qKey)}
-          <span
-            class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-edge text-muted transition group-open:rotate-45 group-open:border-mint/40 group-open:bg-mint/10 group-open:text-mint"
-          >
-            <Plus class="h-3.5 w-3.5" />
-          </span>
-        </summary>
-        <p class="mt-3 border-t border-edge/50 pt-3 text-sm leading-relaxed text-muted">{$t(f.aKey)}</p>
-      </details>
-    {/each}
+<section class="py-10 sm:py-14">
+  <div class="faq-center">
+    <div class="faq-intro" use:inview>
+      <span class="pill bg-mint/10 text-mint">{$t('landing.faq.eyebrow')}</span>
+      <h2 class="mt-4 text-2xl font-semibold leading-tight text-strong sm:text-3xl lg:text-4xl">{$t('landing.faq.title')}</h2>
+      <p class="mt-3 text-sm leading-relaxed text-muted sm:text-base">{$t('landing.faq.sub')}</p>
+
+      <div class="mt-6 space-y-3">
+        {#each faqHighlights as item, i}
+          <div class="faq-highlight" style="--signal: var({item.color});" use:inview={{ delay: 100 + i * 70 }}>
+            <span class="signal-icon"><item.icon class="h-4 w-4" /></span>
+            <div>
+              <h3 class="text-sm font-semibold text-strong">{$t(item.tKey)}</h3>
+              <p class="mt-1 text-xs leading-relaxed text-muted">{$t(item.bKey)}</p>
+            </div>
+          </div>
+        {/each}
+      </div>
+    </div>
+
+    <div class="faq-board" use:inview={{ delay: 120 }}>
+      <div class="faq-board-head">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-wider text-muted">{$t('landing.faq.board')}</p>
+          <p class="mt-1 text-sm text-soft">{faqs.length} {$t('landing.faq.count')}</p>
+        </div>
+        <span class="flex h-10 w-10 items-center justify-center rounded-2xl bg-mint/12 text-mint">
+          <Quote class="h-5 w-5" />
+        </span>
+      </div>
+
+      <div class="mt-4 space-y-2.5">
+        {#each faqs as f, i}
+          <details class="faq-item group" open={i === 0} use:inview={{ delay: 160 + Math.min(i, 8) * 45 }}>
+            <summary>
+              <span class="faq-index">{String(i + 1).padStart(2, '0')}</span>
+              <span class="min-w-0 flex-1">
+                <span class="faq-group-label">{$t(f.groupKey)}</span>
+                <span class="mt-1 block text-sm font-semibold leading-snug text-strong sm:text-base">{$t(f.qKey)}</span>
+              </span>
+              <span class="faq-toggle">
+                <Plus class="h-4 w-4" />
+              </span>
+            </summary>
+            <p class="faq-answer">{$t(f.aKey)}</p>
+          </details>
+        {/each}
+      </div>
+    </div>
   </div>
 </section>
 
 <!-- ── 9 · FINAL CTA ──────────────────────────────────────────────────────── -->
 <section class="py-10 sm:py-14">
-  <div class="hero-card text-center" use:inview>
-    <span class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-mint/15 text-mint"><Zap class="h-6 w-6" /></span>
-    <h2 class="text-2xl font-semibold text-strong sm:text-3xl">{$t('landing.final.title')}</h2>
-    <p class="mx-auto mt-2 max-w-xl text-muted">{$t('landing.final.sub')}</p>
-    <div class="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row sm:flex-wrap">
-      <a href="/register" class="btn-primary w-full justify-center px-6 py-3 text-base sm:w-auto">{$t('landing.cta.startFree')} <ArrowRight class="h-4 w-4" /></a>
-      <a href="/pricing" class="btn-ghost w-full justify-center px-6 py-3 text-base sm:w-auto">{$t('landing.cta.viewPricing')}</a>
+  <div class="final-cta" use:inview>
+    <div class="final-cta-grid"></div>
+    <div class="relative z-[1] grid gap-7 lg:grid-cols-[minmax(0,0.95fr)_minmax(360px,0.72fr)] lg:items-center">
+      <div class="min-w-0">
+        <span class="pill bg-mint/10 text-mint"><Zap class="h-3.5 w-3.5" /> {$t('landing.final.eyebrow')}</span>
+        <h2 class="mt-4 max-w-3xl text-2xl font-semibold leading-tight text-strong sm:text-3xl lg:text-4xl">{$t('landing.final.title')}</h2>
+        <p class="mt-3 max-w-2xl text-sm leading-relaxed text-muted sm:text-base">{$t('landing.final.sub')}</p>
+
+        <div class="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+          <a href="/register" class="btn-primary w-full justify-center px-6 py-3 text-base shadow-lg shadow-mint/15 sm:w-auto">
+            {$t('landing.cta.startFree')} <ArrowRight class="h-4 w-4" />
+          </a>
+          <a href="/pricing" class="btn-ghost w-full justify-center px-6 py-3 text-base sm:w-auto">{$t('landing.cta.viewPricing')}</a>
+        </div>
+
+        <div class="mt-5 flex flex-wrap gap-2.5">
+          {#each finalTrust as item}
+            <span class="final-trust-chip"><Check class="h-3.5 w-3.5 text-mint" /> {$t(item)}</span>
+          {/each}
+        </div>
+      </div>
+
+      <div class="final-proof">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <p class="text-xs font-semibold uppercase tracking-wider text-muted">{$t('landing.final.preview.title')}</p>
+            <h3 class="mt-1 text-lg font-semibold text-strong">{$t('landing.feat.overview.t')}</h3>
+          </div>
+          <span class="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-mint/25 bg-mint/10 px-2.5 py-1 text-xs font-medium text-mint">
+            <span class="h-1.5 w-1.5 rounded-full bg-mint"></span>
+            {$t('landing.preview.synced')}
+          </span>
+        </div>
+
+        <div class="mt-5 space-y-3">
+          {#each finalProofs as item}
+            <div class="final-proof-row" style="--signal: var({item.color}); --level: {item.level};">
+              <span class="signal-icon"><item.icon class="h-4 w-4" /></span>
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center justify-between gap-3">
+                  <span class="text-sm font-semibold text-strong">{$t(item.labelKey)}</span>
+                  <span class="text-xs font-medium text-muted">{$t(item.valueKey)}</span>
+                </div>
+                <div class="feature-meter mt-2"><span></span></div>
+              </div>
+            </div>
+          {/each}
+        </div>
+
+        <p class="mt-4 flex items-start gap-2 border-t border-edge/60 pt-4 text-xs leading-relaxed text-muted">
+          <ShieldCheck class="mt-0.5 h-3.5 w-3.5 shrink-0 text-mint" /> {$t('landing.final.trust')}
+        </p>
+      </div>
     </div>
-    <p class="mt-4 flex items-center justify-center gap-1.5 text-xs text-muted"><ShieldCheck class="h-3.5 w-3.5 text-mint" /> {$t('landing.final.trust')}</p>
   </div>
 </section>
 
 <style>
+  .feature-map {
+    position: relative;
+    overflow: hidden;
+    border-radius: 2rem;
+    border: 1px solid rgb(var(--glass-brd) / var(--glass-brd-a));
+    background:
+      radial-gradient(90% 80% at 10% 0%, rgb(var(--c-mint) / 0.14), transparent 52%),
+      radial-gradient(80% 80% at 100% 20%, rgb(var(--c-accent) / 0.12), transparent 48%),
+      radial-gradient(70% 70% at 78% 100%, rgb(var(--c-warn) / 0.08), transparent 54%),
+      rgb(var(--c-panel) / calc(var(--card-a) + 0.08));
+    box-shadow: var(--glass-sh);
+    padding: 1.5rem;
+  }
+  @supports ((backdrop-filter: blur(2px)) or (-webkit-backdrop-filter: blur(2px))) {
+    .feature-map {
+      backdrop-filter: blur(22px) saturate(165%);
+      -webkit-backdrop-filter: blur(22px) saturate(165%);
+    }
+  }
+  .feature-map::after {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgb(var(--c-mint) / 0.5), rgb(var(--c-accent) / 0.35), transparent);
+    pointer-events: none;
+  }
+  .feature-map-grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgb(127 140 160 / 0.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(127 140 160 / 0.08) 1px, transparent 1px);
+    background-size: 36px 36px;
+    -webkit-mask-image: radial-gradient(72% 78% at 50% 38%, #000, transparent 78%);
+    mask-image: radial-gradient(72% 78% at 50% 38%, #000, transparent 78%);
+    pointer-events: none;
+  }
+  .feature-preview,
+  .feature-cluster,
+  .feature-stack,
+  .delivery-strip {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgb(var(--c-edge) / 0.72);
+    background: rgb(var(--c-panel) / calc(var(--card-a) + 0.2));
+    box-shadow: 0 18px 45px rgb(0 0 0 / 0.12);
+  }
+  .feature-preview {
+    border-radius: 1.5rem;
+    padding: 1.15rem;
+  }
+  .feature-preview::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(90% 80% at 10% 0%, rgb(var(--c-mint) / 0.12), transparent 52%);
+    pointer-events: none;
+  }
+  .feature-preview > * {
+    position: relative;
+    z-index: 1;
+  }
+  .feature-metric {
+    border-radius: 1rem;
+    border: 1px solid rgb(var(--signal) / 0.18);
+    background: rgb(var(--signal) / 0.08);
+    padding: 0.85rem;
+  }
+  .feature-meter {
+    height: 0.35rem;
+    overflow: hidden;
+    border-radius: 9999px;
+    background: rgb(var(--c-panel-2) / 0.85);
+  }
+  .feature-meter span {
+    display: block;
+    height: 100%;
+    width: var(--level);
+    border-radius: inherit;
+    background: linear-gradient(90deg, rgb(var(--signal) / 0.45), rgb(var(--signal)));
+  }
+  .market-tape {
+    display: grid;
+    height: 8.5rem;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    align-items: end;
+    gap: 0.45rem;
+    border-radius: 1.1rem;
+    border: 1px solid rgb(var(--c-edge) / 0.65);
+    background:
+      linear-gradient(180deg, rgb(var(--c-panel-2) / 0.4), transparent),
+      repeating-linear-gradient(180deg, transparent 0 2rem, rgb(var(--c-edge) / 0.36) 2rem calc(2rem + 1px));
+    padding: 0.8rem;
+  }
+  .market-tape span {
+    display: block;
+    min-height: 1.2rem;
+    border-radius: 9999px 9999px 0.35rem 0.35rem;
+    background: linear-gradient(180deg, rgb(var(--c-mint)), rgb(var(--c-accent)));
+    box-shadow: 0 0 18px rgb(var(--c-mint) / 0.16);
+    animation: tape-rise 720ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: var(--bar-delay);
+    transform-origin: bottom;
+  }
+  .market-tape span:nth-child(3n) {
+    background: linear-gradient(180deg, rgb(var(--c-warn)), rgb(var(--c-accent)));
+  }
+  .market-tape span:nth-child(4n) {
+    background: linear-gradient(180deg, rgb(var(--c-danger)), rgb(var(--c-warn)));
+  }
+  .feature-cluster,
+  .feature-stack,
+  .delivery-strip {
+    border-radius: 1.35rem;
+    padding: 1rem;
+  }
+  .feature-cluster-risk {
+    background:
+      radial-gradient(80% 100% at 100% 0%, rgb(var(--c-mint) / 0.11), transparent 48%),
+      rgb(var(--c-panel) / calc(var(--card-a) + 0.2));
+  }
+  .signal-row,
+  .compact-signal,
+  .delivery-item {
+    display: flex;
+    min-width: 0;
+    gap: 0.85rem;
+    border-radius: 1rem;
+    border: 1px solid rgb(var(--signal) / 0.16);
+    background: rgb(var(--signal) / 0.06);
+    padding: 0.85rem;
+  }
+  .signal-row {
+    align-items: flex-start;
+  }
+  .compact-signal,
+  .delivery-item {
+    align-items: flex-start;
+  }
+  .signal-icon {
+    display: inline-flex;
+    height: 2.1rem;
+    width: 2.1rem;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.85rem;
+    color: rgb(var(--signal));
+    background: rgb(var(--signal) / 0.13);
+  }
+  .signal-line {
+    height: 0.35rem;
+    width: min(8rem, 34%);
+    flex: 0 0 auto;
+    overflow: hidden;
+    border-radius: 9999px;
+    background: rgb(var(--c-panel-2) / 0.9);
+  }
+  .signal-line span {
+    display: block;
+    height: 100%;
+    width: var(--level);
+    border-radius: inherit;
+    background: rgb(var(--signal));
+  }
+  .delivery-strip {
+    background:
+      radial-gradient(90% 100% at 0% 100%, rgb(var(--c-accent) / 0.1), transparent 48%),
+      rgb(var(--c-panel) / calc(var(--card-a) + 0.2));
+  }
+  @keyframes tape-rise {
+    from {
+      transform: scaleY(0.35);
+      opacity: 0.35;
+    }
+    to {
+      transform: scaleY(1);
+      opacity: 1;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .market-tape span {
+      animation: none;
+    }
+  }
+  @media (min-width: 640px) {
+    .feature-map {
+      padding: 2rem;
+    }
+    .feature-preview,
+    .feature-cluster,
+    .feature-stack,
+    .delivery-strip {
+      padding: 1.25rem;
+    }
+  }
+  @media (min-width: 1024px) {
+    .feature-map {
+      padding: 2.5rem;
+    }
+  }
+  @media (max-width: 520px) {
+    .feature-map {
+      border-radius: 1.45rem;
+      padding: 1rem;
+    }
+    .feature-preview,
+    .feature-cluster,
+    .feature-stack,
+    .delivery-strip {
+      border-radius: 1.1rem;
+    }
+    .signal-row,
+    .compact-signal,
+    .delivery-item {
+      gap: 0.7rem;
+      padding: 0.75rem;
+    }
+    .signal-line {
+      display: none;
+    }
+    .market-tape {
+      height: 6.5rem;
+      gap: 0.3rem;
+    }
+  }
+
+  .faq-center {
+    display: grid;
+    gap: 1rem;
+    align-items: start;
+  }
+  .faq-intro,
+  .faq-board {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgb(var(--glass-brd) / var(--glass-brd-a));
+    background: rgb(var(--c-panel) / calc(var(--card-a) + 0.16));
+    box-shadow: var(--glass-sh);
+  }
+  .faq-intro {
+    border-radius: 1.5rem;
+    padding: 1.2rem;
+    background:
+      radial-gradient(90% 90% at 0% 0%, rgb(var(--c-mint) / 0.13), transparent 55%),
+      radial-gradient(85% 90% at 100% 100%, rgb(var(--c-accent) / 0.08), transparent 55%),
+      rgb(var(--c-panel) / calc(var(--card-a) + 0.16));
+  }
+  .faq-intro::after {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 1px;
+    background: linear-gradient(90deg, rgb(var(--c-mint) / 0.5), transparent 72%);
+    pointer-events: none;
+  }
+  .faq-highlight {
+    display: flex;
+    gap: 0.85rem;
+    border-radius: 1rem;
+    border: 1px solid rgb(var(--signal) / 0.16);
+    background: rgb(var(--signal) / 0.07);
+    padding: 0.85rem;
+  }
+  .faq-board {
+    border-radius: 1.65rem;
+    padding: 0.85rem;
+    background:
+      radial-gradient(75% 70% at 100% 0%, rgb(var(--c-accent) / 0.1), transparent 52%),
+      rgb(var(--c-panel) / calc(var(--card-a) + 0.2));
+  }
+  .faq-board-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    border-bottom: 1px solid rgb(var(--c-edge) / 0.65);
+    padding: 0.45rem 0.5rem 1rem;
+  }
+  .faq-item {
+    border-radius: 1rem;
+    border: 1px solid transparent;
+    transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  .faq-item summary {
+    display: flex;
+    cursor: pointer;
+    list-style: none;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 0.95rem;
+  }
+  .faq-item summary::-webkit-details-marker {
+    display: none;
+  }
+  .faq-item:hover {
+    background: rgb(var(--c-panel-2) / 0.42);
+  }
+  .faq-item[open] {
+    border-color: rgb(var(--c-mint) / 0.28);
+    background:
+      radial-gradient(95% 110% at 0% 0%, rgb(var(--c-mint) / 0.1), transparent 52%),
+      rgb(var(--c-panel-2) / 0.52);
+    box-shadow: 0 16px 35px rgb(0 0 0 / 0.08);
+  }
+  .faq-index {
+    display: inline-flex;
+    height: 2.1rem;
+    width: 2.1rem;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.85rem;
+    background: rgb(var(--c-panel-2) / 0.92);
+    color: rgb(var(--c-muted));
+    font-size: 0.72rem;
+    font-weight: 700;
+  }
+  .faq-item[open] .faq-index {
+    background: rgb(var(--c-mint) / 0.14);
+    color: rgb(var(--c-mint));
+  }
+  .faq-group-label {
+    display: inline-flex;
+    max-width: 100%;
+    border-radius: 9999px;
+    background: rgb(var(--c-panel-2) / 0.78);
+    padding: 0.18rem 0.5rem;
+    color: rgb(var(--c-muted));
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+  .faq-toggle {
+    display: inline-flex;
+    height: 2rem;
+    width: 2rem;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    border: 1px solid rgb(var(--c-edge));
+    color: rgb(var(--c-muted));
+    transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+  }
+  .faq-item[open] .faq-toggle {
+    transform: rotate(45deg);
+    border-color: rgb(var(--c-mint) / 0.35);
+    background: rgb(var(--c-mint) / 0.1);
+    color: rgb(var(--c-mint));
+  }
+  .faq-answer {
+    margin: 0;
+    padding: 0 0.95rem 1rem 3.95rem;
+    color: rgb(var(--c-muted));
+    font-size: 0.9rem;
+    line-height: 1.75;
+  }
+  @media (min-width: 1024px) {
+    .faq-center {
+      grid-template-columns: minmax(0, 0.82fr) minmax(0, 1.18fr);
+      gap: 1.25rem;
+    }
+    .faq-intro {
+      position: sticky;
+      top: 6rem;
+      padding: 1.45rem;
+    }
+    .faq-board {
+      padding: 1rem;
+    }
+  }
+  @media (max-width: 520px) {
+    .faq-intro,
+    .faq-board {
+      border-radius: 1.2rem;
+    }
+    .faq-item summary {
+      align-items: flex-start;
+      gap: 0.7rem;
+      padding: 0.8rem;
+    }
+    .faq-index,
+    .faq-toggle {
+      height: 1.85rem;
+      width: 1.85rem;
+    }
+    .faq-answer {
+      padding: 0 0.8rem 0.9rem 3.35rem;
+      font-size: 0.84rem;
+    }
+  }
+
+  .final-cta {
+    position: relative;
+    overflow: hidden;
+    border-radius: 2rem;
+    border: 1px solid rgb(var(--glass-brd) / var(--glass-brd-a));
+    background:
+      linear-gradient(135deg, rgb(var(--c-panel) / calc(var(--card-a) + 0.24)), rgb(var(--c-panel-2) / calc(var(--card-a) + 0.14))),
+      rgb(var(--c-panel));
+    box-shadow: var(--glass-sh);
+    padding: 1.25rem;
+  }
+  .final-cta::after {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgb(var(--c-mint) / 0.52), rgb(var(--c-accent) / 0.3), transparent);
+    pointer-events: none;
+  }
+  .final-cta-grid {
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(rgb(127 140 160 / 0.12) 1px, transparent 1.4px);
+    background-size: 18px 18px;
+    -webkit-mask-image: linear-gradient(120deg, rgba(0, 0, 0, 0.72), transparent 68%);
+    mask-image: linear-gradient(120deg, rgba(0, 0, 0, 0.72), transparent 68%);
+    pointer-events: none;
+  }
+  .final-trust-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    border-radius: 9999px;
+    border: 1px solid rgb(var(--c-edge) / 0.72);
+    background: rgb(var(--c-panel) / 0.62);
+    padding: 0.45rem 0.7rem;
+    color: rgb(var(--c-muted));
+    font-size: 0.78rem;
+    font-weight: 600;
+  }
+  .final-proof {
+    overflow: hidden;
+    border-radius: 1.35rem;
+    border: 1px solid rgb(var(--c-edge) / 0.78);
+    background:
+      linear-gradient(180deg, rgb(var(--c-panel) / calc(var(--card-a) + 0.2)), rgb(var(--c-panel-2) / calc(var(--card-a) + 0.1))),
+      rgb(var(--c-panel));
+    padding: 1rem;
+    box-shadow: 0 18px 44px rgb(0 0 0 / 0.12);
+  }
+  .final-proof-row {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 0.85rem;
+    border-radius: 1rem;
+    border: 1px solid rgb(var(--signal) / 0.16);
+    background: rgb(var(--signal) / 0.06);
+    padding: 0.85rem;
+  }
+  @supports ((backdrop-filter: blur(2px)) or (-webkit-backdrop-filter: blur(2px))) {
+    .final-cta,
+    .final-proof {
+      backdrop-filter: blur(22px) saturate(165%);
+      -webkit-backdrop-filter: blur(22px) saturate(165%);
+    }
+  }
+  @media (min-width: 640px) {
+    .final-cta {
+      padding: 1.65rem;
+    }
+    .final-proof {
+      padding: 1.2rem;
+    }
+  }
+  @media (min-width: 1024px) {
+    .final-cta {
+      padding: 2rem;
+    }
+  }
+  @media (max-width: 520px) {
+    .final-cta {
+      border-radius: 1.35rem;
+      padding: 1rem;
+    }
+    .final-proof {
+      border-radius: 1.1rem;
+    }
+    .final-proof-row {
+      align-items: flex-start;
+      gap: 0.7rem;
+      padding: 0.75rem;
+    }
+    .final-proof-row .flex.items-center.justify-between {
+      align-items: flex-start;
+      flex-direction: column;
+      gap: 0.15rem;
+    }
+  }
+
   /* Faint market-grid behind the hero, fading outward */
   .hero-grid {
     position: absolute;

@@ -148,6 +148,11 @@ export const sw: Record<string, string> = {
   // Landing — features
   'landing.feat.eyebrow': 'Dashibodi moja, kila ishara',
   'landing.feat.title': 'Kila kitu unachohitaji kusoma soko',
+  'landing.feat.map.command': 'Kituo cha amri cha kila siku',
+  'landing.feat.map.risk': 'Mfumo mkuu wa hatari',
+  'landing.feat.map.rotation': 'Akili ya mzunguko',
+  'landing.feat.map.context': 'Tabaka za muktadha',
+  'landing.feat.map.delivery': 'Ripoti na orodha ya kufuatilia',
   'landing.feat.risk.t': 'Kipimo cha Hatari ya BTC na DCA',
   'landing.feat.risk.b': 'Alama ya hatari 0–1 kutoka kwa mdororo, wastani wa mwenendo, RSI na muktadha wa on-chain — pamoja na vipindi vya DCA inavyoonyesha.',
   'landing.feat.radar.t': 'Rada ya hali ya soko',
@@ -205,6 +210,22 @@ export const sw: Record<string, string> = {
   // Landing — FAQ
   'landing.faq.eyebrow': 'Maswali ya mara kwa mara',
   'landing.faq.title': 'Maswali, yamejibiwa',
+  'landing.faq.sub': 'Majibu ya wazi kabla hujajiunga: jukwaa linafanya nini, mipango inavyofanya kazi, usalama wake, na aina ya msaada unaopata.',
+  'landing.faq.board': 'Dawati la maswali',
+  'landing.faq.count': 'majibu',
+  'landing.faq.group.platform': 'Jukwaa',
+  'landing.faq.group.plans': 'Mipango',
+  'landing.faq.group.risk': 'Ishara',
+  'landing.faq.group.support': 'Msaada',
+  'landing.faq.group.data': 'Data',
+  'landing.faq.group.safety': 'Usalama',
+  'landing.faq.group.compare': 'Ulinganisho',
+  'landing.faq.highlight.1.t': 'Kusoma tu kwa muundo',
+  'landing.faq.highlight.1.b': 'Pastatrade haiunganishi na masoko ya ubadilishaji, haishiki fedha, wala haiombi funguo za wallet.',
+  'landing.faq.highlight.2.t': 'Anza bure',
+  'landing.faq.highlight.2.b': 'Tumia dashibodi ya msingi kwanza, kisha pandisha pale unapohitaji maabara na ripoti za kina zaidi.',
+  'landing.faq.highlight.3.t': 'Msaada wa binadamu',
+  'landing.faq.highlight.3.b': 'Wanachama wa Premium wanaweza kupata msaada wa kusoma dashibodi na ripoti kwa simu au WhatsApp.',
   'landing.faq.1.q': 'Je, huu ni ushauri wa kifedha?',
   'landing.faq.1.a':
     'Hapana. Pastatrade huonyesha taarifa za kupanga na alama za mtindo wa uwezekano kutoka kwa data ya soko. Alama hueleza hali ya sasa — si ubashiri. Daima fanya utafiti wako mwenyewe.',
@@ -246,9 +267,13 @@ export const sw: Record<string, string> = {
   'landing.faq.14.a':
     'Unaweza kulipa kwa mobile money kupitia checkout ndani ya programu. Kama ungependa kupanga malipo kwa mkono, wasiliana nasi kwa 0752093014 na tutakusaidia kujiandaa.',
   // Landing — final CTA
+  'landing.final.eyebrow': 'Tayari ukiwa tayari',
   'landing.final.title': 'Acha kuitikia. Anza kusoma soko.',
   'landing.final.sub': 'Fungua akaunti ya bure na upate picha yako ya kwanza ya hatari na orodha ya mzunguko leo. Pandisha tu unapotaka arifa na maabara kamili.',
   'landing.final.trust': 'Taarifa za soko, si ushauri wa kifedha — na kamwe hatugusi fedha zako.',
+  'landing.final.preview.title': 'Usomaji wako wa kwanza wa soko',
+  'landing.final.preview.report': 'Ripoti ya kila siku',
+  'landing.final.preview.ready': 'Tayari kusoma',
 
   // Pricing page
   'pricing.title': 'Uanachama wa Pastatrade',

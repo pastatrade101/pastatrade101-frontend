@@ -147,6 +147,11 @@ export const en: Record<string, string> = {
   // Landing — features
   'landing.feat.eyebrow': 'One dashboard, every signal',
   'landing.feat.title': 'Everything you need to read the market',
+  'landing.feat.map.command': 'Daily command center',
+  'landing.feat.map.risk': 'Core risk engine',
+  'landing.feat.map.rotation': 'Rotation intelligence',
+  'landing.feat.map.context': 'Context layers',
+  'landing.feat.map.delivery': 'Reports & watchlist',
   'landing.feat.risk.t': 'BTC Risk & DCA model',
   'landing.feat.risk.b': 'A 0–1 risk score from drawdown, moving averages, RSI and on-chain context — with the DCA windows it flags.',
   'landing.feat.radar.t': 'Market condition radar',
@@ -204,6 +209,22 @@ export const en: Record<string, string> = {
   // Landing — FAQ
   'landing.faq.eyebrow': 'FAQ',
   'landing.faq.title': 'Questions, answered',
+  'landing.faq.sub': 'Clear answers before you sign up: what the platform does, how plans work, how safe it is, and what support looks like.',
+  'landing.faq.board': 'FAQ desk',
+  'landing.faq.count': 'answers',
+  'landing.faq.group.platform': 'Platform',
+  'landing.faq.group.plans': 'Plans',
+  'landing.faq.group.risk': 'Signals',
+  'landing.faq.group.support': 'Support',
+  'landing.faq.group.data': 'Data',
+  'landing.faq.group.safety': 'Safety',
+  'landing.faq.group.compare': 'Comparison',
+  'landing.faq.highlight.1.t': 'Read-only by design',
+  'landing.faq.highlight.1.b': 'Pastatrade never connects to exchanges, holds funds, or asks for wallet keys.',
+  'landing.faq.highlight.2.t': 'Start free',
+  'landing.faq.highlight.2.b': 'Use the core dashboard first, then upgrade only when you need deeper labs and reports.',
+  'landing.faq.highlight.3.t': 'Human support',
+  'landing.faq.highlight.3.b': 'Premium members can ask for help reading dashboards and reports by call or WhatsApp.',
   'landing.faq.1.q': 'Is this financial advice?',
   'landing.faq.1.a':
     'No. Pastatrade surfaces ranking-based intelligence and probability-style scoring from market data. Scores describe current conditions — they are not predictions. Always do your own research.',
@@ -245,9 +266,13 @@ export const en: Record<string, string> = {
   'landing.faq.14.a':
     'You can pay with mobile money through the in-app checkout. If you would prefer to arrange payment manually, contact us on 0752093014 and we will help you get set up.',
   // Landing — final CTA
+  'landing.final.eyebrow': 'Ready when you are',
   'landing.final.title': 'Stop reacting. Start reading the market.',
   'landing.final.sub': 'Create a free account and get your first risk read and rotation ranking today. Upgrade only when you want alerts and the full labs.',
   'landing.final.trust': 'Market intelligence, not financial advice — and we never touch your funds.',
+  'landing.final.preview.title': 'Your first market read',
+  'landing.final.preview.report': 'Daily report',
+  'landing.final.preview.ready': 'Ready to read',
 
   // Pricing page
   'pricing.title': 'Pastatrade Membership',
