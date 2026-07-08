@@ -14,6 +14,7 @@
     name: string;
     slug: string;
     description: string | null;
+    tagline: string | null;
     badge: string | null;
     monthly_price: number;
     yearly_price: number;
@@ -77,12 +78,13 @@
   {:else}
     <div class="grid gap-4 md:grid-cols-3">
       {#each plans as p}
+        {@const identity = p.tagline ?? IDENTITY[p.slug]}
         <div class="card rail-card flex flex-col {p.is_popular ? 'border-accent/40' : ''}" style={p.is_popular ? '--rail: var(--c-accent)' : '--rail: var(--c-edge)'}>
           <div class="mb-1.5 flex items-center justify-between">
             <h2 class="text-lg font-semibold text-strong">{p.name}</h2>
             {#if p.badge}<span class="pill bg-accent/15 text-accent">{p.badge}</span>{/if}
           </div>
-          {#if IDENTITY[p.slug]}<p class="mb-3 text-sm font-medium text-soft">{IDENTITY[p.slug]}</p>{/if}
+          {#if identity}<p class="mb-3 text-sm font-medium text-soft">{identity}</p>{/if}
           <div class="mb-1 flex items-end gap-1">
             <span class="text-3xl font-semibold text-strong">{fmtMoney(price(p), p.currency)}</span>
             <span class="mb-1 text-sm text-muted">/{yearly ? 'yr' : 'mo'}</span>

@@ -14,6 +14,7 @@
     name: string;
     slug: string;
     description: string | null;
+    tagline: string | null;
     badge: string | null;
     monthly_price: number;
     yearly_price: number;
@@ -72,6 +73,7 @@
         body: {
           name: p.name,
           description: p.description ?? undefined,
+          tagline: p.tagline ?? undefined,
           badge: p.badge,
           monthly_price: Number(p.monthly_price),
           yearly_price: Number(p.yearly_price),
@@ -199,6 +201,7 @@
             </select></label>
             <label class="block text-xs text-muted">Sort order<input type="number" class="input mt-1" bind:value={p.sort_order} /></label>
             <label class="block text-xs text-muted">Trial days<input type="number" class="input mt-1" bind:value={p.trial_days} /></label>
+            <label class="block text-xs text-muted sm:col-span-2 lg:col-span-4">Tagline <span class="text-muted/70">(who it's for — shown on pricing)</span><input class="input mt-1" bind:value={p.tagline} placeholder="For people who want the daily market read." /></label>
             <label class="block text-xs text-muted sm:col-span-2 lg:col-span-4">Description<input class="input mt-1" bind:value={p.description} /></label>
           </div>
           <div class="flex flex-wrap gap-4 text-sm text-soft">
