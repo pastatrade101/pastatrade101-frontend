@@ -24,13 +24,13 @@
   --glass-brd: 255 255 255;
   --glass-brd-a: 0.12;
   --glass-sh: 0 12px 35px rgb(0 0 0 / 0.3), inset 0 1px 0 rgb(255 255 255 / 0.08);
-  --card-a: 0.82;
+  --card-a: 0.62;
   /* Calm layered background: gradient scrim over the mesh image so the frosted
      glass has a real image to blur, while text stays readable. */
   --app-bg:
-    radial-gradient(circle at 0% 0%, rgb(91 140 255 / 0.18), transparent 45%),
-    radial-gradient(circle at 100% 100%, rgb(88 86 214 / 0.16), transparent 46%),
-    linear-gradient(180deg, rgb(10 13 19 / 0.78) 0%, rgb(8 11 17 / 0.85) 100%),
+    radial-gradient(circle at 0% 0%, rgb(91 140 255 / 0.16), transparent 45%),
+    radial-gradient(circle at 100% 100%, rgb(88 86 214 / 0.14), transparent 46%),
+    linear-gradient(180deg, rgb(10 13 19 / 0.88) 0%, rgb(8 11 17 / 0.93) 100%),
     url('/mesh.jpg');
   color-scheme: dark;
 }
@@ -55,13 +55,13 @@
   --glass-brd: 255 255 255;
   --glass-brd-a: 0.65;
   --glass-sh: 0 8px 30px rgb(15 23 42 / 0.1), inset 0 1px 0 rgb(255 255 255 / 0.8);
-  --card-a: 0.72;
+  --card-a: 0.6;
   /* Calm layered background: gradient scrim over the mesh image so the frosted
      glass has a real image to blur, while text stays readable. */
   --app-bg:
-    radial-gradient(circle at 0% 0%, rgb(0 122 255 / 0.14), transparent 40%),
-    radial-gradient(circle at 100% 100%, rgb(88 86 214 / 0.12), transparent 42%),
-    linear-gradient(180deg, rgb(247 249 252 / 0.74) 0%, rgb(238 242 247 / 0.82) 100%),
+    radial-gradient(circle at 0% 0%, rgb(0 122 255 / 0.12), transparent 40%),
+    radial-gradient(circle at 100% 100%, rgb(88 86 214 / 0.1), transparent 42%),
+    linear-gradient(180deg, rgb(247 249 252 / 0.84) 0%, rgb(238 242 247 / 0.9) 100%),
     url('/mesh.jpg');
   color-scheme: light;
 }
@@ -99,10 +99,10 @@
      with a subtle blur only where the browser supports it. */
   .card {
     border-radius: 1.25rem;
-    border: 1px solid rgb(var(--c-edge) / 0.85);
-    background: rgb(var(--c-panel) / var(--card-a));
+    border: 1px solid rgb(var(--c-edge) / 0.7);
+    background: rgb(var(--c-panel) / calc(var(--card-a) + 0.3));
     padding: 1.25rem;
-    box-shadow: 0 6px 24px rgb(0 0 0 / 0.06);
+    box-shadow: 0 6px 24px rgb(0 0 0 / 0.08);
     transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
   }
 
@@ -129,6 +129,11 @@
   }
 
   @supports ((backdrop-filter: blur(2px)) or (-webkit-backdrop-filter: blur(2px))) {
+    .card {
+      background: rgb(var(--c-panel) / var(--card-a));
+      backdrop-filter: blur(20px) saturate(150%);
+      -webkit-backdrop-filter: blur(20px) saturate(150%);
+    }
     .glass-card {
       background: rgb(var(--glass-rgb) / var(--glass-a));
       backdrop-filter: blur(22px) saturate(180%);
