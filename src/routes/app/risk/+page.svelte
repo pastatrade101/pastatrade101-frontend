@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { Lock } from '@lucide/svelte';
+  import { Lock, ChevronDown } from '@lucide/svelte';
+  import { slide } from 'svelte/transition';
   import { api } from '$lib/api';
   import Gauge from '$lib/components/Gauge.svelte';
   import EChart from '$lib/components/EChart.svelte';
@@ -86,6 +87,11 @@
   let socialHist = $state<SocialHistPoint[]>([]);
   let onchainHist = $state<OnchainHistPoint[]>([]);
   let onchainLatest = $state<Record<string, { raw: number | null; risk: number | null }>>({});
+
+  // Mobile disclosure state (mirrors the Overview mobile pattern).
+  let showMethodology = $state(false);
+  let showZoneLegend = $state(false);
+  let expandedTakeaway = $state(false);
 
   // ── Supply in Profit & Loss (Premium on-chain module) ──
   type SupplyTone = 'profit' | 'healthy' | 'neutral' | 'loss' | 'capitulation' | 'recovery';
@@ -826,18 +832,28 @@
 </script>
 
 <header class="mb-4">
-  <h1 class="text-xl font-semibold text-strong">Pastatrade BTC Risk Model</h1>
-  <p class="mt-1 max-w-3xl text-sm leading-relaxed text-muted">
+  <h1 class="text-lg font-semibold text-strong sm:text-xl">Pastatrade BTC Risk Model</h1>
+  <!-- Compact one-liner on mobile; full intro on desktop -->
+  <p class="mt-1 text-sm text-muted lg:hidden">A 0–1 BTC risk score for DCA, neutral and distribution zones.</p>
+  <p class="mt-1 hidden max-w-3xl text-sm leading-relaxed text-muted lg:block">
     A proprietary 0–1 risk score for Bitcoin, built to frame disciplined accumulation (DCA), neutral and distribution
     conditions across the market cycle — so you can act on the regime rather than the headlines.
   </p>
-  <div class="mt-3 max-w-3xl rounded-lg border border-edge bg-panel-2/40 px-3.5 py-2.5 text-xs leading-relaxed text-muted">
-    <span class="font-semibold uppercase tracking-wide text-soft">Methodology &amp; attribution.</span>
-    The score is an independent, transparent composite of market and on-chain indicators — drawdown from cycle highs, the
-    Mayer Multiple, long-term moving-average extension and RSI — normalized to a 0–1 scale. It draws on the established
-    family of 0–1 cycle-risk frameworks used by quantitative analysts (including work popularized by Benjamin Cowen), but is
-    an original Pastatrade implementation. It does <span class="text-soft">not reproduce, replicate or claim affiliation with</span>
-    any third party’s proprietary model or formula, and is provided for educational purposes only — not financial advice.
+  <!-- Methodology & attribution — collapsible so it no longer dominates the page -->
+  <div class="mt-3 max-w-3xl overflow-hidden rounded-lg border border-edge bg-panel-2/40 text-xs text-muted">
+    <button type="button" class="flex w-full items-center justify-between gap-2 px-3.5 py-2.5 text-left" aria-expanded={showMethodology} onclick={() => (showMethodology = !showMethodology)}>
+      <span class="font-semibold uppercase tracking-wide text-soft">Methodology &amp; attribution</span>
+      <ChevronDown class="h-4 w-4 shrink-0 transition-transform {showMethodology ? 'rotate-180' : ''}" />
+    </button>
+    {#if showMethodology}
+      <p class="px-3.5 pb-2.5 leading-relaxed" transition:slide={{ duration: 180 }}>
+        The score is an independent, transparent composite of market and on-chain indicators — drawdown from cycle highs, the
+        Mayer Multiple, long-term moving-average extension and RSI — normalized to a 0–1 scale. It draws on the established
+        family of 0–1 cycle-risk frameworks used by quantitative analysts (including work popularized by Benjamin Cowen), but is
+        an original Pastatrade implementation. It does <span class="text-soft">not reproduce, replicate or claim affiliation with</span>
+        any third party’s proprietary model or formula, and is provided for educational purposes only — not financial advice.
+      </p>
+    {/if}
   </div>
 </header>
 
@@ -860,11 +876,19 @@
         <p class="mt-3 rounded-lg border border-edge bg-panel-2 px-3 py-2 text-sm text-soft">
           <span class="font-medium text-strong">DCA guidance:</span> {zone.msg}
         </p>
-        <!-- Zone legend -->
-        <div class="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted">
-          {#each [{ c: '#2fbf71', t: '0.0–0.2 Aggressive' }, { c: '#9acd3e', t: '0.2–0.4 Good' }, { c: '#ffd23f', t: '0.4–0.6 Neutral' }, { c: '#ff8c42', t: '0.6–0.8 Caution' }, { c: '#ff5d6c', t: '0.8–1.0 Distribution' }] as z}
-            <span class="flex items-center gap-1.5"><span class="inline-block h-2 w-2 rounded-sm" style="background: {z.c}"></span>{z.t}</span>
-          {/each}
+        <!-- Zone legend — collapsible to keep the summary clean -->
+        <div class="mt-3">
+          <button type="button" class="flex items-center gap-1 text-xs font-medium text-muted transition hover:text-soft" aria-expanded={showZoneLegend} onclick={() => (showZoneLegend = !showZoneLegend)}>
+            Risk zones
+            <ChevronDown class="h-3.5 w-3.5 transition-transform {showZoneLegend ? 'rotate-180' : ''}" />
+          </button>
+          {#if showZoneLegend}
+            <div class="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted" transition:slide={{ duration: 180 }}>
+              {#each [{ c: '#2fbf71', t: '0.0–0.2 Aggressive' }, { c: '#9acd3e', t: '0.2–0.4 Good' }, { c: '#ffd23f', t: '0.4–0.6 Neutral' }, { c: '#ff8c42', t: '0.6–0.8 Caution' }, { c: '#ff5d6c', t: '0.8–1.0 Distribution' }] as z}
+                <span class="flex items-center gap-1.5"><span class="inline-block h-2 w-2 rounded-sm" style="background: {z.c}"></span>{z.t}</span>
+              {/each}
+            </div>
+          {/if}
         </div>
       </div>
     </div>
@@ -884,7 +908,8 @@
   {#if canInterp}
     <div class="card mb-4 border border-mint/30 bg-mint/5">
       <p class="stat-label text-mint">Premium Takeaway</p>
-      <p class="mt-1 text-sm leading-relaxed text-soft">{premiumTakeaway}</p>
+      <p class="mt-1 text-sm leading-relaxed text-soft {expandedTakeaway ? '' : 'line-clamp-3 lg:line-clamp-none'}">{premiumTakeaway}</p>
+      <button type="button" class="mt-2 text-xs font-medium text-accent lg:hidden" onclick={() => (expandedTakeaway = !expandedTakeaway)}>{expandedTakeaway ? 'Show less' : 'Read more'}</button>
     </div>
   {:else}
     <div class="relative mb-4">
