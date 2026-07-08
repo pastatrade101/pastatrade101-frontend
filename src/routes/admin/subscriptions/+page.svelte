@@ -1,7 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
-  import { X } from '@lucide/svelte';
+  import { X, ChevronRight } from '@lucide/svelte';
+  import { slide } from 'svelte/transition';
   import { api } from '$lib/api';
   import { authReady, user } from '$lib/stores/auth';
   import AdminTabs from '$lib/components/AdminTabs.svelte';
@@ -41,6 +42,7 @@
   let error = $state('');
   let message = $state('');
   let busyId = $state('');
+  let expanded = $state<Record<string, boolean>>({}); // mobile twirl state
 
   // Admin guard.
   $effect(() => {
@@ -154,58 +156,119 @@
   <button class="btn-ghost" onclick={() => load()}>Apply</button>
 </div>
 
-<div class="card overflow-x-auto p-0">
-  <table class="w-full min-w-[980px] text-sm">
-    <thead>
-      <tr class="border-b border-edge text-left text-xs uppercase tracking-wider text-muted">
-        <th class="px-4 py-3 font-medium">User</th>
-        <th class="px-4 py-3 font-medium">Plan</th>
-        <th class="px-4 py-3 font-medium">Status</th>
-        <th class="px-4 py-3 font-medium">Interval</th>
-        <th class="px-4 py-3 font-medium">Provider</th>
-        <th class="px-4 py-3 font-medium">Period</th>
-        <th class="px-4 py-3 font-medium">Actions</th>
-      </tr>
-    </thead>
-    <tbody>
+<!-- Mobile-first: cards on phones, table on lg+ -->
+<div class="card p-0">
+  {#if subs.length === 0}
+    <p class="px-4 py-6 text-center text-muted">No subscriptions found.</p>
+  {:else}
+    <!-- Mobile: collapsible card per subscription (twirl to expand) -->
+    <ul class="divide-y divide-edge/60 lg:hidden">
       {#each subs as s (s.id)}
         {@const u = one(s.user)}
-        <tr class="border-b border-edge/60 last:border-0 hover:bg-panel-2/50 {busyId === s.user_id ? 'opacity-50' : ''}">
-          <td class="px-4 py-3">
-            <button class="text-left" onclick={() => openDetail(s)}>
-              <div class="font-medium text-strong hover:underline">{u.full_name || u.email || '—'}</div>
-              <div class="text-xs text-muted">{u.email}</div>
-            </button>
-          </td>
-          <td class="px-4 py-3">
-            <select class="rounded-lg border border-edge bg-panel-2/40 px-2 py-1 text-xs text-soft" value={one(s.plan).slug ?? 'free'} onchange={(e) => assignPlan(s, (e.currentTarget as HTMLSelectElement).value)}>
-              {#each planOptions as p}<option value={p.slug}>{p.name}</option>{/each}
-            </select>
-          </td>
-          <td class="px-4 py-3">
-            <select class="rounded-lg px-2 py-1 text-xs {statusTone[s.status] ?? 'bg-edge text-muted'}" value={s.status} onchange={(e) => setStatus(s, (e.currentTarget as HTMLSelectElement).value)}>
-              {#each STATUSES as st}<option value={st}>{st}</option>{/each}
-            </select>
-            {#if s.cancel_at_period_end}<span class="ml-1 pill bg-warn/15 text-warn text-[10px]">cancels at period end</span>{/if}
-          </td>
-          <td class="px-4 py-3 text-soft">{s.billing_interval}</td>
-          <td class="px-4 py-3 text-muted">{s.provider ?? '—'}</td>
-          <td class="px-4 py-3 text-xs text-muted">{fmtDate(s.current_period_start)} → {fmtDate(s.current_period_end)}</td>
-          <td class="px-4 py-3">
-            <div class="flex gap-1.5">
-              <button class="btn-ghost px-2 py-1 text-xs" onclick={() => extend(s)}>Extend</button>
-              <button class="btn-ghost px-2 py-1 text-xs" onclick={() => setStatus(s, 'active')}>Reactivate</button>
-              <button class="btn-ghost px-2 py-1 text-xs text-warn" onclick={() => setStatus(s, 'suspended')}>Suspend</button>
-              <button class="btn-ghost px-2 py-1 text-xs text-danger" onclick={() => cancel(s)}>Cancel</button>
+        <li class={busyId === s.user_id ? 'opacity-50' : ''}>
+          <!-- Collapsed summary — tap to twirl open -->
+          <button type="button" class="flex w-full items-center gap-2.5 px-4 py-3 text-left" aria-expanded={!!expanded[s.id]} onclick={() => (expanded[s.id] = !expanded[s.id])}>
+            <ChevronRight class="h-4 w-4 shrink-0 text-muted transition-transform duration-200 {expanded[s.id] ? 'rotate-90' : ''}" />
+            <div class="min-w-0 flex-1">
+              <div class="truncate font-medium text-strong">{u.full_name || u.email || '—'}</div>
+              <div class="truncate text-xs text-muted">{u.email}</div>
             </div>
-          </td>
-        </tr>
+            <div class="flex shrink-0 items-center gap-1.5">
+              <span class="pill bg-panel-2 text-[10px] capitalize text-soft">{one(s.plan).name ?? 'Free'}</span>
+              <span class="pill text-[10px] {statusTone[s.status] ?? 'bg-edge text-muted'}">{s.status}</span>
+            </div>
+          </button>
+
+          {#if expanded[s.id]}
+            <div class="px-4 pb-3.5" transition:slide={{ duration: 180 }}>
+              {#if s.cancel_at_period_end}<div class="mb-2"><span class="pill bg-warn/15 text-[10px] text-warn">cancels at period end</span></div>{/if}
+
+              <div class="grid grid-cols-2 gap-2">
+                <label class="block">
+                  <span class="text-[10px] uppercase tracking-wide text-muted">Plan</span>
+                  <select class="mt-0.5 w-full rounded-lg border border-edge bg-panel-2/40 px-2 py-1.5 text-xs text-soft" value={one(s.plan).slug ?? 'free'} onchange={(e) => assignPlan(s, (e.currentTarget as HTMLSelectElement).value)}>
+                    {#each planOptions as p}<option value={p.slug}>{p.name}</option>{/each}
+                  </select>
+                </label>
+                <label class="block">
+                  <span class="text-[10px] uppercase tracking-wide text-muted">Status</span>
+                  <select class="mt-0.5 w-full rounded-lg border border-edge bg-panel-2/40 px-2 py-1.5 text-xs text-soft" value={s.status} onchange={(e) => setStatus(s, (e.currentTarget as HTMLSelectElement).value)}>
+                    {#each STATUSES as st}<option value={st}>{st}</option>{/each}
+                  </select>
+                </label>
+              </div>
+
+              <div class="mt-2 grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
+                <div><div class="text-[10px] uppercase tracking-wide text-muted">Interval</div><div class="text-soft">{s.billing_interval}</div></div>
+                <div><div class="text-[10px] uppercase tracking-wide text-muted">Provider</div><div class="text-soft">{s.provider ?? '—'}</div></div>
+                <div class="col-span-2"><div class="text-[10px] uppercase tracking-wide text-muted">Period</div><div class="text-soft">{fmtDate(s.current_period_start)} → {fmtDate(s.current_period_end)}</div></div>
+              </div>
+
+              <div class="mt-2.5 flex flex-wrap gap-1.5">
+                <button class="btn-ghost px-2.5 py-1 text-xs" onclick={() => extend(s)}>Extend</button>
+                <button class="btn-ghost px-2.5 py-1 text-xs" onclick={() => setStatus(s, 'active')}>Reactivate</button>
+                <button class="btn-ghost px-2.5 py-1 text-xs text-warn" onclick={() => setStatus(s, 'suspended')}>Suspend</button>
+                <button class="btn-ghost px-2.5 py-1 text-xs text-danger" onclick={() => cancel(s)}>Cancel</button>
+                <button class="btn-ghost px-2.5 py-1 text-xs text-accent" onclick={() => openDetail(s)}>History →</button>
+              </div>
+            </div>
+          {/if}
+        </li>
       {/each}
-      {#if subs.length === 0}
-        <tr><td colspan="7" class="px-4 py-6 text-center text-muted">No subscriptions found.</td></tr>
-      {/if}
-    </tbody>
-  </table>
+    </ul>
+
+    <!-- Desktop: full table -->
+    <div class="hidden overflow-x-auto lg:block">
+      <table class="w-full min-w-[980px] text-sm">
+        <thead>
+          <tr class="border-b border-edge text-left text-xs uppercase tracking-wider text-muted">
+            <th class="px-4 py-3 font-medium">User</th>
+            <th class="px-4 py-3 font-medium">Plan</th>
+            <th class="px-4 py-3 font-medium">Status</th>
+            <th class="px-4 py-3 font-medium">Interval</th>
+            <th class="px-4 py-3 font-medium">Provider</th>
+            <th class="px-4 py-3 font-medium">Period</th>
+            <th class="px-4 py-3 font-medium">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {#each subs as s (s.id)}
+            {@const u = one(s.user)}
+            <tr class="border-b border-edge/60 last:border-0 hover:bg-panel-2/50 {busyId === s.user_id ? 'opacity-50' : ''}">
+              <td class="px-4 py-3">
+                <button class="text-left" onclick={() => openDetail(s)}>
+                  <div class="font-medium text-strong hover:underline">{u.full_name || u.email || '—'}</div>
+                  <div class="text-xs text-muted">{u.email}</div>
+                </button>
+              </td>
+              <td class="px-4 py-3">
+                <select class="rounded-lg border border-edge bg-panel-2/40 px-2 py-1 text-xs text-soft" value={one(s.plan).slug ?? 'free'} onchange={(e) => assignPlan(s, (e.currentTarget as HTMLSelectElement).value)}>
+                  {#each planOptions as p}<option value={p.slug}>{p.name}</option>{/each}
+                </select>
+              </td>
+              <td class="px-4 py-3">
+                <select class="rounded-lg px-2 py-1 text-xs {statusTone[s.status] ?? 'bg-edge text-muted'}" value={s.status} onchange={(e) => setStatus(s, (e.currentTarget as HTMLSelectElement).value)}>
+                  {#each STATUSES as st}<option value={st}>{st}</option>{/each}
+                </select>
+                {#if s.cancel_at_period_end}<span class="ml-1 pill bg-warn/15 text-[10px] text-warn">cancels at period end</span>{/if}
+              </td>
+              <td class="px-4 py-3 text-soft">{s.billing_interval}</td>
+              <td class="px-4 py-3 text-muted">{s.provider ?? '—'}</td>
+              <td class="px-4 py-3 text-xs text-muted">{fmtDate(s.current_period_start)} → {fmtDate(s.current_period_end)}</td>
+              <td class="px-4 py-3">
+                <div class="flex gap-1.5">
+                  <button class="btn-ghost px-2 py-1 text-xs" onclick={() => extend(s)}>Extend</button>
+                  <button class="btn-ghost px-2 py-1 text-xs" onclick={() => setStatus(s, 'active')}>Reactivate</button>
+                  <button class="btn-ghost px-2 py-1 text-xs text-warn" onclick={() => setStatus(s, 'suspended')}>Suspend</button>
+                  <button class="btn-ghost px-2 py-1 text-xs text-danger" onclick={() => cancel(s)}>Cancel</button>
+                </div>
+              </td>
+            </tr>
+          {/each}
+        </tbody>
+      </table>
+    </div>
+  {/if}
 </div>
 
 <!-- Detail drawer -->

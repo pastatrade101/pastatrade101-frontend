@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { Check, ChevronDown, ChevronRight } from '@lucide/svelte';
+  import { slide } from 'svelte/transition';
   import { api } from '$lib/api';
   import { authReady, user } from '$lib/stores/auth';
   import AdminTabs from '$lib/components/AdminTabs.svelte';
@@ -132,57 +133,96 @@
   <button class="btn-ghost" onclick={() => load()}>Apply</button>
 </div>
 
-<div class="card overflow-x-auto p-0">
-  <table class="w-full min-w-[900px] text-sm">
-    <thead>
-      <tr class="border-b border-edge text-left text-xs uppercase tracking-wider text-muted">
-        <th class="w-8 px-2 py-3"></th>
-        <th class="px-4 py-3 font-medium">User</th>
-        <th class="px-4 py-3 font-medium">Provider</th>
-        <th class="px-4 py-3 font-medium">Event type</th>
-        <th class="px-4 py-3 font-medium">Status</th>
-        <th class="px-4 py-3 font-medium">Created</th>
-        <th class="px-4 py-3 font-medium">Reviewed</th>
-      </tr>
-    </thead>
-    <tbody>
+<!-- Mobile-first: collapsible cards on phones, table on lg+ -->
+<div class="card p-0">
+  {#if events.length === 0}
+    <p class="px-4 py-6 text-center text-muted">No payment events yet. They appear here when users request upgrades or a provider webhook fires.</p>
+  {:else}
+    <!-- Mobile: collapsible card per event (twirl reveals the raw payload) -->
+    <ul class="divide-y divide-edge/60 lg:hidden">
       {#each events as e (e.id)}
         {@const u = one(e.user)}
-        <tr class="border-b border-edge/60 hover:bg-panel-2/40">
-          <td class="px-2 py-3">
-            <button class="text-muted hover:text-strong" onclick={() => (expanded[e.id] = !expanded[e.id])} aria-label="Toggle payload">
-              {#if expanded[e.id]}<ChevronDown class="h-4 w-4" />{:else}<ChevronRight class="h-4 w-4" />{/if}
-            </button>
-          </td>
-          <td class="px-4 py-3">
-            <div class="font-medium text-strong">{u.full_name || u.email || '—'}</div>
-            {#if u.email}<div class="text-xs text-muted">{u.email}</div>{/if}
-          </td>
-          <td class="px-4 py-3 text-soft">{e.provider ?? '—'}</td>
-          <td class="px-4 py-3 font-mono text-xs text-soft">{e.event_type ?? '—'}</td>
-          <td class="px-4 py-3"><span class="pill {statusTone(e.status)}">{e.status ?? '—'}</span></td>
-          <td class="px-4 py-3 text-xs text-muted">{fmtDateTime(e.created_at)}</td>
-          <td class="px-4 py-3">
-            <button
-              class="pill {e.reviewed ? 'bg-mint/15 text-mint' : 'bg-edge text-muted'} {busyId === e.id ? 'opacity-50' : ''}"
-              onclick={() => toggleReviewed(e)}
-            >
-              {#if e.reviewed}<Check class="h-3 w-3" /> Reviewed{:else}Mark reviewed{/if}
-            </button>
-          </td>
-        </tr>
-        {#if expanded[e.id]}
-          <tr class="border-b border-edge/60 bg-panel-2/30">
-            <td colspan="7" class="px-4 py-3">
+        <li>
+          <button type="button" class="flex w-full items-center gap-2.5 px-4 py-3 text-left" aria-expanded={!!expanded[e.id]} onclick={() => (expanded[e.id] = !expanded[e.id])}>
+            <ChevronRight class="h-4 w-4 shrink-0 text-muted transition-transform duration-200 {expanded[e.id] ? 'rotate-90' : ''}" />
+            <div class="min-w-0 flex-1">
+              <div class="truncate font-medium text-strong">{u.full_name || u.email || '—'}</div>
+              <div class="truncate text-xs text-muted"><span class="font-mono">{e.event_type ?? '—'}</span> · {e.provider ?? '—'}</div>
+            </div>
+            <span class="pill shrink-0 {statusTone(e.status)}">{e.status ?? '—'}</span>
+          </button>
+
+          {#if expanded[e.id]}
+            <div class="px-4 pb-3.5" transition:slide={{ duration: 180 }}>
+              <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+                <span class="text-xs text-muted">Created {fmtDateTime(e.created_at)}</span>
+                <button
+                  class="pill {e.reviewed ? 'bg-mint/15 text-mint' : 'bg-edge text-muted'} {busyId === e.id ? 'opacity-50' : ''}"
+                  onclick={() => toggleReviewed(e)}
+                >
+                  {#if e.reviewed}<Check class="h-3 w-3" /> Reviewed{:else}Mark reviewed{/if}
+                </button>
+              </div>
+              {#if u.email}<div class="mb-2 truncate text-xs text-muted">{u.email}</div>{/if}
               <p class="mb-1 text-[11px] uppercase tracking-wide text-muted">Raw event payload</p>
-              <pre class="max-h-80 overflow-auto rounded-lg border border-edge bg-ink/60 p-3 font-mono text-xs text-soft">{pretty(e.event_payload)}</pre>
-            </td>
-          </tr>
-        {/if}
+              <pre class="max-h-72 overflow-auto rounded-lg border border-edge bg-ink/60 p-3 font-mono text-[11px] text-soft">{pretty(e.event_payload)}</pre>
+            </div>
+          {/if}
+        </li>
       {/each}
-      {#if events.length === 0}
-        <tr><td colspan="7" class="px-4 py-6 text-center text-muted">No payment events yet. They appear here when users request upgrades or a provider webhook fires.</td></tr>
-      {/if}
-    </tbody>
-  </table>
+    </ul>
+
+    <!-- Desktop: full table -->
+    <div class="hidden overflow-x-auto lg:block">
+      <table class="w-full min-w-[900px] text-sm">
+        <thead>
+          <tr class="border-b border-edge text-left text-xs uppercase tracking-wider text-muted">
+            <th class="w-8 px-2 py-3"></th>
+            <th class="px-4 py-3 font-medium">User</th>
+            <th class="px-4 py-3 font-medium">Provider</th>
+            <th class="px-4 py-3 font-medium">Event type</th>
+            <th class="px-4 py-3 font-medium">Status</th>
+            <th class="px-4 py-3 font-medium">Created</th>
+            <th class="px-4 py-3 font-medium">Reviewed</th>
+          </tr>
+        </thead>
+        <tbody>
+          {#each events as e (e.id)}
+            {@const u = one(e.user)}
+            <tr class="border-b border-edge/60 hover:bg-panel-2/40">
+              <td class="px-2 py-3">
+                <button class="text-muted hover:text-strong" onclick={() => (expanded[e.id] = !expanded[e.id])} aria-label="Toggle payload">
+                  {#if expanded[e.id]}<ChevronDown class="h-4 w-4" />{:else}<ChevronRight class="h-4 w-4" />{/if}
+                </button>
+              </td>
+              <td class="px-4 py-3">
+                <div class="font-medium text-strong">{u.full_name || u.email || '—'}</div>
+                {#if u.email}<div class="text-xs text-muted">{u.email}</div>{/if}
+              </td>
+              <td class="px-4 py-3 text-soft">{e.provider ?? '—'}</td>
+              <td class="px-4 py-3 font-mono text-xs text-soft">{e.event_type ?? '—'}</td>
+              <td class="px-4 py-3"><span class="pill {statusTone(e.status)}">{e.status ?? '—'}</span></td>
+              <td class="px-4 py-3 text-xs text-muted">{fmtDateTime(e.created_at)}</td>
+              <td class="px-4 py-3">
+                <button
+                  class="pill {e.reviewed ? 'bg-mint/15 text-mint' : 'bg-edge text-muted'} {busyId === e.id ? 'opacity-50' : ''}"
+                  onclick={() => toggleReviewed(e)}
+                >
+                  {#if e.reviewed}<Check class="h-3 w-3" /> Reviewed{:else}Mark reviewed{/if}
+                </button>
+              </td>
+            </tr>
+            {#if expanded[e.id]}
+              <tr class="border-b border-edge/60 bg-panel-2/30">
+                <td colspan="7" class="px-4 py-3">
+                  <p class="mb-1 text-[11px] uppercase tracking-wide text-muted">Raw event payload</p>
+                  <pre class="max-h-80 overflow-auto rounded-lg border border-edge bg-ink/60 p-3 font-mono text-xs text-soft">{pretty(e.event_payload)}</pre>
+                </td>
+              </tr>
+            {/if}
+          {/each}
+        </tbody>
+      </table>
+    </div>
+  {/if}
 </div>

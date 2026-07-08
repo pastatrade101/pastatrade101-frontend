@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { BarChart3, Bitcoin, CircleDollarSign, Gem, Globe, PieChart, TrendingDown, TrendingUp, Gauge, Users, DoorOpen, Layers, FileText, Spline, ArrowRight, AlertTriangle, Zap, Activity, Lock, Flame } from '@lucide/svelte';
+  import { BarChart3, Bitcoin, CircleDollarSign, Gem, Globe, PieChart, TrendingDown, TrendingUp, Gauge, Users, DoorOpen, Layers, FileText, Spline, ArrowRight, AlertTriangle, Zap, Activity, Lock, Flame, ChevronDown, Minus } from '@lucide/svelte';
+  import { slide } from 'svelte/transition';
   import { api } from '$lib/api';
   import { changeColor, fmtPct, fmtUsd } from '$lib/format';
   import Disclaimer from '$lib/components/Disclaimer.svelte';
@@ -10,6 +11,8 @@
   let error = $state('');
   let loading = $state(true);
   let universe = $state<'clean' | 'all'>('clean');
+  let expandedMarketRead = $state(false); // mobile Daily Market Read collapse
+  let freshnessOpen = $state(false); // mobile "Data freshness" disclosure
 
   const load = async () => {
     loading = true;
@@ -42,6 +45,7 @@
     na: 'bg-edge text-muted'
   };
   const toneBorder: Record<string, string> = { good: 'border-l-mint', neutral: 'border-l-accent', warn: 'border-l-warn', danger: 'border-l-danger', na: 'border-l-edge' };
+  const textTone: Record<string, string> = { good: 'text-mint', neutral: 'text-accent', warn: 'text-warn', danger: 'text-danger', na: 'text-muted' };
 
   // Plausible placeholder content shown blurred behind the upgrade CTA.
   const SAMPLE_SIGNALS = [
@@ -106,9 +110,21 @@
   );
   const anyStale = $derived(freshnessRows.some(([, f]) => (f as { stale?: boolean })?.stale));
   const moverBadge = (vs: string) => (vs === 'strong' ? { t: 'Strong vs BTC', c: 'bg-mint/15 text-mint' } : vs === 'weak' ? { t: 'Weak vs BTC', c: 'bg-danger/15 text-danger' } : { t: 'In line w/ BTC', c: 'bg-edge text-muted' });
+
+  // "What changed today" → tag each change with a direction so the card reads as
+  // a professional change feed instead of a generic bullet list.
+  const changeTone = (t: string): 'good' | 'warn' | 'neutral' => {
+    const s = t.toLowerCase();
+    if (/\bdown\b|weak|euphori|overheat|caution|distribut|\bfell\b|\bdrop|deteriorat|contract/.test(s)) return 'warn';
+    if (/\bup\b|\bgain|beating|\bquiet\b|accumulation|healthy|\bstrong|\brose\b|improv|expand/.test(s)) return 'good';
+    return 'neutral';
+  };
+  const changesToday = $derived(((data?.what_changed_today ?? []) as string[]).map((c) => ({ text: c, tone: changeTone(c) })));
+  const changeGood = $derived(changesToday.filter((c) => c.tone === 'good').length);
+  const changeWarn = $derived(changesToday.filter((c) => c.tone === 'warn').length);
 </script>
 
-<header class="mb-4 flex flex-wrap items-end justify-between gap-3">
+<header class="mb-4 hidden flex-wrap items-end justify-between gap-3 lg:flex">
   <div>
     <h1 class="text-xl font-semibold text-strong">Market Overview</h1>
     <p class="text-sm text-muted">Your daily crypto market command center — what is the market telling you today?</p>
@@ -136,8 +152,88 @@
     <p class="mt-1 text-sm text-muted">If this is a fresh install, run a data sync from the Admin panel first.</p>
   </div>
 {:else if data}
-  <!-- ── Hero: Daily Market Read ── -->
-  <div class="hero-card mb-4">
+  <!-- ═══ MOBILE: native command-center hero + Daily Market Read ═══ -->
+  <section class="mb-4 space-y-3 lg:hidden">
+    <!-- Compact hero -->
+    <div class="rounded-2xl border border-edge bg-gradient-to-br from-panel to-panel-2/60 p-4">
+      <div class="flex items-center justify-between gap-2">
+        <h1 class="text-lg font-bold text-strong">Market Today</h1>
+        {#if data.data_freshness?.market}
+          <button type="button" class="inline-flex items-center gap-1 rounded-full bg-panel-2 px-2.5 py-1 text-[11px] text-muted" aria-expanded={freshnessOpen} onclick={() => (freshnessOpen = !freshnessOpen)}>
+            <span class="h-1.5 w-1.5 rounded-full {anyStale ? 'bg-warn' : 'bg-mint'}"></span>
+            Updated {data.data_freshness.market.label}
+            <ChevronDown class="h-3 w-3 transition-transform {freshnessOpen ? 'rotate-180' : ''}" />
+          </button>
+        {/if}
+      </div>
+
+      <div class="mt-2.5">
+        <span class="inline-flex items-center rounded-full px-3 py-1 text-sm font-bold {toneClass[data.signals?.btc_risk?.tone ?? 'neutral']}">{data.market_posture.label}</span>
+      </div>
+      <p class="mt-2 text-sm leading-relaxed text-soft">{data.market_posture.interpretation}</p>
+
+      {#if data.signals}
+        <div class="mt-3 grid grid-cols-2 gap-2">
+          {#each [data.signals.btc_risk, data.signals.altcoin_breadth].filter(Boolean) as sig}
+            {@const s = sig as { name: string; label: string; value: string | null; tone: string; link: string }}
+            <a href={s.link} class="rounded-xl bg-panel-2/50 px-3 py-2 transition active:scale-[0.98]">
+              <p class="truncate text-[10px] uppercase tracking-wide text-muted">{s.name}</p>
+              <p class="mt-0.5 text-sm font-semibold {textTone[s.tone]}">{s.label}</p>
+              {#if s.value}<p class="truncate text-[11px] text-muted">{s.value}</p>{/if}
+            </a>
+          {/each}
+        </div>
+      {/if}
+
+      {#if freshnessOpen}
+        <div class="mt-3 border-t border-edge/60 pt-2.5" transition:slide={{ duration: 180 }}>
+          <p class="mb-1.5 text-[10px] uppercase tracking-wide text-muted">Data freshness</p>
+          <div class="grid grid-cols-2 gap-x-3 gap-y-1 text-[11px]">
+            {#each freshnessRows as [label, f]}
+              <span class="inline-flex items-center gap-1 text-muted"><span class="h-1.5 w-1.5 shrink-0 rounded-full {(f as { stale?: boolean }).stale ? 'bg-warn' : 'bg-mint'}"></span>{label}: {(f as { label: string }).label}</span>
+            {/each}
+          </div>
+        </div>
+      {/if}
+    </div>
+
+    <!-- Collapsible Daily Market Read -->
+    <div class="card">
+      <div class="flex items-center gap-1.5">
+        <Activity class="h-4 w-4 shrink-0 text-accent" />
+        <span class="stat-label">Daily Market Read</span>
+      </div>
+      <div class="mt-2">
+        <span class="inline-flex items-center rounded-md px-2 py-1 text-xs font-semibold {toneClass[data.signals?.btc_risk?.tone ?? 'neutral']}">{data.market_posture.label}</span>
+      </div>
+
+      <p class="mt-2.5 text-sm leading-relaxed text-soft {expandedMarketRead ? '' : 'line-clamp-3'}">{data.daily_market_read}</p>
+
+      {#if data.strongest_signal_today || data.biggest_warning_today}
+        <div class="mt-2.5 space-y-2">
+          {#if data.strongest_signal_today}
+            <div class="flex items-start gap-2 rounded-lg border border-mint/30 bg-mint/5 px-3 py-2 text-xs">
+              <Zap class="mt-0.5 h-3.5 w-3.5 shrink-0 text-mint" /><span><span class="font-medium text-mint">Strongest signal:</span> <span class="text-soft">{data.strongest_signal_today}</span></span>
+            </div>
+          {/if}
+          {#if data.biggest_warning_today}
+            <div class="flex items-start gap-2 rounded-lg border border-warn/30 bg-warn/5 px-3 py-2 text-xs">
+              <AlertTriangle class="mt-0.5 h-3.5 w-3.5 shrink-0 text-warn" /><span><span class="font-medium text-warn">Biggest warning:</span> <span class="text-soft">{data.biggest_warning_today}</span></span>
+            </div>
+          {/if}
+        </div>
+      {:else if !data.has_interpretation}
+        <a href="/pricing" class="btn-primary mt-2.5 flex w-full justify-center text-sm"><Lock class="h-4 w-4" /> Unlock strongest signal & warning</a>
+      {/if}
+
+      <button type="button" class="mt-3 w-full rounded-lg border border-edge py-2 text-sm font-medium text-accent transition active:scale-[0.99]" onclick={() => (expandedMarketRead = !expandedMarketRead)}>
+        {expandedMarketRead ? 'Show less' : 'Read full analysis'}
+      </button>
+    </div>
+  </section>
+
+  <!-- ── Hero: Daily Market Read (desktop) ── -->
+  <div class="hero-card mb-4 hidden lg:block">
     <div class="flex flex-wrap items-center gap-2">
       <span class="stat-label flex items-center gap-1.5"><Activity class="h-4 w-4 text-accent" /> Daily Market Read</span>
       <span class="pill {toneClass[data.signals?.btc_risk?.tone ?? 'neutral']}">{data.market_posture.label}</span>
@@ -217,17 +313,29 @@
           <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-mint/10 text-mint"><m.icon class="h-4 w-4" /></span>
         </div>
         <p class="stat-value mt-1.5 text-xl tracking-tight">{m.value}</p>
-        <p class="mt-1 text-[11px] leading-snug text-muted">{m.meaning}</p>
+        <p class="mt-1 hidden text-[11px] leading-snug text-muted lg:block">{m.meaning}</p>
       </div>
     {/each}
   </div>
 
   <!-- ── What changed today ── -->
-  {#if data.what_changed_today?.length}
+  {#if changesToday.length}
     <div class="card mb-4">
-      <p class="stat-label">What changed today</p>
-      <ul class="mt-2 grid gap-1.5 text-sm text-muted sm:grid-cols-2">
-        {#each data.what_changed_today as c}<li class="flex items-start gap-1.5"><span class="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-accent"></span>{c}</li>{/each}
+      <div class="flex items-center justify-between gap-2">
+        <p class="stat-label">What changed today</p>
+        <span class="text-[11px] text-muted">vs last snapshot</span>
+      </div>
+      <p class="mt-1 text-xs leading-snug text-muted">
+        {#if changeGood}<span class="font-semibold text-mint">{changeGood} improving</span>{/if}{#if changeGood && changeWarn}<span class="text-muted"> · </span>{/if}{#if changeWarn}<span class="font-semibold text-warn">{changeWarn} softening</span>{/if}{#if !changeGood && !changeWarn}Mostly unchanged{/if} across {changesToday.length} tracked signals.
+      </p>
+      <ul class="mt-3 grid gap-x-5 gap-y-3 sm:grid-cols-2">
+        {#each changesToday as c}
+          {@const Icon = c.tone === 'good' ? TrendingUp : c.tone === 'warn' ? TrendingDown : Minus}
+          <li class="flex items-start gap-2.5">
+            <span class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full {toneClass[c.tone]}"><Icon class="h-3 w-3" /></span>
+            <span class="text-sm leading-snug text-soft">{c.text}</span>
+          </li>
+        {/each}
       </ul>
     </div>
   {/if}
