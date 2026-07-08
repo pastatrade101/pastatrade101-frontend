@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { BarChart3, Bitcoin, CircleDollarSign, Gem, Globe, PieChart, TrendingDown, TrendingUp, Gauge, Users, DoorOpen, Layers, FileText, Spline, ArrowRight, AlertTriangle, Zap, Activity, Lock, Flame, ChevronDown, Minus } from '@lucide/svelte';
+  import { BarChart3, Bitcoin, CircleDollarSign, Gem, Globe, PieChart, TrendingDown, TrendingUp, Gauge, Users, DoorOpen, Layers, FileText, Spline, ArrowRight, AlertTriangle, Zap, Activity, Lock, Flame, ChevronDown, Minus, Compass } from '@lucide/svelte';
   import { slide } from 'svelte/transition';
   import { api } from '$lib/api';
   import { changeColor, fmtPct, fmtUsd } from '$lib/format';
@@ -11,8 +11,8 @@
   let error = $state('');
   let loading = $state(true);
   let universe = $state<'clean' | 'all'>('clean');
-  let expandedMarketRead = $state(false); // mobile Daily Market Read collapse
   let freshnessOpen = $state(false); // mobile "Data freshness" disclosure
+  let mobileFull = $state(false); // mobile "See full analysis / Pro view" reveal
 
   const load = async () => {
     loading = true;
@@ -122,6 +122,50 @@
   const changesToday = $derived(((data?.what_changed_today ?? []) as string[]).map((c) => ({ text: c, tone: changeTone(c) })));
   const changeGood = $derived(changesToday.filter((c) => c.tone === 'good').length);
   const changeWarn = $derived(changesToday.filter((c) => c.tone === 'warn').length);
+
+  // ── Simple Mode: sell the decision, not the data ──
+  // Translate each signal into a plain-language headline (the technical value is
+  // still shown underneath as proof). Keyed by signal key + tone.
+  const HUMAN: Record<string, Record<string, string>> = {
+    btc_risk: { good: 'Bitcoin is not overheated', neutral: 'Bitcoin risk is moderate', warn: 'Bitcoin is getting hot', danger: 'Bitcoin looks overheated' },
+    altcoin_breadth: { good: 'Altcoins are broadly strong', neutral: 'Altcoins are mixed', warn: 'Altcoins are still selective', danger: 'Altcoins are weak vs Bitcoin' },
+    social_risk: { good: 'The crowd is calm', neutral: 'Attention is rising', warn: 'Hype is building', danger: 'The crowd is euphoric' },
+    exit_strategy: { good: 'Not a take-profit zone yet', neutral: 'Watch for profit-taking', warn: 'Consider trimming some', danger: 'Distribution risk is high' },
+    ecosystem_rotation: { good: 'Money is rotating into strength', neutral: 'Rotation is selective', warn: 'Few sectors are strengthening', danger: 'Sectors are weak' },
+    stablecoin_liquidity: { good: 'Plenty of buying power waiting', neutral: 'Sideline cash is steady', warn: 'Sideline cash is thinning', danger: 'Liquidity is drying up' },
+    derivatives: { good: 'Leverage looks healthy', neutral: 'Leverage is normal', warn: 'Leverage is rising', danger: 'Leverage is dangerous' },
+    macro_regime: { good: 'Macro backdrop is supportive', neutral: 'Macro backdrop is mixed', warn: 'Macro is a mild headwind', danger: 'Macro is a headwind' }
+  };
+  const humanFor = (key: string, tone: string, fallback: string) => HUMAN[key]?.[tone] ?? fallback;
+  const postureTone = $derived(data?.signals?.btc_risk?.tone ?? 'neutral');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const signalList = $derived(data?.signals ? (Object.values(data.signals) as any[]) : []);
+
+  // One plain-language "what should I do" line, synthesized from the signals.
+  const bestAction = $derived.by(() => {
+    if (!data?.signals) return '';
+    const btc = data.signals.btc_risk?.tone;
+    const alt = data.signals.altcoin_breadth?.tone;
+    const exit = data.signals.exit_strategy?.tone;
+    const parts: string[] = [];
+    if (btc === 'good') parts.push('DCA Bitcoin slowly');
+    else if (btc === 'neutral') parts.push('Keep DCA measured — Bitcoin is neither cheap nor overheated');
+    else if (btc === 'warn' || btc === 'danger') parts.push('Be patient with Bitcoin — this is not a strong buy zone');
+    else parts.push('Stay disciplined');
+    if (alt === 'good') parts.push('and let selective altcoins prove their strength');
+    else if (alt === 'danger') parts.push('and avoid altcoins bleeding against Bitcoin');
+    else if (alt) parts.push('and avoid chasing weak altcoins');
+    if (exit === 'warn' || exit === 'danger') parts.push('— consider taking some profit');
+    return parts.join(' ').replace(' — consider', ' — consider') + '.';
+  });
+  const altStatus = $derived.by(() => {
+    const t = data?.signals?.altcoin_breadth?.tone;
+    if (!t) return '';
+    return t === 'good' ? 'Altcoins are broadly strong right now.'
+      : t === 'neutral' ? 'Altcoins are mixed — improving but not confirmed.'
+      : t === 'warn' ? 'Altcoins are improving, but full altseason is not confirmed.'
+      : 'Altcoins are still weak against Bitcoin — be very selective.';
+  });
 </script>
 
 <header class="mb-4 hidden flex-wrap items-end justify-between gap-3 lg:flex">
@@ -152,12 +196,12 @@
     <p class="mt-1 text-sm text-muted">If this is a fresh install, run a data sync from the Admin panel first.</p>
   </div>
 {:else if data}
-  <!-- ═══ MOBILE: native command-center hero + Daily Market Read ═══ -->
+  <!-- ═══ MOBILE: "Just Tell Me" advisor experience ═══ -->
   <section class="mb-4 space-y-3 lg:hidden">
-    <!-- Compact hero -->
+    <!-- 1 · Market Today — one clear verdict -->
     <div class="rounded-2xl border border-edge bg-gradient-to-br from-panel to-panel-2/60 p-4">
       <div class="flex items-center justify-between gap-2">
-        <h1 class="text-lg font-bold text-strong">Market Today</h1>
+        <span class="text-[11px] font-semibold uppercase tracking-wide text-muted">Market Today</span>
         {#if data.data_freshness?.market}
           <button type="button" class="inline-flex items-center gap-1 rounded-full bg-panel-2 px-2.5 py-1 text-[11px] text-muted" aria-expanded={freshnessOpen} onclick={() => (freshnessOpen = !freshnessOpen)}>
             <span class="h-1.5 w-1.5 rounded-full {anyStale ? 'bg-warn' : 'bg-mint'}"></span>
@@ -166,25 +210,8 @@
           </button>
         {/if}
       </div>
-
-      <div class="mt-2.5">
-        <span class="inline-flex items-center rounded-full px-3 py-1 text-sm font-bold {toneClass[data.signals?.btc_risk?.tone ?? 'neutral']}">{data.market_posture.label}</span>
-      </div>
-      <p class="mt-2 text-sm leading-relaxed text-soft">{data.market_posture.interpretation}</p>
-
-      {#if data.signals}
-        <div class="mt-3 grid grid-cols-2 gap-2">
-          {#each [data.signals.btc_risk, data.signals.altcoin_breadth].filter(Boolean) as sig}
-            {@const s = sig as { name: string; label: string; value: string | null; tone: string; link: string }}
-            <a href={s.link} class="rounded-xl bg-panel-2/50 px-3 py-2 transition active:scale-[0.98]">
-              <p class="truncate text-[10px] uppercase tracking-wide text-muted">{s.name}</p>
-              <p class="mt-0.5 text-sm font-semibold {textTone[s.tone]}">{s.label}</p>
-              {#if s.value}<p class="truncate text-[11px] text-muted">{s.value}</p>{/if}
-            </a>
-          {/each}
-        </div>
-      {/if}
-
+      <p class="mt-1.5 text-xl font-bold leading-tight {textTone[postureTone]}">{data.market_posture.label}</p>
+      <p class="mt-1.5 text-sm leading-relaxed text-soft">{data.market_posture.interpretation}</p>
       {#if freshnessOpen}
         <div class="mt-3 border-t border-edge/60 pt-2.5" transition:slide={{ duration: 180 }}>
           <p class="mb-1.5 text-[10px] uppercase tracking-wide text-muted">Data freshness</p>
@@ -197,43 +224,72 @@
       {/if}
     </div>
 
-    <!-- Collapsible Daily Market Read -->
-    <div class="card">
-      <div class="flex items-center gap-1.5">
-        <Activity class="h-4 w-4 shrink-0 text-accent" />
-        <span class="stat-label">Daily Market Read</span>
+    <!-- 2 · Best action — what should I do? -->
+    {#if bestAction}
+      <div class="rounded-2xl border border-mint/25 bg-mint/[0.05] p-4">
+        <p class="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-mint"><Compass class="h-3.5 w-3.5" /> Best action</p>
+        <p class="mt-1.5 text-[15px] font-medium leading-snug text-strong">{bestAction}</p>
       </div>
-      <div class="mt-2">
-        <span class="inline-flex items-center rounded-md px-2 py-1 text-xs font-semibold {toneClass[data.signals?.btc_risk?.tone ?? 'neutral']}">{data.market_posture.label}</span>
+    {/if}
+
+    <!-- 3 · Altcoin status -->
+    {#if altStatus}
+      <div class="rounded-2xl border border-edge bg-panel p-4">
+        <p class="text-[11px] font-semibold uppercase tracking-wide text-muted">Altcoins</p>
+        <p class="mt-1 text-sm font-medium text-soft">{altStatus}</p>
+        {#if data.signals?.altcoin_breadth?.value}<p class="mt-0.5 text-[11px] text-muted">{data.signals.altcoin_breadth.value}</p>{/if}
       </div>
+    {/if}
 
-      <p class="mt-2.5 text-sm leading-relaxed text-soft {expandedMarketRead ? '' : 'line-clamp-3'}">{data.daily_market_read}</p>
+    <!-- 4 · Strongest signal + 5 · Biggest warning -->
+    {#if data.strongest_signal_today || data.biggest_warning_today}
+      <div class="space-y-2.5">
+        {#if data.strongest_signal_today}
+          <div class="flex items-start gap-2.5 rounded-2xl border border-mint/30 bg-mint/[0.05] p-3.5">
+            <span class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-mint/15"><Zap class="h-3.5 w-3.5 text-mint" /></span>
+            <div><p class="text-[11px] font-semibold uppercase tracking-wide text-mint">Strongest signal</p><p class="mt-0.5 text-sm text-soft">{data.strongest_signal_today}</p></div>
+          </div>
+        {/if}
+        {#if data.biggest_warning_today}
+          <div class="flex items-start gap-2.5 rounded-2xl border border-warn/30 bg-warn/[0.05] p-3.5">
+            <span class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-warn/15"><AlertTriangle class="h-3.5 w-3.5 text-warn" /></span>
+            <div><p class="text-[11px] font-semibold uppercase tracking-wide text-warn">Biggest warning</p><p class="mt-0.5 text-sm text-soft">{data.biggest_warning_today}</p></div>
+          </div>
+        {/if}
+      </div>
+    {:else if !data.has_interpretation}
+      <a href="/pricing" class="flex items-center justify-center gap-1.5 rounded-2xl border border-mint/30 bg-mint/[0.05] p-3.5 text-sm font-medium text-mint"><Lock class="h-4 w-4" /> Unlock the strongest signal &amp; biggest warning</a>
+    {/if}
 
-      {#if data.strongest_signal_today || data.biggest_warning_today}
-        <div class="mt-2.5 space-y-2">
-          {#if data.strongest_signal_today}
-            <div class="flex items-start gap-2 rounded-lg border border-mint/30 bg-mint/5 px-3 py-2 text-xs">
-              <Zap class="mt-0.5 h-3.5 w-3.5 shrink-0 text-mint" /><span><span class="font-medium text-mint">Strongest signal:</span> <span class="text-soft">{data.strongest_signal_today}</span></span>
-            </div>
-          {/if}
-          {#if data.biggest_warning_today}
-            <div class="flex items-start gap-2 rounded-lg border border-warn/30 bg-warn/5 px-3 py-2 text-xs">
-              <AlertTriangle class="mt-0.5 h-3.5 w-3.5 shrink-0 text-warn" /><span><span class="font-medium text-warn">Biggest warning:</span> <span class="text-soft">{data.biggest_warning_today}</span></span>
-            </div>
-          {/if}
+    <!-- 6 · Quick read — horizontal human-labelled signal cards -->
+    {#if signalList.length}
+      <div>
+        <p class="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted">Quick read</p>
+        <div class="-mx-4 flex gap-2.5 overflow-x-auto px-4 pb-1">
+          {#each signalList as s}
+            <a href={s.link} class="flex w-[150px] shrink-0 flex-col rounded-2xl border border-edge bg-panel-2/50 p-3 transition active:scale-[0.98]">
+              <p class="truncate text-[10px] uppercase tracking-wide text-muted">{s.name}</p>
+              <p class="mt-1 text-sm font-semibold leading-snug {textTone[s.tone]}">{humanFor(s.key, s.tone, s.label)}</p>
+              {#if s.value}<p class="mt-auto pt-1 text-[11px] text-muted">{s.value}</p>{/if}
+            </a>
+          {/each}
         </div>
-      {:else if !data.has_interpretation}
-        <a href="/pricing" class="btn-primary mt-2.5 flex w-full justify-center text-sm"><Lock class="h-4 w-4" /> Unlock strongest signal & warning</a>
-      {/if}
+      </div>
+    {:else}
+      <a href="/pricing" class="flex items-center justify-center gap-1.5 rounded-2xl border border-edge bg-panel-2/40 p-3.5 text-sm font-medium text-accent"><Lock class="h-4 w-4" /> Unlock the full market read</a>
+    {/if}
 
-      <button type="button" class="mt-3 w-full rounded-lg border border-edge py-2 text-sm font-medium text-accent transition active:scale-[0.99]" onclick={() => (expandedMarketRead = !expandedMarketRead)}>
-        {expandedMarketRead ? 'Show less' : 'Read full analysis'}
-      </button>
-    </div>
+    <!-- See why — reveals the full analysis / Pro view -->
+    <button type="button" class="flex w-full items-center justify-center gap-1.5 rounded-2xl border border-edge py-2.5 text-sm font-medium text-accent transition active:scale-[0.99]" aria-expanded={mobileFull} onclick={() => (mobileFull = !mobileFull)}>
+      {mobileFull ? 'Hide full analysis' : 'See why — full analysis'}
+      <ChevronDown class="h-4 w-4 transition-transform {mobileFull ? 'rotate-180' : ''}" />
+    </button>
   </section>
 
-  <!-- ── Hero: Daily Market Read (desktop) ── -->
-  <div class="hero-card mb-4 hidden lg:block">
+  <!-- ═══ Full analysis / Pro view — always on desktop, revealed on mobile ═══ -->
+  <div class="{mobileFull ? '' : 'hidden'} lg:block">
+  <!-- ── Hero: Daily Market Read ── -->
+  <div class="hero-card mb-4">
     <div class="flex flex-wrap items-center gap-2">
       <span class="stat-label flex items-center gap-1.5"><Activity class="h-4 w-4 text-accent" /> Daily Market Read</span>
       <span class="pill {toneClass[data.signals?.btc_risk?.tone ?? 'neutral']}">{data.market_posture.label}</span>
@@ -403,7 +459,9 @@
     </div>
   </div>
 
-  <!-- ── Coverage + disclaimer ── -->
+  <!-- ── Coverage note (part of full analysis) ── -->
   <p class="mt-4 text-[11px] text-muted">{data.coverage?.note}</p>
-  <div class="mt-2"><Disclaimer /></div>
+  </div>
+  <!-- Disclaimer — always visible -->
+  <div class="mt-4"><Disclaimer /></div>
 {/if}

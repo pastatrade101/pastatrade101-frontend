@@ -314,7 +314,7 @@
         <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/10 ring-1 ring-white/20 backdrop-blur"><Crosshair class="h-6 w-6" /></div>
         <div>
           <h1 class="text-2xl font-bold tracking-tight sm:text-[28px]">Token Position Radar</h1>
-          <p class="mt-0.5 max-w-xl text-sm text-white/70">Institutional-style token analysis using liquidity, momentum, holder confidence, exchange listings, contract risk, and market timing.</p>
+          <p class="mt-0.5 max-w-xl text-sm text-white/70">Know if a coin is safe to buy — before you risk your money. Paste any token and get a clear read: strong, risky, or avoid.</p>
         </div>
       </div>
       <div class="flex flex-wrap items-center gap-2 sm:flex-col sm:items-end">
