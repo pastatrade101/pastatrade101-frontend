@@ -95,11 +95,11 @@ export const sw: Record<string, string> = {
   'auth.forgot.back': 'Rudi kuingia',
 
   // Landing — hero
-  'landing.eyebrow': 'Akili ya mzunguko wa crypto',
-  'landing.h1.a': 'Acha kubahatisha soko.',
-  'landing.h1.accent': 'Ona pale nguvu ya crypto inakohamia.',
+  'landing.eyebrow': 'Rai yako ya pili kwenye crypto',
+  'landing.h1.a': 'Acha kubahatisha.',
+  'landing.h1.accent': 'Jua wakati wa kununua, kusubiri, au kuchukua faida.',
   'landing.sub':
-    'Pastatrade hubadilisha hatari ya BTC, nguvu ya Alt/BTC, mzunguko wa mifumo ikolojia, umakini wa jamii na ishara za soko za kiwango cha juu kuwa picha moja iliyo wazi — ili ujue kinachoimarika, kinachodhoofika, na kinachohitaji uthibitisho.',
+    'Pastatrade101 hubadilisha data tata za crypto kuwa uamuzi mmoja wazi — nunua, subiri, epuka, au chukua faida — kwa lugha rahisi, ili uwekeze kwa ujasiri bila kuwa mtaalamu.',
   'landing.cta.startFree': 'Anza bure',
   'landing.cta.viewPricing': 'Tazama bei',
   'landing.cta.journey': 'Gundua safari yangu',

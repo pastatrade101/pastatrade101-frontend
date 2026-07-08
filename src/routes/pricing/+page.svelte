@@ -46,11 +46,18 @@
   const ctaHref = (p: Plan) => (!$user ? '/register' : '/app/account');
   // Show the headline limits on each card.
   const KEY_LIMITS = ['max_watchlist_items', 'max_alerts', 'max_history_years'];
+
+  // Reframe plans by WHO they're for, not by feature tier.
+  const IDENTITY: Record<string, string> = {
+    free: 'For people who want the daily market read.',
+    mid: 'For active traders who want the full signals.',
+    premium: 'For serious investors who want everything.'
+  };
 </script>
 
 <Seo
   title="Pricing"
-  description="Pastatrade plans — start free, then upgrade for full daily, weekly and monthly reports, on-chain depth, premium signals and exports. No exchange connection required."
+  description="Pastatrade101 tells you when to buy, wait, avoid or take profit — in plain language. Start free, upgrade for the full signals. No exchange connection required."
 />
 
 <section class="mx-auto max-w-[1100px] px-4 py-10">
@@ -71,10 +78,11 @@
     <div class="grid gap-4 md:grid-cols-3">
       {#each plans as p}
         <div class="card rail-card flex flex-col {p.is_popular ? 'border-accent/40' : ''}" style={p.is_popular ? '--rail: var(--c-accent)' : '--rail: var(--c-edge)'}>
-          <div class="mb-3 flex items-center justify-between">
+          <div class="mb-1.5 flex items-center justify-between">
             <h2 class="text-lg font-semibold text-strong">{p.name}</h2>
             {#if p.badge}<span class="pill bg-accent/15 text-accent">{p.badge}</span>{/if}
           </div>
+          {#if IDENTITY[p.slug]}<p class="mb-3 text-sm font-medium text-soft">{IDENTITY[p.slug]}</p>{/if}
           <div class="mb-1 flex items-end gap-1">
             <span class="text-3xl font-semibold text-strong">{fmtMoney(price(p), p.currency)}</span>
             <span class="mb-1 text-sm text-muted">/{yearly ? 'yr' : 'mo'}</span>

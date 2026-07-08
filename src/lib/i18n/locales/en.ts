@@ -94,11 +94,11 @@ export const en: Record<string, string> = {
   'auth.forgot.back': 'Back to sign in',
 
   // Landing — hero
-  'landing.eyebrow': 'Crypto rotation intelligence',
-  'landing.h1.a': 'Stop guessing the market.',
-  'landing.h1.accent': 'See where crypto strength is rotating.',
+  'landing.eyebrow': 'Your crypto second opinion',
+  'landing.h1.a': 'Stop guessing.',
+  'landing.h1.accent': 'Know when to buy, wait, or take profit.',
   'landing.sub':
-    'Pastatrade turns BTC risk, Alt/BTC strength, ecosystem rotation, social attention and premium market signals into one clear read — so you know what is improving, what is weakening, and what needs confirmation.',
+    'Pastatrade101 turns confusing crypto data into one clear decision — buy, wait, avoid, or take profit — in plain language, so you can invest with confidence without being an expert.',
   'landing.cta.startFree': 'Start free',
   'landing.cta.viewPricing': 'View pricing',
   'landing.cta.journey': 'Discover my journey',
