@@ -55,14 +55,9 @@
   --glass-brd: 255 255 255;
   --glass-brd-a: 0.65;
   --glass-sh: 0 8px 30px rgb(15 23 42 / 0.1), inset 0 1px 0 rgb(255 255 255 / 0.8);
-  --card-a: 0.6;
-  /* Calm layered background: gradient scrim over the mesh image so the frosted
-     glass has a real image to blur, while text stays readable. */
-  --app-bg:
-    radial-gradient(circle at 0% 0%, rgb(0 122 255 / 0.12), transparent 40%),
-    radial-gradient(circle at 100% 100%, rgb(88 86 214 / 0.1), transparent 42%),
-    linear-gradient(180deg, rgb(247 249 252 / 0.84) 0%, rgb(238 242 247 / 0.9) 100%),
-    url('/mesh.jpg');
+  --card-a: 0.7;
+  /* Light theme: a clean, complete white background (no mesh image). */
+  --app-bg: linear-gradient(180deg, #ffffff 0%, #ffffff 100%);
   color-scheme: light;
 }
 
