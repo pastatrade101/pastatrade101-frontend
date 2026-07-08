@@ -3,7 +3,8 @@
   import { api } from '$lib/api';
   import { fmtPct, fmtUsd } from '$lib/format';
   import Disclaimer from '$lib/components/Disclaimer.svelte';
-  import { Lock, ExternalLink } from '@lucide/svelte';
+  import { Lock, ExternalLink, ChevronRight } from '@lucide/svelte';
+  import { slide } from 'svelte/transition';
   import { membership, hasFeature } from '$lib/stores/membership';
   import {
     enrich,
@@ -48,6 +49,19 @@
   const weakest = $derived([...all].filter((e) => e.signal !== 'No data').slice(-3).reverse());
   const takeaway = $derived(buildTakeaway(breadth, regime, all[0]));
   const altView = $derived(altcoinView(breadth, regime));
+
+  // Plain-language verdict — the decision, from ecosystem breadth (counts stay as proof).
+  const textTone = (t: string) => (t === 'good' ? 'text-mint' : t === 'warn' ? 'text-danger' : t === 'neutral' ? 'text-accent' : 'text-soft');
+  const ecoVerdict = $derived.by(() => {
+    const imp = breadth.improving ?? 0;
+    const wk = breadth.weak ?? 0;
+    const total = imp + wk + (breadth.neutral ?? 0) || 1;
+    if (imp >= wk && imp / total >= 0.4)
+      return { head: 'Money is rotating into strong chains', sub: `${imp} ecosystem${imp === 1 ? '' : 's'} improving — strength is fairly broad.`, action: 'You can take selective ecosystem exposure — favour the leaders.', tone: 'good' };
+    if (wk > imp && wk / total >= 0.4)
+      return { head: 'Most ecosystems are weak right now', sub: `${wk} weak vs ${imp} improving — rotation is thin.`, action: 'Stay defensive — avoid broad ecosystem bets until breadth improves.', tone: 'warn' };
+    return { head: 'Rotation is selective right now', sub: `Only ${imp} ecosystem${imp === 1 ? '' : 's'} improving — most are neutral or weak.`, action: 'Be selective — back only the strongest chains, not the whole sector.', tone: 'neutral' };
+  });
 
   const filtered = $derived.by<EnrichedEco[]>(() => {
     return all.filter((e) => {
@@ -95,11 +109,8 @@
 </script>
 
 <header class="mb-4">
-  <h1 class="text-xl font-semibold text-strong">Ecosystem Rotation Report</h1>
-  <p class="text-sm text-muted">
-    Chains ranked by a composite strength score — TVL growth, stablecoin depth, DEX volume and native-token momentum — with plain-language
-    signals so you can read rotation at a glance.
-  </p>
+  <h1 class="text-lg font-semibold text-strong sm:text-xl">Ecosystem Rotation</h1>
+  <p class="text-sm text-muted">See where crypto money is flowing — which chains are gaining strength, and which are fading.</p>
 </header>
 
 {#if loading}
@@ -122,7 +133,16 @@
         </svg>
       </span>
       <div class="min-w-0 flex-1">
-        <div class="mb-1.5 flex flex-wrap items-center gap-2">
+        <!-- Plain-language verdict first; the ranked data + premium read sit below as proof -->
+        <p class="text-[11px] font-semibold uppercase tracking-wide text-muted">The rotation read</p>
+        <p class="mt-0.5 text-xl font-bold leading-tight {textTone(ecoVerdict.tone)}">{ecoVerdict.head}</p>
+        <p class="mt-1 text-sm text-soft">{ecoVerdict.sub}</p>
+        <p class="mt-2.5 flex items-start gap-2 rounded-lg border border-edge bg-panel-2/50 px-3 py-2 text-sm text-strong">
+          <span class="mt-0.5 shrink-0 rounded-md bg-accent/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-accent">Do</span>
+          {ecoVerdict.action}
+        </p>
+
+        <div class="mb-1.5 mt-3 flex flex-wrap items-center gap-2 border-t border-edge/60 pt-3">
           <span class="text-[11px] font-semibold uppercase tracking-[0.14em] text-accent">Premium Takeaway</span>
           <span class="pill {tonePill(regime.tone)}">{regime.label}</span>
         </div>
@@ -287,10 +307,52 @@
     </div>
   {/if}
 
-  <!-- 3–6 · Table with rich signals, confidence and expandable "why" -->
-  <div class="card overflow-x-auto p-0">
-    <table class="w-full min-w-[860px] text-sm">
-      <thead>
+  <!-- 3–6 · Ranked ecosystems — mobile cards, full table on lg+ -->
+  <div class="card p-0">
+    {#if !rows.length}
+      <p class="px-4 py-6 text-center text-muted">No ecosystems match the current filters.</p>
+    {:else}
+      <!-- Mobile: collapsible card per ecosystem (twirl reveals metrics + why) -->
+      <ul class="divide-y divide-edge/60 lg:hidden">
+        {#each rows as e (e.id)}
+          {@const m = e.metrics}
+          <li>
+            <button type="button" class="flex w-full items-center gap-2.5 px-4 py-3 text-left" aria-expanded={!!expanded[e.id]} onclick={() => toggle(e.id)}>
+              <ChevronRight class="h-4 w-4 shrink-0 text-muted transition-transform duration-200 {expanded[e.id] ? 'rotate-90' : ''}" />
+              <span class="rank-badge shrink-0">{e.rank}</span>
+              <div class="min-w-0 flex-1">
+                <p class="truncate font-medium text-strong">{e.name}</p>
+                <p class="text-[11px] text-muted">Score {m?.strength_score ?? '—'} · {e.confidence.level} confidence</p>
+              </div>
+              <span class="pill shrink-0 {tonePill(e.tone)}">{e.signal}</span>
+            </button>
+            {#if expanded[e.id]}
+              <div class="px-4 pb-3.5" transition:slide={{ duration: 180 }}>
+                <div class="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                  <div><div class="text-[10px] uppercase tracking-wide text-muted">TVL</div><div class="text-soft">{fmtUsd(m?.tvl ?? null, { compact: true })}</div></div>
+                  <div><div class="text-[10px] uppercase tracking-wide text-muted">TVL 30d</div><div class="{(m?.tvl_change_30d ?? 0) >= 0 ? 'text-mint' : 'text-danger'}">{fmtPct(m?.tvl_change_30d)}</div></div>
+                  <div><div class="text-[10px] uppercase tracking-wide text-muted">Stablecoins</div><div class="text-soft">{fmtUsd(m?.stablecoin_mcap ?? null, { compact: true })}</div></div>
+                  <div><div class="text-[10px] uppercase tracking-wide text-muted">DEX vol 7d</div><div class="{(m?.dex_volume_change_7d ?? 0) >= 0 ? 'text-mint' : 'text-danger'}">{fmtPct(m?.dex_volume_change_7d)}</div></div>
+                  <div><div class="text-[10px] uppercase tracking-wide text-muted">Native 30d</div><div class="{(m?.native_token_30d ?? 0) >= 0 ? 'text-mint' : 'text-danger'}">{fmtPct(m?.native_token_30d)}</div></div>
+                  {#if ecoUrl(e)}<div class="flex items-end"><a href={ecoUrl(e)} target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-[11px] font-medium text-accent">DefiLlama <ExternalLink class="h-3 w-3" /></a></div>{/if}
+                </div>
+                {#if canAdvanced}
+                  <p class="mt-2.5 text-xs leading-relaxed text-soft"><span class="font-semibold text-strong">Why ranked here? </span>{e.why}</p>
+                  <p class="mt-1 text-[11px] text-muted"><span class="font-medium text-soft">Confidence: {e.confidence.level}.</span> {e.confidence.reason}</p>
+                  {#if e.notes.length}<ul class="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-warn">{#each e.notes as n}<li>• {n}</li>{/each}</ul>{/if}
+                {:else}
+                  <a href="/app/account" class="mt-2.5 inline-flex items-center gap-1.5 text-xs font-medium text-accent"><Lock class="h-3.5 w-3.5" /> Upgrade to see why it's ranked here</a>
+                {/if}
+              </div>
+            {/if}
+          </li>
+        {/each}
+      </ul>
+
+      <!-- Desktop: full ranked table -->
+      <div class="hidden overflow-x-auto lg:block">
+        <table class="w-full min-w-[860px] text-sm">
+          <thead>
         <tr class="border-b border-edge text-left text-xs uppercase tracking-wider text-muted">
           <th class="px-3 py-3 font-medium">#</th>
           <th class="px-3 py-3 font-medium">Ecosystem</th>
@@ -363,16 +425,15 @@
             </tr>
           {/if}
         {/each}
-        {#if !rows.length}
-          <tr><td colspan="11" class="px-3 py-6 text-center text-muted">No ecosystems match the current filters.</td></tr>
-        {/if}
-        {#if !canAdvanced && all.length > FREE_ROWS}
-          <tr><td colspan="11" class="px-3 py-4 text-center text-xs text-muted">
-            Showing top {FREE_ROWS} of {all.length}. <a href="/app/account" class="text-accent hover:underline">Upgrade to Premium</a> for the full ranked table, advanced filters &amp; detail drawers.
-          </td></tr>
-        {/if}
-      </tbody>
-    </table>
+          </tbody>
+        </table>
+      </div>
+    {/if}
+    {#if !canAdvanced && all.length > FREE_ROWS}
+      <p class="border-t border-edge/60 px-4 py-3 text-center text-xs text-muted">
+        Showing top {FREE_ROWS} of {all.length}. <a href="/app/account" class="text-accent hover:underline">Upgrade to Premium</a> for the full ranked table, advanced filters &amp; detail drawers.
+      </p>
+    {/if}
   </div>
 
   <div class="mt-6"><Disclaimer /></div>
