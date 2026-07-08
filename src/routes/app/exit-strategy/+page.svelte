@@ -35,6 +35,14 @@
   const zoneBar = (s: number) => (s < 0.5 ? 'bg-mint' : s < 0.75 ? 'bg-warn' : 'bg-danger');
   const confPill = (c: string) => (c === 'High' ? 'bg-mint/15 text-mint' : c === 'Low' ? 'bg-danger/15 text-danger' : 'bg-warn/15 text-warn');
   const scorePill = (s: number | null) => (s == null ? 'bg-edge text-muted' : s < 0.4 ? 'bg-mint/15 text-mint' : s < 0.6 ? 'bg-warn/15 text-warn' : 'bg-danger/15 text-danger');
+
+  // Plain-language exit verdict — the decision, not the score (the 0–1 stays as proof).
+  const exitVerdict = (s: number): { head: string; sub: string; color: string } => {
+    if (s < 0.4) return { head: 'Not a take-profit zone yet', sub: 'Risk is low — no reason to sell into this.', color: 'text-mint' };
+    if (s < 0.6) return { head: 'Getting closer, but not yet', sub: 'Risk is building — hold and watch, no rush to trim.', color: 'text-accent' };
+    if (s < 0.75) return { head: 'Time to start trimming into strength', sub: 'Risk is elevated — taking some profit is reasonable.', color: 'text-warn' };
+    return { head: 'Scale out — this is a high-risk zone', sub: 'Historically a distribution zone — prioritise protecting gains.', color: 'text-danger' };
+  };
   const statusPill = (s: string) => (s === 'active' ? 'bg-mint/15 text-mint' : s === 'partial' ? 'bg-warn/15 text-warn' : 'bg-edge text-muted');
   const fmt2 = (n: number | null) => (n == null ? 'n/a' : n.toFixed(2));
   const pct100 = (n: number | null) => (n == null ? 'n/a' : `${Math.round(n)}/100`);
@@ -191,6 +199,7 @@
   <div class="card border-danger/30 bg-danger/5 text-danger">{error}</div>
 {:else if result}
   {@const r = result}
+  {@const ev = exitVerdict(r.exit_risk_score)}
   <!-- Profile selector (premium) -->
   {#if isPremium}
     <div class="mb-4">
@@ -203,14 +212,19 @@
     </div>
   {/if}
 
-  <!-- Current action (the headline answer) -->
+  <!-- Current action — plain-language verdict first, then the exact action -->
   <div class="card mb-3 border-l-4 {r.exit_risk_score < 0.5 ? 'border-l-mint' : r.exit_risk_score < 0.75 ? 'border-l-warn' : 'border-l-danger'}">
     <div class="flex items-center gap-2">
       <Activity class="h-4 w-4 text-accent" />
-      <p class="stat-label">Current action</p>
+      <p class="stat-label">Should I take profit?</p>
     </div>
-    <p class="mt-1 text-lg font-semibold text-strong">{r.current_action.action}</p>
-    <p class="mt-1 text-sm leading-relaxed text-soft"><span class="font-medium text-muted">Reason:</span> {r.current_action.reason}</p>
+    <p class="mt-1.5 text-xl font-bold leading-tight {ev.color}">{ev.head}</p>
+    <p class="mt-1 text-sm text-soft">{ev.sub}</p>
+    <p class="mt-2.5 flex items-start gap-2 rounded-lg border border-edge bg-panel-2/50 px-3 py-2 text-sm text-strong">
+      <span class="mt-0.5 shrink-0 rounded-md bg-accent/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-accent">Do</span>
+      {r.current_action.action}
+    </p>
+    <p class="mt-1.5 text-xs text-muted"><span class="font-medium text-soft">Reason:</span> {r.current_action.reason}</p>
   </div>
 
   <!-- Hero -->

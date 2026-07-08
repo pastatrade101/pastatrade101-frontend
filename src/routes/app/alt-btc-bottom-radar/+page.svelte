@@ -66,6 +66,23 @@
   const scoreTone = (s: number) => (s >= 71 ? 'text-mint' : s >= 56 ? 'text-mint/90' : s >= 41 ? 'text-accent' : s >= 21 ? 'text-warn' : 'text-danger');
   const scoreBar = (s: number) => (s >= 56 ? 'bg-mint' : s >= 41 ? 'bg-accent' : s >= 21 ? 'bg-warn' : 'bg-danger');
   const invTone = (s: number) => (s <= 25 ? 'text-mint' : s <= 45 ? 'text-accent' : s <= 65 ? 'text-warn' : 'text-danger');
+
+  // Plain-language rotation verdict from the summary counts (counts stay as proof).
+  const textTone = (t: string) => (t === 'good' ? 'text-mint' : t === 'warn' ? 'text-danger' : 'text-accent');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const bottomVerdict = $derived.by(() => {
+    const s = data?.summary;
+    if (!s) return null;
+    const conf = s.confirmed_strength ?? 0;
+    const early = s.early_recoveries ?? 0;
+    const bleed = s.still_bleeding ?? 0;
+    const bottom = s.bottoming_attempts ?? 0;
+    if (conf + early >= 3 && conf + early >= bleed)
+      return { head: 'Altcoins are starting to recover against Bitcoin', sub: `${conf} confirmed and ${early} in early recovery — rotation is building.`, action: 'Focus on coins that have confirmed strength, not just a bounce.', tone: 'good' };
+    if (bleed > conf + early + bottom)
+      return { head: 'Altcoins are still bleeding against Bitcoin', sub: `${bleed} still weak vs ${conf + early} recovering — most alts underperform BTC.`, action: 'Be patient — holding Bitcoin may still be the stronger position.', tone: 'warn' };
+    return { head: 'Altcoins are trying to bottom vs Bitcoin', sub: `${bottom} attempting a bottom, ${early} early recovery — early and unconfirmed.`, action: 'Wait for confirmed higher lows before treating any as a leader.', tone: 'neutral' };
+  });
   const statusPill = (s: string) => {
     if (/leader|confirmed/i.test(s)) return 'bg-mint/15 text-mint';
     if (/early recovery/i.test(s)) return 'bg-accent/15 text-accent';
@@ -181,10 +198,24 @@
   {:else if data && !data.available}
     <div class="card border-warn/30 bg-warn/5"><p class="stat-label text-warn">Not synced yet</p><p class="mt-1 text-sm text-soft">{data.takeaway}</p></div>
   {:else if data}
-    <!-- Takeaway -->
+    <!-- Verdict first, then the radar takeaway as proof -->
     <div class="hero-card mb-3">
-      <p class="stat-label text-accent">Radar takeaway</p>
-      <p class="mt-1 text-sm leading-relaxed text-soft">{data.takeaway}</p>
+      {#if bottomVerdict}
+        <p class="text-[11px] font-semibold uppercase tracking-wide text-muted">The rotation read</p>
+        <p class="mt-0.5 text-xl font-bold leading-tight {textTone(bottomVerdict.tone)}">{bottomVerdict.head}</p>
+        <p class="mt-1 text-sm text-soft">{bottomVerdict.sub}</p>
+        <p class="mt-2.5 flex items-start gap-2 rounded-lg border border-edge bg-panel-2/50 px-3 py-2 text-sm text-strong">
+          <span class="mt-0.5 shrink-0 rounded-md bg-accent/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-accent">Do</span>
+          {bottomVerdict.action}
+        </p>
+        <div class="mt-3 border-t border-edge/60 pt-3">
+          <p class="stat-label text-accent">Radar takeaway</p>
+          <p class="mt-1 text-sm leading-relaxed text-soft">{data.takeaway}</p>
+        </div>
+      {:else}
+        <p class="stat-label text-accent">Radar takeaway</p>
+        <p class="mt-1 text-sm leading-relaxed text-soft">{data.takeaway}</p>
+      {/if}
     </div>
 
     <!-- Stage progression guide -->

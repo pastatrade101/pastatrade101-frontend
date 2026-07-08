@@ -194,8 +194,8 @@
 <header class="mb-4 flex items-start gap-2">
   <Radar class="mt-0.5 h-5 w-5 text-accent" />
   <div class="min-w-0">
-    <h1 class="text-xl font-semibold text-strong">Early Opportunity Radar</h1>
-    <p class="text-sm text-muted">Discover early research candidates from trending coins, new DEX pools, and rising market activity — with risk filters built in.</p>
+    <h1 class="text-lg font-semibold text-strong sm:text-xl">Early Opportunity Radar</h1>
+    <p class="text-sm text-muted">Find early coins gaining real attention — with the scam and low-liquidity traps filtered out. Research leads, never buy signals.</p>
   </div>
 </header>
 

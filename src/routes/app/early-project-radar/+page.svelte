@@ -56,13 +56,26 @@
   const meta = (c: string) => CLASS_META[c] ?? { light: '', label: c ?? '—', cls: 'text-muted', pill: 'bg-edge text-muted' };
   const scoreTone = (n: number | null) => (n == null ? 'text-muted' : n >= 70 ? 'text-mint' : n >= 45 ? 'text-warn' : 'text-danger');
   const statusPill = (s: string) => (s === 'active' ? 'bg-mint/15 text-mint' : s === 'upcoming' ? 'bg-accent/15 text-accent' : 'bg-edge text-muted');
+
+  // Decision-first summary of what's on the radar today.
+  const radarSummary = $derived.by(() => {
+    const by = (c: string) => items.filter((p) => p.classification === c).length;
+    const s = by('strong_watchlist');
+    const n = by('needs_research');
+    const h = by('high_risk');
+    const line =
+      s > 0
+        ? `${s} project${s === 1 ? '' : 's'} score${s === 1 ? 's' : ''} well enough to research — but a high score is never a buy signal.`
+        : 'Nothing scores strongly today — most are high-risk. Be very selective.';
+    return { s, n, h, line };
+  });
 </script>
 
 <header class="mb-4 flex items-center gap-2">
   <Rocket class="h-5 w-5 text-accent" />
   <div>
-    <h1 class="text-xl font-semibold text-strong">Early Project Radar</h1>
-    <p class="text-sm text-muted">Upcoming & active token projects — scored for backers, tokenomics, vesting and red flags. Research candidates, never buy signals.</p>
+    <h1 class="text-lg font-semibold text-strong sm:text-xl">Early Project Radar</h1>
+    <p class="text-sm text-muted">Which new token projects are worth a closer look — and which to avoid. Research only, never a buy signal.</p>
   </div>
 </header>
 
@@ -71,6 +84,18 @@
 {:else if error}
   <div class="card border-danger/30 bg-danger/5 text-danger">{error}</div>
 {:else}
+  {#if !locked && shown.length}
+    <div class="mb-3 rounded-xl border border-edge bg-panel p-3.5">
+      <p class="text-[11px] font-semibold uppercase tracking-wide text-muted">On the radar today</p>
+      <div class="mt-2 flex flex-wrap gap-2 text-sm">
+        <span class="pill bg-mint/15 text-mint">🟢 {radarSummary.s} worth researching</span>
+        <span class="pill bg-warn/15 text-warn">🟡 {radarSummary.n} need research</span>
+        <span class="pill bg-danger/15 text-danger">🔴 {radarSummary.h} high-risk</span>
+      </div>
+      <p class="mt-2 text-sm text-soft">{radarSummary.line}</p>
+    </div>
+  {/if}
+
   <div class="mb-3 flex items-start gap-2 rounded-lg border border-edge bg-panel-2 px-3 py-2 text-xs leading-relaxed text-muted">
     <Info class="mt-0.5 h-3.5 w-3.5 shrink-0" />
     <span>Score rates <span class="text-soft">backer strength, narrative, tokenomics, vesting, community, docs, timing</span> and red flags. A high score is not a recommendation — new tokens are highly risky.</span>
