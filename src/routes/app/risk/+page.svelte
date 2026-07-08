@@ -187,6 +187,17 @@
   const displayRisk = $derived(smoothedByDate.get(currentDate) ?? summary?.summary_risk ?? null);
   const zone = $derived(displayRisk != null ? zoneFor(displayRisk) : null);
 
+  // Plain-language verdict — the decision, not the score (the 0–100 stays as proof).
+  const humanVerdict = $derived.by(() => {
+    const r = displayRisk;
+    if (r == null) return { head: 'Bitcoin risk is unavailable', sub: 'Not enough data to read the market yet.', action: '' };
+    if (r < 0.2) return { head: 'Bitcoin looks deeply undervalued', sub: 'A strong zone for disciplined accumulation.', action: 'Good time to buy — slowly and consistently.' };
+    if (r < 0.4) return { head: 'Bitcoin is not overheated', sub: 'A good zone for disciplined buying.', action: 'Reasonable time to DCA — no need to rush.' };
+    if (r < 0.6) return { head: 'Bitcoin is fairly priced', sub: 'Neutral — not cheap, not expensive.', action: 'Keep buying measured, not aggressive.' };
+    if (r < 0.8) return { head: 'Bitcoin is getting expensive', sub: 'Risk is building above healthy levels.', action: 'Be cautious — ease off aggressive buying.' };
+    return { head: 'Bitcoin looks overheated', sub: 'Historically a high-risk zone.', action: 'Consider taking some profit, not adding aggressively.' };
+  });
+
   const shortInterp = (r: number) =>
     r < 0.2
       ? 'Aggressive accumulation zone.'
@@ -864,6 +875,19 @@
 {:else if summary && bounds && zone && displayRisk != null}
   <!-- Summary card -->
   <div class="card mb-4 border-l-4" style="border-left-color: {zone.color}">
+    <!-- Plain-language verdict first (the decision); the gauge + score sit below as proof -->
+    <div class="mb-4">
+      <p class="text-[11px] font-semibold uppercase tracking-wide text-muted">Bitcoin Today</p>
+      <p class="mt-1 text-xl font-bold leading-tight sm:text-2xl" style="color: {zone.color}">{humanVerdict.head}</p>
+      <p class="mt-1 text-sm text-soft">{humanVerdict.sub}</p>
+      {#if humanVerdict.action}
+        <p class="mt-2.5 flex items-start gap-2 rounded-lg border border-edge bg-panel-2/50 px-3 py-2 text-sm text-strong">
+          <span class="mt-0.5 shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide" style="background: {zone.color}22; color: {zone.color}">Do</span>
+          {humanVerdict.action}
+        </p>
+      {/if}
+      <p class="mt-2 text-[11px] text-muted">Risk score {Math.round((displayRisk ?? 0) * 100)}/100 · {zone.label}</p>
+    </div>
     <div class="grid gap-4 md:grid-cols-[220px_1fr]">
       <div class="flex flex-col items-center">
         <Gauge value={displayRisk} title="BTC Risk" size={220} />

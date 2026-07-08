@@ -193,6 +193,16 @@
     return { v, label };
   });
 
+  // Plain-language verdict — is this coin winning or bleeding against Bitcoin?
+  const coinVerdict = (sym: string, s30: number | null, s7: number | null): { head: string; sub: string; tone: 'good' | 'warn' | 'neutral' } => {
+    const s = s30 ?? s7 ?? 0;
+    if (s > 5) return { head: `${sym} is winning against Bitcoin`, sub: 'It is outperforming BTC — real strength, not just a dollar move.', tone: 'good' };
+    if (s < -5) return { head: `${sym} is bleeding against Bitcoin`, sub: 'It is losing value vs BTC — you may have been better off just holding Bitcoin.', tone: 'warn' };
+    return { head: `${sym} is holding even with Bitcoin`, sub: 'Roughly matching BTC — no clear edge either way right now.', tone: 'neutral' };
+  };
+  const verdictText: Record<'good' | 'warn' | 'neutral', string> = { good: 'text-mint', warn: 'text-danger', neutral: 'text-soft' };
+  const hvVerdict = $derived(data?.coin ? coinVerdict(data.coin.symbol, data.strength_30d, data.strength_7d) : null);
+
   const load = async () => {
     loading = true;
     error = '';
@@ -555,9 +565,10 @@
   <div class="card mb-4 border-l-4" style="border-left-color: var(--mint, #37e0a6)">
     <div class="flex flex-wrap items-start justify-between gap-3">
       <div>
-        <p class="stat-label">{data.coin.symbol}/BTC Verdict</p>
-        <p class="mt-1 text-2xl font-semibold text-strong">{data.analysis.verdict_label}</p>
-        <p class="mt-1 text-sm text-soft">{data.analysis.verdict_summary}</p>
+        <p class="text-[11px] font-semibold uppercase tracking-wide text-muted">The verdict</p>
+        <p class="mt-1 text-xl font-bold leading-tight sm:text-2xl {verdictText[hvVerdict?.tone ?? 'neutral']}">{hvVerdict?.head}</p>
+        <p class="mt-1 text-sm text-soft">{hvVerdict?.sub}</p>
+        <p class="mt-2 text-[11px] text-muted">Signal: {data.analysis.verdict_label} · {data.analysis.verdict_summary}</p>
       </div>
       <div class="flex flex-col items-end gap-1">
         <button class="btn-primary" onclick={addToWatchlist}><Star class="h-4 w-4" /> Add to Watchlist</button>
