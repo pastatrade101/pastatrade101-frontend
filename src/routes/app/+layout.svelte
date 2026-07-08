@@ -3,7 +3,7 @@
   import { fade, fly } from 'svelte/transition';
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
-  import { Activity, BarChart3, Bitcoin, Crosshair, DoorOpen, FileText, Flame, FlaskConical, Gauge, Globe, LayoutDashboard, Layers, Radar, Rocket, Scale, Search, Spline, Star, Users, X } from '@lucide/svelte';
+  import { Activity, BarChart3, Bitcoin, Crosshair, DoorOpen, FileText, Flame, FlaskConical, Gauge, Globe, LayoutDashboard, Layers, Radar, Rocket, Scale, Search, Spline, Star, Users, X, Menu } from '@lucide/svelte';
   import { api } from '$lib/api';
   import { authReady, user } from '$lib/stores/auth';
   import { sidebarCollapsed, sidebarOpen } from '$lib/stores/ui';
@@ -98,6 +98,17 @@
       ]
     }
   ];
+
+  // Native-app bottom navigation (mobile only) — the 4 most-used destinations,
+  // with "More" opening the full grouped drawer.
+  const bottomNav: { href: string; label: string; icon: typeof Gauge; exact?: boolean }[] = [
+    { href: '/app', label: 'Home', icon: LayoutDashboard, exact: true },
+    { href: '/app/token-radar', label: 'Scan', icon: Crosshair },
+    { href: '/app/charts', label: 'Charts', icon: BarChart3 },
+    { href: '/app/watchlist', label: 'Watchlist', icon: Star }
+  ];
+  const bottomActive = (href: string, exact?: boolean) =>
+    exact ? $page.url.pathname === href : $page.url.pathname === href || $page.url.pathname.startsWith(`${href}/`);
 
   // Active when it's the exact route or a true sub-route. Plain startsWith() is
   // wrong here because `/app/btc` is a string prefix of `/app/btc-cycle-lab`.
@@ -257,10 +268,29 @@
       {@render sidebarContent($sidebarCollapsed)}
     </aside>
 
-    <div class="min-w-0 px-4 py-6 lg:h-full lg:min-h-0 lg:overflow-y-auto lg:overscroll-none lg:px-8">
+    <div class="min-w-0 px-4 pb-24 pt-6 lg:h-full lg:min-h-0 lg:overflow-y-auto lg:overscroll-none lg:px-8 lg:pb-6">
       {@render children()}
     </div>
   </div>
+
+  <!-- Sticky mobile bottom navigation (native-app style) -->
+  {#if !$sidebarOpen}
+    <nav class="fixed inset-x-0 bottom-0 z-40 border-t border-edge bg-panel/95 backdrop-blur lg:hidden" style="padding-bottom: env(safe-area-inset-bottom)">
+      <div class="mx-auto grid max-w-lg grid-cols-5">
+        {#each bottomNav as b}
+          {@const active = bottomActive(b.href, b.exact)}
+          <a href={b.href} class="flex flex-col items-center gap-0.5 py-2 text-[10px] font-medium transition {active ? 'text-mint' : 'text-muted'}">
+            <b.icon class="h-5 w-5" />
+            {b.label}
+          </a>
+        {/each}
+        <button type="button" class="flex flex-col items-center gap-0.5 py-2 text-[10px] font-medium text-muted transition active:text-soft" onclick={() => sidebarOpen.set(true)}>
+          <Menu class="h-5 w-5" />
+          More
+        </button>
+      </div>
+    </nav>
+  {/if}
 
   <!-- Mobile drawer (toggled from the header hamburger) -->
   {#if $sidebarOpen}
