@@ -44,6 +44,15 @@
   // What each input tone means for crypto — the beginner-friendly one-liner.
   const cryptoMeaning = (t: string) => (t === 'good' ? 'Supportive for crypto' : t === 'warn' ? 'Headwind for crypto' : 'Neutral for crypto');
 
+  // Plain-language verdict — the decision, not the score (the /100 stays as proof).
+  const macroVerdict = $derived.by(() => {
+    const s = r?.regime_score;
+    if (s == null) return { head: 'Macro read unavailable', sub: 'Not enough market data to read the backdrop yet.' };
+    if (s >= 60) return { head: 'Traditional markets are supporting crypto', sub: 'The dollar, stocks and volatility lean risk-on — a tailwind behind crypto right now.' };
+    if (s >= 40) return { head: 'The macro backdrop is mixed', sub: 'No strong tailwind or headwind — traditional markets are neither helping nor hurting much.' };
+    return { head: 'Traditional markets are a headwind for crypto', sub: 'The backdrop is risk-off — even good coins face resistance until this eases.' };
+  });
+
   // Plain-English "what to do about it" for each regime band.
   const bestApproach = (s: number) =>
     s >= 60
@@ -120,6 +129,10 @@
   <div class="hero-card mb-3 grid items-center gap-4 sm:grid-cols-[auto_1fr]">
     <div class="mx-auto"><Gauge value={r.regime_score / 100} title="Risk Appetite" /></div>
     <div class="min-w-0">
+      <!-- Plain-language verdict first; the score + labels sit below as proof -->
+      <p class="text-[11px] font-semibold uppercase tracking-wide text-muted">The macro read</p>
+      <p class="mt-0.5 text-xl font-bold leading-tight {scoreTone(r.regime_score)}">{macroVerdict.head}</p>
+      <p class="mb-3 mt-1 text-sm text-soft">{macroVerdict.sub}</p>
       <div class="flex flex-wrap items-center gap-2">
         <span class="text-2xl font-bold {scoreTone(r.regime_score)}">{r.regime_score}<span class="text-base text-muted">/100</span></span>
         <span class="pill {pill(r.regime_score)}">{r.regime_label}</span>
