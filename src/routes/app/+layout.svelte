@@ -273,19 +273,19 @@
     </div>
   </div>
 
-  <!-- Sticky mobile bottom navigation (native-app style) -->
+  <!-- Sticky mobile bottom navigation — floating liquid-glass pill -->
   {#if !$sidebarOpen}
-    <nav class="fixed inset-x-0 bottom-0 z-40 border-t border-edge bg-panel/95 backdrop-blur lg:hidden" style="padding-bottom: env(safe-area-inset-bottom)">
-      <div class="mx-auto grid max-w-lg grid-cols-5">
+    <nav class="fixed inset-x-0 bottom-0 z-40 px-3 pt-2 lg:hidden" style="padding-bottom: calc(env(safe-area-inset-bottom) + 0.55rem)">
+      <div class="glass-nav mx-auto grid max-w-md grid-cols-5 rounded-[26px] p-1">
         {#each bottomNav as b}
           {@const active = bottomActive(b.href, b.exact)}
-          <a href={b.href} class="flex flex-col items-center gap-0.5 py-2 text-[10px] font-medium transition {active ? 'text-mint' : 'text-muted'}">
-            <b.icon class="h-5 w-5" />
+          <a href={b.href} class="flex flex-col items-center gap-0.5 rounded-[20px] py-2 text-[10px] font-medium transition {active ? 'bg-mint/12 text-mint' : 'text-muted active:bg-white/5'}">
+            <b.icon class="h-[22px] w-[22px]" />
             {b.label}
           </a>
         {/each}
-        <button type="button" class="flex flex-col items-center gap-0.5 py-2 text-[10px] font-medium text-muted transition active:text-soft" onclick={() => sidebarOpen.set(true)}>
-          <Menu class="h-5 w-5" />
+        <button type="button" class="flex flex-col items-center gap-0.5 rounded-[20px] py-2 text-[10px] font-medium text-muted transition active:bg-white/5 active:text-soft" onclick={() => sidebarOpen.set(true)}>
+          <Menu class="h-[22px] w-[22px]" />
           More
         </button>
       </div>

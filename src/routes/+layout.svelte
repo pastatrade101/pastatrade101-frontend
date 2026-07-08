@@ -44,7 +44,7 @@
 
 <!-- App desktop: exact-viewport shell (no body scroll) so the panes own all scrolling. -->
 <div class="flex min-h-screen flex-col {onApp && $user ? 'lg:h-screen lg:overflow-hidden' : ''}">
-  <header class="sticky top-0 z-20 border-b border-edge bg-ink/80 backdrop-blur">
+  <header class="sticky top-0 z-20 border-b border-edge/70" style="background: rgb(var(--glass-rgb) / 0.62); backdrop-filter: blur(20px) saturate(170%); -webkit-backdrop-filter: blur(20px) saturate(170%);">
     <!-- App pages: full-width bar so the brand aligns with the left-edge sidebar.
          Marketing pages keep the centered container. -->
     <div class={onApp && $user ? 'flex w-full items-center justify-between px-4 py-3 lg:px-5' : 'mx-auto flex w-full max-w-[1440px] items-center justify-between px-4 py-3 lg:px-8'}>

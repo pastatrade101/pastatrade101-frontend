@@ -18,6 +18,18 @@
   --c-danger: 255 93 108;
   --c-warn: 255 181 71;
   --c-accent: 91 140 255;
+  /* Liquid-glass surface tokens (dark) */
+  --glass-rgb: 20 24 35;
+  --glass-a: 0.5;
+  --glass-brd: 255 255 255;
+  --glass-brd-a: 0.12;
+  --glass-sh: 0 12px 35px rgb(0 0 0 / 0.3), inset 0 1px 0 rgb(255 255 255 / 0.08);
+  --card-a: 0.82;
+  /* Calm layered background */
+  --app-bg:
+    radial-gradient(circle at 0% 0%, rgb(91 140 255 / 0.16), transparent 42%),
+    radial-gradient(circle at 100% 100%, rgb(88 86 214 / 0.14), transparent 44%),
+    linear-gradient(180deg, rgb(10 13 19) 0%, rgb(8 11 17) 100%);
   color-scheme: dark;
 }
 
@@ -35,6 +47,18 @@
   --c-danger: 220 38 60;
   --c-warn: 176 116 8;
   --c-accent: 37 99 235;
+  /* Liquid-glass surface tokens (light) */
+  --glass-rgb: 255 255 255;
+  --glass-a: 0.6;
+  --glass-brd: 255 255 255;
+  --glass-brd-a: 0.65;
+  --glass-sh: 0 8px 30px rgb(15 23 42 / 0.1), inset 0 1px 0 rgb(255 255 255 / 0.8);
+  --card-a: 0.72;
+  /* Calm layered background */
+  --app-bg:
+    radial-gradient(circle at 0% 0%, rgb(0 122 255 / 0.16), transparent 35%),
+    radial-gradient(circle at 100% 100%, rgb(88 86 214 / 0.14), transparent 38%),
+    linear-gradient(180deg, #f7f9fc 0%, #eef2f7 100%);
   color-scheme: light;
 }
 
@@ -46,14 +70,73 @@
   }
   body {
     background-color: rgb(var(--c-ink));
+    background: var(--app-bg) fixed;
     min-height: 100vh;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
   }
 }
 
+/* Reusable calm gradient background (same as body) for any wrapper that needs it. */
+.app-bg {
+  background: var(--app-bg);
+  background-attachment: fixed;
+}
+
 @layer components {
+  /* Translucent premium surface — readable (kept fairly opaque), soft-rounded,
+     with a subtle blur only where the browser supports it. */
   .card {
-    @apply rounded-xl border border-edge bg-panel p-5;
+    border-radius: 1.25rem;
+    border: 1px solid rgb(var(--c-edge) / 0.85);
+    background: rgb(var(--c-panel) / var(--card-a));
+    padding: 1.25rem;
+    box-shadow: 0 6px 24px rgb(0 0 0 / 0.06);
+    transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  }
+
+  /* ── Liquid-glass utilities ──────────────────────────────────────────────
+     Fallback (no backdrop-filter) = more opaque so text always stays readable;
+     the blur variant below drops the opacity and adds the frost. */
+  .glass-card,
+  .glass-panel,
+  .glass-nav,
+  .glass-button {
+    background: rgb(var(--glass-rgb) / calc(var(--glass-a) + 0.28));
+    border: 1px solid rgb(var(--glass-brd) / var(--glass-brd-a));
+    box-shadow: var(--glass-sh);
+    transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease, background 0.25s ease;
+  }
+  .glass-card {
+    border-radius: 24px;
+  }
+  .glass-panel {
+    border-radius: 26px;
+  }
+  .glass-button {
+    border-radius: 9999px;
+  }
+
+  @supports ((backdrop-filter: blur(2px)) or (-webkit-backdrop-filter: blur(2px))) {
+    .glass-card {
+      background: rgb(var(--glass-rgb) / var(--glass-a));
+      backdrop-filter: blur(22px) saturate(180%);
+      -webkit-backdrop-filter: blur(22px) saturate(180%);
+    }
+    .glass-panel {
+      background: rgb(var(--glass-rgb) / calc(var(--glass-a) + 0.08));
+      backdrop-filter: blur(28px) saturate(180%);
+      -webkit-backdrop-filter: blur(28px) saturate(180%);
+    }
+    .glass-nav {
+      background: rgb(var(--glass-rgb) / calc(var(--glass-a) + 0.14));
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+    }
+    .glass-button {
+      background: rgb(var(--glass-rgb) / calc(var(--glass-a) + 0.12));
+      backdrop-filter: blur(14px) saturate(160%);
+      -webkit-backdrop-filter: blur(14px) saturate(160%);
+    }
   }
   .stat-label {
     @apply text-xs uppercase tracking-wider text-muted;
@@ -98,11 +181,14 @@
   .stat-tile {
     position: relative;
     overflow: hidden;
-    border-radius: 0.85rem;
-    border: 1px solid rgb(var(--c-edge));
+    border-radius: 1.25rem;
+    border: 1px solid rgb(var(--glass-brd) / var(--glass-brd-a));
     background:
-      radial-gradient(130% 130% at 0% 0%, rgb(var(--c-mint) / 0.08), transparent 42%),
-      rgb(var(--c-panel));
+      radial-gradient(130% 130% at 0% 0%, rgb(var(--c-mint) / 0.09), transparent 42%),
+      rgb(var(--c-panel) / var(--card-a));
+    box-shadow: 0 6px 22px rgb(0 0 0 / 0.06);
+    backdrop-filter: blur(16px) saturate(160%);
+    -webkit-backdrop-filter: blur(16px) saturate(160%);
     padding: 1.1rem 1.2rem;
     transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
   }
@@ -142,12 +228,15 @@
   .hero-card {
     position: relative;
     overflow: hidden;
-    border-radius: 0.9rem;
-    border: 1px solid rgb(var(--c-edge));
+    border-radius: 1.5rem;
+    border: 1px solid rgb(var(--glass-brd) / var(--glass-brd-a));
     background:
-      radial-gradient(120% 130% at 100% 0%, rgb(var(--c-accent) / 0.1), transparent 46%),
-      radial-gradient(110% 120% at 0% 100%, rgb(var(--c-mint) / 0.06), transparent 52%),
-      rgb(var(--c-panel));
+      radial-gradient(120% 130% at 100% 0%, rgb(var(--c-accent) / 0.12), transparent 46%),
+      radial-gradient(110% 120% at 0% 100%, rgb(var(--c-mint) / 0.07), transparent 52%),
+      rgb(var(--c-panel) / var(--card-a));
+    box-shadow: var(--glass-sh);
+    backdrop-filter: blur(20px) saturate(170%);
+    -webkit-backdrop-filter: blur(20px) saturate(170%);
     padding: 1.3rem 1.45rem;
   }
   .hero-card::before {
