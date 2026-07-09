@@ -17,6 +17,7 @@
   const reduceMotion = browser && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   import CoinMarquee from '$lib/components/CoinMarquee.svelte';
   import CountUp from '$lib/components/CountUp.svelte';
+  import LiteYouTube from '$lib/components/LiteYouTube.svelte';
   import Seo from '$lib/components/Seo.svelte';
   import { inview, whenInView } from '$lib/actions/inview';
 
@@ -42,11 +43,17 @@
   let plans = $state<Plan[]>([]);
   let pricingVisible = $state(false); // gates the staggered fly-in for pricing cards
   let userCount = $state<number | null>(null); // real registered users (from /stats)
+  let videos = $state<{ id: string; title: string; views: number | null }[]>([]); // latest YouTube uploads
   onMount(async () => {
     try {
       plans = (await api<{ items: Plan[] }>('/plans')).items;
     } catch {
       /* pricing teaser is optional on the landing page */
+    }
+    try {
+      videos = (await api<{ items: { id: string; title: string; views: number | null }[] }>('/youtube/videos?limit=3')).items ?? [];
+    } catch {
+      /* video section is optional */
     }
     try {
       userCount = (await api<{ users: number }>('/stats')).users;
@@ -466,6 +473,25 @@
     </div>
   </div>
 </section>
+
+<!-- ── 5b · VIDEOS (latest YouTube uploads) ───────────────────────────────── -->
+{#if videos.length}
+  <section class="mx-auto max-w-[1100px] px-4 py-14" use:inview>
+    <div class="mb-8 text-center">
+      <span class="pill bg-danger/10 text-danger">{$t('landing.videos.eyebrow')}</span>
+      <h2 class="mt-3 text-2xl font-bold text-strong sm:text-3xl">{$t('landing.videos.title')}</h2>
+      <p class="mx-auto mt-2 max-w-xl text-muted">{$t('landing.videos.sub')}</p>
+    </div>
+    <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      {#each videos.slice(0, 3) as v}
+        <LiteYouTube id={v.id} title={v.title} views={v.views} />
+      {/each}
+    </div>
+    <div class="mt-8 text-center">
+      <a href="https://www.youtube.com/@pastatrade101" target="_blank" rel="noopener noreferrer" class="btn-ghost inline-flex">{$t('landing.videos.cta')} <ArrowRight class="h-4 w-4" /></a>
+    </div>
+  </section>
+{/if}
 
 <!-- ── 6 · PRICING TEASER ─────────────────────────────────────────────────── -->
 {#if plans.length}
