@@ -5,6 +5,7 @@
   import Gauge from '$lib/components/Gauge.svelte';
   import LockedFeature from '$lib/components/LockedFeature.svelte';
   import EChart from '$lib/components/EChart.svelte';
+  import AiInterpret from '$lib/components/AiInterpret.svelte';
 
   const canDeriv = $derived(hasFeature($membership, 'access_derivatives'));
 
@@ -74,6 +75,25 @@
   const fundingPct = (f: number | null) => (f == null ? 'n/a' : `${(f * 100).toFixed(4)}%`);
   const fundTone = (f: number | null) => (f == null ? 'text-muted' : f < 0 ? 'text-accent' : f > 0.0003 ? 'text-warn' : 'text-soft');
   const lsTone = (v: number | null) => (v == null ? 'text-muted' : v > 1.6 ? 'text-warn' : v < 0.9 ? 'text-accent' : 'text-soft');
+
+  // AI interpretation signals — built from the page's own computed live values.
+  const zoneTone = (s: number) => (s < 0.4 ? 'good' : s < 0.6 ? 'neutral' : s < 0.75 ? 'warn' : 'danger');
+  const fundSigTone = (f: number | null) => (f == null ? 'neutral' : f < 0 ? 'good' : f > 0.0003 ? 'warn' : 'neutral');
+  const lsSigTone = (v: number | null) => (v == null ? 'neutral' : v > 1.6 ? 'warn' : v < 0.9 ? 'good' : 'neutral');
+  const aiSignals = $derived(
+    r && r.leverage_risk != null
+      ? [
+          { name: 'Leverage risk', label: r.label, value: `${r.leverage_risk.toFixed(2)} (${r.leverage_percent}/100)`, tone: zoneTone(r.leverage_risk) },
+          { name: 'Confidence', label: `${r.confidence} confidence`, value: r.confidence, tone: r.confidence === 'High' ? 'good' : r.confidence === 'Low' ? 'danger' : 'warn' },
+          { name: 'BTC funding (8h)', label: 'BTC funding rate', value: fundingPct(r.btc_funding_rate), tone: fundSigTone(r.btc_funding_rate) },
+          { name: 'ETH funding (8h)', label: 'ETH funding rate', value: fundingPct(r.eth_funding_rate), tone: fundSigTone(r.eth_funding_rate) },
+          { name: 'BTC long/short', label: 'BTC long/short ratio', value: r.btc_long_short == null ? 'n/a' : r.btc_long_short.toFixed(2), tone: lsSigTone(r.btc_long_short) },
+          ...(r.hot_funding_breadth != null
+            ? [{ name: 'Hot funding breadth', label: 'Share of futures with hot funding', value: `${r.hot_funding_breadth}%`, tone: r.hot_funding_breadth > 60 ? 'warn' : 'neutral' }]
+            : [])
+        ]
+      : []
+  );
 </script>
 
 <header class="mb-5 flex items-center gap-2">
@@ -114,6 +134,11 @@
         <p class="mt-2 max-w-2xl text-sm leading-relaxed text-soft">{r.interpretation}</p>
         {#if r.hot_funding_breadth != null}<p class="mt-1.5 text-xs text-muted">Funding breadth: <span class="font-medium text-soft">{r.hot_funding_breadth}%</span> of futures have hot (positive) funding.</p>{/if}
       </div>
+    </div>
+
+    <!-- AI interpretation -->
+    <div class="mb-4">
+      <AiInterpret module="derivatives" title="Leverage Risk" signals={aiSignals} />
     </div>
 
     <!-- Metric cards -->

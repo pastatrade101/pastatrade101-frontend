@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { Check, X } from '@lucide/svelte';
+  import { Check, X, Sparkles } from '@lucide/svelte';
   import { api } from '$lib/api';
   import { fmtMoney } from '$lib/format';
   import { user } from '$lib/stores/auth';
@@ -106,8 +106,10 @@
 
 <section class="mx-auto max-w-[1100px] px-4 py-10">
   <header class="mb-8 text-center">
+    <span class="mb-3 inline-flex items-center gap-1.5 rounded-full border border-mint/30 bg-mint/10 px-3 py-1 text-xs font-semibold text-mint"><Sparkles class="h-3.5 w-3.5" /> {$t('pricing.aiTag')}</span>
     <h1 class="text-3xl font-semibold text-strong">{$t('pricing.title')}</h1>
     <p class="mx-auto mt-2 max-w-xl text-muted">{$t('pricing.sub')}</p>
+    <p class="mx-auto mt-2 max-w-lg text-sm text-soft">{$t('pricing.aiPitch')}</p>
     <div class="mt-5 inline-flex items-center gap-1 rounded-lg border border-edge p-1 text-sm">
       <button class="rounded-md px-3 py-1.5 {!yearly ? 'bg-accent/15 text-accent' : 'text-muted'}" onclick={() => (yearly = false)}>{$t('pricing.monthly')}</button>
       <button class="rounded-md px-3 py-1.5 {yearly ? 'bg-accent/15 text-accent' : 'text-muted'}" onclick={() => (yearly = true)}>{$t('pricing.yearly')}{#if yearlySaving}

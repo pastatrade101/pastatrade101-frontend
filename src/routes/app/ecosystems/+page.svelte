@@ -3,6 +3,7 @@
   import { api } from '$lib/api';
   import { fmtPct, fmtUsd } from '$lib/format';
   import Disclaimer from '$lib/components/Disclaimer.svelte';
+  import AiInterpret from '$lib/components/AiInterpret.svelte';
   import { Lock, ExternalLink, ChevronRight } from '@lucide/svelte';
   import { slide } from 'svelte/transition';
   import { membership, hasFeature } from '$lib/stores/membership';
@@ -62,6 +63,45 @@
       return { head: 'Most ecosystems are weak right now', sub: `${wk} weak vs ${imp} improving — rotation is thin.`, action: 'Stay defensive — avoid broad ecosystem bets until breadth improves.', tone: 'warn' };
     return { head: 'Rotation is selective right now', sub: `Only ${imp} ecosystem${imp === 1 ? '' : 's'} improving — most are neutral or weak.`, action: 'Be selective — back only the strongest chains, not the whole sector.', tone: 'neutral' };
   });
+
+  // Signals for the AI interpretation — built from the page's own computed verdict,
+  // regime and breadth counts (no new data). Tones mapped to the AiInterpret vocab.
+  const aiSignals = $derived(
+    all.length
+      ? [
+          {
+            name: 'Rotation verdict',
+            label: ecoVerdict.head,
+            value: ecoVerdict.action,
+            tone: ecoVerdict.tone === 'good' ? 'good' : ecoVerdict.tone === 'warn' ? 'danger' : 'neutral'
+          },
+          {
+            name: 'Market regime',
+            label: regime.label,
+            value: regime.blurb,
+            tone: regime.tone === 'pos' ? 'good' : regime.tone === 'neg' ? 'danger' : regime.tone === 'warn' ? 'warn' : 'neutral'
+          },
+          {
+            name: 'Ecosystem breadth',
+            label: `${breadth.improving} improving · ${breadth.neutral} neutral · ${breadth.weak} weak`,
+            value: `${breadth.improving} of ${breadth.total} improving`,
+            tone: breadth.improving > breadth.weak ? 'good' : breadth.weak > breadth.improving ? 'warn' : 'neutral'
+          },
+          {
+            name: 'Positive 30D TVL growth',
+            label: `${breadth.pctTvlPos}% of ecosystems`,
+            value: breadth.pctTvlPos,
+            tone: breadth.pctTvlPos >= 50 ? 'good' : breadth.pctTvlPos >= 25 ? 'warn' : 'danger'
+          },
+          {
+            name: 'Strongest ecosystem',
+            label: all[0]?.name ?? 'Unavailable',
+            value: all[0]?.signal ?? null,
+            tone: all[0]?.improving ? 'good' : all[0]?.weak ? 'danger' : 'neutral'
+          }
+        ]
+      : []
+  );
 
   const filtered = $derived.by<EnrichedEco[]>(() => {
     return all.filter((e) => {
@@ -157,6 +197,11 @@
           <span class="h-1.5 w-1.5 rounded-full bg-muted/60"></span>{regime.blurb}
         </p>
   </section>
+
+  <!-- AI interpretation — plain-language read of the rotation verdict + breadth -->
+  <div class="mb-4">
+    <AiInterpret module="ecosystems" title="Ecosystem Rankings" signals={aiSignals} />
+  </div>
 
   <!-- 2 · Strongest / Weakest cards -->
   <div class="mb-4 grid gap-3 sm:grid-cols-2">

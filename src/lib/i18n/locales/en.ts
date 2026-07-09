@@ -329,6 +329,8 @@ export const en: Record<string, string> = {
   'pricing.current': 'Current plan',
   'pricing.included': 'Included in your plan',
   'pricing.offerEndsIn': 'Offer ends in',
+  'pricing.aiTag': 'New · AI interpretation',
+  'pricing.aiPitch': 'Premium turns every dashboard into a plain-language read — ask the AI to explain any module, in English or Swahili.',
   'pricing.startFree': 'Start free',
   'pricing.get': 'Get {name}',
   'pricing.trial': '{days}-day free trial',

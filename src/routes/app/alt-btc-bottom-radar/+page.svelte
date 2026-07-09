@@ -4,6 +4,7 @@
   import { membership, membershipReady, hasFeature } from '$lib/stores/membership';
   import LockedFeature from '$lib/components/LockedFeature.svelte';
   import EChart from '$lib/components/EChart.svelte';
+  import AiInterpret from '$lib/components/AiInterpret.svelte';
 
   const canUse = $derived(hasFeature($membership, 'access_alt_btc_bottom_radar'));
 
@@ -83,6 +84,22 @@
       return { head: 'Altcoins are still bleeding against Bitcoin', sub: `${bleed} still weak vs ${conf + early} recovering — most alts underperform BTC.`, action: 'Be patient — holding Bitcoin may still be the stronger position.', tone: 'warn' };
     return { head: 'Altcoins are trying to bottom vs Bitcoin', sub: `${bottom} attempting a bottom, ${early} early recovery — early and unconfirmed.`, action: 'Wait for confirmed higher lows before treating any as a leader.', tone: 'neutral' };
   });
+  // Signals fed to the AI interpretation — built from values this page already computes.
+  const aiSignals = $derived.by(() => {
+    const s = data?.summary;
+    if (!data || !s || !bottomVerdict) return [];
+    const out = [
+      { name: 'Rotation read', label: bottomVerdict.head, value: null, tone: bottomVerdict.tone === 'good' ? 'good' : bottomVerdict.tone === 'warn' ? 'warn' : 'neutral' },
+      { name: 'Recovering vs bleeding', label: 'Confirmed + early recovery vs still bleeding', value: `${(s.confirmed_strength ?? 0) + (s.early_recoveries ?? 0)} recovering / ${s.still_bleeding ?? 0} bleeding`, tone: (s.confirmed_strength ?? 0) + (s.early_recoveries ?? 0) >= (s.still_bleeding ?? 0) ? 'good' : 'warn' },
+      { name: 'Bottoming attempts', label: 'Coins attempting a bottom vs BTC', value: s.bottoming_attempts ?? 0, tone: 'neutral' },
+      { name: 'BTC dominance', label: `BTC dominance ${data.market_context?.btc_dominance ?? '—'}`, value: data.market_context?.btc_dominance ?? null, tone: data.market_context?.btc_dominance === 'falling' ? 'good' : data.market_context?.btc_dominance === 'rising' ? 'warn' : 'neutral' }
+    ];
+    if (data.breadth) {
+      out.push({ name: 'Rotation wave', label: data.breadth.rotation_wave_label, value: `${data.breadth.above_ma50_percent ?? '—'}% above ALT/BTC MA50`, tone: 'neutral' });
+    }
+    return out;
+  });
+
   const statusPill = (s: string) => {
     if (/leader|confirmed/i.test(s)) return 'bg-mint/15 text-mint';
     if (/early recovery/i.test(s)) return 'bg-accent/15 text-accent';
@@ -216,6 +233,11 @@
         <p class="stat-label text-accent">Radar takeaway</p>
         <p class="mt-1 text-sm leading-relaxed text-soft">{data.takeaway}</p>
       {/if}
+    </div>
+
+    <!-- AI interpretation of the rotation read -->
+    <div class="mb-4">
+      <AiInterpret module="alt_btc_bottom" title="Alt/BTC Bottom Radar" signals={aiSignals} />
     </div>
 
     <!-- Stage progression guide -->

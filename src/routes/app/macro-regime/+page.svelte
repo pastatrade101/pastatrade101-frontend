@@ -4,6 +4,7 @@
   import { membership, membershipReady, hasFeature } from '$lib/stores/membership';
   import Gauge from '$lib/components/Gauge.svelte';
   import LockedFeature from '$lib/components/LockedFeature.svelte';
+  import AiInterpret from '$lib/components/AiInterpret.svelte';
 
   const canUse = $derived(hasFeature($membership, 'access_macro_regime'));
 
@@ -102,6 +103,20 @@
     { name: 'Volatility (VIX)', symbol: 'VIXY', icon: Activity, weight: '20%', signal: 'Rising = risk-off (fear)' },
     { name: 'Gold', symbol: 'XAU/USD', icon: Coins, weight: '10%', signal: 'Context — safe-haven vs debasement' }
   ];
+
+  // Signals for the AI interpretation — built from the page's own computed reads.
+  const regimeTone = (s: number) => (s >= 60 ? 'good' : s >= 40 ? 'neutral' : 'danger');
+  const aiSignals = $derived(
+    r && r.available
+      ? [
+          { name: 'Regime score', label: r.regime_label, value: r.regime_score, tone: regimeTone(r.regime_score) },
+          { name: 'Macro read', label: macroVerdict.head, meaning: macroVerdict.sub, tone: regimeTone(r.regime_score) },
+          { name: 'Confidence', label: r.confidence, tone: r.confidence === 'High' ? 'good' : r.confidence === 'Low' ? 'warn' : 'neutral' },
+          { name: 'Dollar trend', label: r.dollar_trend, tone: r.dollar_trend === 'weakening' ? 'good' : r.dollar_trend === 'strengthening' ? 'danger' : 'neutral' },
+          { name: 'Input tally', label: `${tally.bullish} bullish · ${tally.bearish} bearish · ${tally.neutral} neutral`, tone: tally.bullish > tally.bearish ? 'good' : tally.bearish > tally.bullish ? 'warn' : 'neutral' }
+        ]
+      : []
+  );
 </script>
 
 <header class="mb-5 flex items-center gap-2">
@@ -162,6 +177,10 @@
       {/if}
     </div>
   </div>
+
+  <!-- AI interpretation — premium sees a button, free/mid see the locked teaser -->
+  <AiInterpret module="macro_regime" title="Macro Regime" signals={aiSignals} />
+  <div class="mb-4"></div>
 
   <!-- Final Interpretation — the plain-English bottom line -->
   <div class="card mb-3 border-accent/25 bg-accent/[0.04]">

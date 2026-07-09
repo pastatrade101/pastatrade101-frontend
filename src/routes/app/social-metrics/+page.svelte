@@ -4,6 +4,7 @@
   import EChart from '$lib/components/EChart.svelte';
   import Disclaimer from '$lib/components/Disclaimer.svelte';
   import LockedFeature from '$lib/components/LockedFeature.svelte';
+  import AiInterpret from '$lib/components/AiInterpret.svelte';
   import { membership, membershipReady, hasFeature } from '$lib/stores/membership';
 
   interface MetricRow {
@@ -65,6 +66,22 @@
         ? 'Social risk is moderate. The crowd is paying more attention than during quiet accumulation periods, but the data does not yet show full retail euphoria.'
         : 'Social risk is high. Retail attention and sentiment are elevated — if price metrics are also high, total risk should move closer to caution or distribution.';
   });
+
+  // Map a 0–1 risk value to an AI-signal tone, mirroring the page's riskColor thresholds.
+  const riskTone = (r: number | null) => (r == null ? 'neutral' : r < 0.4 ? 'good' : r < 0.6 ? 'warn' : 'danger');
+
+  // Signals for the AI interpretation — built from values this page already computes/shows.
+  const aiSignals = $derived(
+    data
+      ? [
+          { name: 'social_risk_score', label: data.label, value: data.social_risk_score, tone: riskTone(data.social_risk_score) },
+          ...data.metrics
+            .filter((m) => m.value != null || m.risk != null)
+            .slice(0, 4)
+            .map((m) => ({ name: m.key, label: m.label, value: m.value ?? m.risk, meaning: m.meaning, tone: riskTone(m.risk) }))
+        ]
+      : []
+  );
 
   // Access gating — Social Metrics is Mid+; the per-source breakdown + second
   // chart are "full" (Premium via advanced filters). Backend enforces too.
@@ -173,6 +190,9 @@
       <p class="mt-2 rounded-lg border border-edge bg-panel-2 px-3 py-1.5 text-xs text-muted">{data.coverage_status}</p>
     </div>
   </div>
+
+  <!-- AI interpretation (self-gating: Premium button / free upsell) -->
+  <div class="mb-4"><AiInterpret module="social" title="Social Signals" signals={aiSignals} /></div>
 
   <!-- Source status -->
   <div class="card mb-4">

@@ -6,6 +6,7 @@
   import Gauge from '$lib/components/Gauge.svelte';
   import EChart from '$lib/components/EChart.svelte';
   import Disclaimer from '$lib/components/Disclaimer.svelte';
+  import AiInterpret from '$lib/components/AiInterpret.svelte';
   import { fmtPct, fmtUsd } from '$lib/format';
   import { membership, hasFeature } from '$lib/stores/membership';
 
@@ -324,6 +325,26 @@
     if (active.length <= 1) return active[0] ?? 'Price Metrics';
     return `${active.slice(0, -1).join(', ')} and ${active[active.length - 1]}`;
   });
+
+  // Map a 0–1 risk value to an AiInterpret tone (low risk is favourable for DCA).
+  const riskTone = (r: number | null): 'good' | 'neutral' | 'warn' | 'danger' =>
+    r == null ? 'neutral' : r < 0.4 ? 'good' : r < 0.6 ? 'neutral' : r < 0.8 ? 'warn' : 'danger';
+
+  // Signals for the AI interpretation — built from the page's own computed values.
+  const aiSignals = $derived(
+    displayRisk != null && zone
+      ? [
+          { name: 'Overall risk verdict', label: humanVerdict.head, value: `${Math.round(displayRisk * 100)}/100`, meaning: humanVerdict.action || humanVerdict.sub, tone: riskTone(displayRisk) },
+          { name: 'DCA zone', label: zone.label, value: zone.action, meaning: shortInterp(displayRisk), tone: riskTone(displayRisk) },
+          ...(canOnchain && onchainComposite != null && onchainStatus
+            ? [{ name: 'On-chain risk', label: onchainStatus.label, value: onchainComposite.toFixed(2), meaning: onchainStatus.meaning, tone: riskTone(onchainComposite) }]
+            : []),
+          ...(canSocial && social?.social_risk_score != null
+            ? [{ name: 'Social risk', label: social.label, value: social.social_risk_score.toFixed(2), meaning: social.interpretation, tone: riskTone(social.social_risk_score) }]
+            : [])
+        ]
+      : []
+  );
 
   const summaryText = $derived.by(() => {
     if (displayRisk == null || !zone) return '';
@@ -927,6 +948,9 @@
       <input type="range" min="0" max={maxIndex} bind:value={dayIndex} oninput={onSlide} class="w-full accent-mint" />
     </div>
   </div>
+
+  <!-- AI interpretation of the verdict + key risk signals -->
+  <div class="mb-4"><AiInterpret module="risk" title="BTC Risk Dashboard" signals={aiSignals} /></div>
 
   <!-- Premium takeaway -->
   {#if canInterp}

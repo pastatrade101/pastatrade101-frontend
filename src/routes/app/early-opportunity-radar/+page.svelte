@@ -3,6 +3,7 @@
   import { api } from '$lib/api';
   import { membership, membershipReady, hasFeature } from '$lib/stores/membership';
   import LockedFeature from '$lib/components/LockedFeature.svelte';
+  import AiInterpret from '$lib/components/AiInterpret.svelte';
 
   const canRadar = $derived(hasFeature($membership, 'access_early_opportunity_radar'));
 
@@ -189,6 +190,20 @@
   // source health banner
   const staleSources = $derived((data?.source_status ?? []).filter((s: any) => s.status === 'Stale').map((s: any) => s.source));
   const downSources = $derived((data?.source_status ?? []).filter((s: any) => s.status === 'Unavailable' || s.status === 'Partial').map((s: any) => s.source));
+
+  // AI interpretation signals — built from the page's own already-computed summary.
+  const aiSignals = $derived(
+    data?.summary
+      ? [
+          { name: 'Candidates', label: 'Research candidates surfaced', value: data.summary.total_candidates, tone: 'neutral' },
+          { name: 'Trending', label: 'Currently trending', value: data.summary.trending_count, tone: 'neutral' },
+          { name: 'High attention', label: 'High attention / traction', value: data.summary.high_attention, tone: data.summary.high_attention > 0 ? 'good' : 'neutral' },
+          { name: 'Clean', label: 'Passed premium-clean filters', value: data.summary.clean_candidates, tone: data.summary.clean_candidates > 0 ? 'good' : 'warn' },
+          { name: 'Low-liq warnings', label: 'Low-liquidity warnings', value: data.summary.low_liquidity_warnings, tone: data.summary.low_liquidity_warnings > 0 ? 'warn' : 'good' },
+          { name: 'Top network', label: 'Most active network', value: data.summary.top_network ?? '—', tone: 'neutral' }
+        ]
+      : []
+  );
 </script>
 
 <header class="mb-4 flex items-start gap-2">
@@ -255,6 +270,10 @@
   {:else if error}
     <div class="card border-danger/30 bg-danger/5 text-danger">{error}</div>
   {:else if data}
+    <!-- AI interpretation of the radar summary -->
+    <AiInterpret module="opportunity_radar" title="Opportunity Radar" signals={aiSignals} />
+    <div class="mb-4"></div>
+
     <!-- Summary cards -->
     <div class="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
       {#each [['Candidates', data.summary.total_candidates], ['Trending', data.summary.trending_count], ['High attention', data.summary.high_attention], ['Clean', data.summary.clean_candidates], ['Low-liq warnings', data.summary.low_liquidity_warnings], ['Top network', data.summary.top_network ?? '—']] as [label, value]}

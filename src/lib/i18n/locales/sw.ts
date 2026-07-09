@@ -330,6 +330,8 @@ export const sw: Record<string, string> = {
   'pricing.current': 'Mpango wa sasa',
   'pricing.included': 'Ipo kwenye mpango wako',
   'pricing.offerEndsIn': 'Ofa inaisha baada ya',
+  'pricing.aiTag': 'Mpya · Tafsiri ya AI',
+  'pricing.aiPitch': 'Premium hubadilisha kila dashibodi kuwa maelezo rahisi — muulize AI akufafanulie moduli yoyote, kwa Kiingereza au Kiswahili.',
   'pricing.startFree': 'Anza bure',
   'pricing.get': 'Pata {name}',
   'pricing.trial': 'Jaribio la bure la siku {days}',

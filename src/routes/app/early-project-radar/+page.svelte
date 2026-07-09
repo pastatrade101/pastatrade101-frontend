@@ -2,6 +2,7 @@
   import { Rocket, ExternalLink, Info, Search, AlertTriangle, Lock } from '@lucide/svelte';
   import { api } from '$lib/api';
   import { membershipReady } from '$lib/stores/membership';
+  import AiInterpret from '$lib/components/AiInterpret.svelte';
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   type Project = any;
@@ -69,6 +70,18 @@
         : 'Nothing scores strongly today — most are high-risk. Be very selective.';
     return { s, n, h, line };
   });
+
+  // Signals for the AI interpretation — built from the same counts the radar already shows.
+  const aiSignals = $derived(
+    !locked && shown.length
+      ? [
+          { name: 'Worth researching', label: 'Strong watchlist', value: radarSummary.s, tone: radarSummary.s > 0 ? 'good' : 'neutral' },
+          { name: 'Need research', label: 'Needs research', value: radarSummary.n, tone: 'warn' },
+          { name: 'High risk', label: 'High risk', value: radarSummary.h, tone: radarSummary.h > 0 ? 'danger' : 'neutral' },
+          { name: 'Projects on radar', label: 'Total scored today', value: shown.length, tone: 'neutral' }
+        ]
+      : []
+  );
 </script>
 
 <header class="mb-4 flex items-center gap-2">
@@ -93,6 +106,10 @@
         <span class="pill bg-danger/15 text-danger">🔴 {radarSummary.h} high-risk</span>
       </div>
       <p class="mt-2 text-sm text-soft">{radarSummary.line}</p>
+    </div>
+
+    <div class="mb-3">
+      <AiInterpret module="early_project" title="Early Project Radar" signals={aiSignals} />
     </div>
   {/if}
 

@@ -5,6 +5,7 @@
   import Gauge from '$lib/components/Gauge.svelte';
   import EChart from '$lib/components/EChart.svelte';
   import LockedFeature from '$lib/components/LockedFeature.svelte';
+  import AiInterpret from '$lib/components/AiInterpret.svelte';
   import { fmtUsd } from '$lib/format';
 
   const canExit = $derived(hasFeature($membership, 'access_exit_strategy'));
@@ -46,6 +47,26 @@
   const statusPill = (s: string) => (s === 'active' ? 'bg-mint/15 text-mint' : s === 'partial' ? 'bg-warn/15 text-warn' : 'bg-edge text-muted');
   const fmt2 = (n: number | null) => (n == null ? 'n/a' : n.toFixed(2));
   const pct100 = (n: number | null) => (n == null ? 'n/a' : `${Math.round(n)}/100`);
+
+  // Signals for the AI interpretation — built from what the page already computes/shows.
+  const scoreTone = (s: number) => (s < 0.4 ? 'good' : s < 0.6 ? 'neutral' : s < 0.75 ? 'warn' : 'danger');
+  const confTone = (c: string) => (c === 'High' ? 'good' : c === 'Low' ? 'danger' : 'neutral');
+  const aiSignals = $derived(
+    result
+      ? [
+          { name: 'Exit risk score', label: exitVerdict(result.exit_risk_score).head, value: result.exit_risk_score.toFixed(2), tone: scoreTone(result.exit_risk_score) },
+          { name: 'Strategy zone', label: result.strategy_label, value: result.exit_risk_percent, tone: scoreTone(result.exit_risk_score) },
+          { name: 'Current action', label: result.current_action?.action ?? null, meaning: result.current_action?.reason ?? null, tone: scoreTone(result.exit_risk_score) },
+          { name: 'Confidence', label: result.confidence, meaning: result.confidence_reason ?? null, tone: confTone(result.confidence) },
+          ...(result.next_threshold
+            ? [{ name: 'Next threshold', label: result.next_threshold.label, value: result.next_threshold.score?.toFixed(2) ?? null, meaning: result.next_threshold.meaning ?? null, tone: 'neutral' }]
+            : []),
+          ...(result.social?.label
+            ? [{ name: 'Social risk', label: result.social.label, tone: result.social.status === 'active' ? 'warn' : 'neutral' }]
+            : [])
+        ]
+      : []
+  );
 
   const loadExit = async () => {
     result = await api(`/exit-strategy?profile=${profile}`, { auth: true });
@@ -251,6 +272,11 @@
       </div>
       <p class="mt-2 text-[11px] text-muted">{r.coverage_note}</p>
     </div>
+  </div>
+
+  <!-- AI interpretation — premium sees the button, free/mid see the locked teaser -->
+  <div class="mb-4">
+    <AiInterpret module="exit_strategy" title="Exit Strategy" signals={aiSignals} />
   </div>
 
   <!-- Category breakdown -->

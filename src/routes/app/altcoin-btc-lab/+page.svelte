@@ -6,6 +6,7 @@
   import MultiAltCompare from '$lib/components/MultiAltCompare.svelte';
   import Disclaimer from '$lib/components/Disclaimer.svelte';
   import LockedFeature from '$lib/components/LockedFeature.svelte';
+  import AiInterpret from '$lib/components/AiInterpret.svelte';
   import { membership, membershipReady, hasFeature } from '$lib/stores/membership';
   import { changeColor, fmtPct, signalColor } from '$lib/format';
 
@@ -202,6 +203,24 @@
   };
   const verdictText: Record<'good' | 'warn' | 'neutral', string> = { good: 'text-mint', warn: 'text-danger', neutral: 'text-soft' };
   const hvVerdict = $derived(data?.coin ? coinVerdict(data.coin.symbol, data.strength_30d, data.strength_7d) : null);
+
+  // Signals for the AI interpretation — built from values this page already computes/shows.
+  const numTone = (n: number | null | undefined): 'good' | 'warn' | 'neutral' =>
+    n == null ? 'neutral' : n > 5 ? 'good' : n < -5 ? 'warn' : 'neutral';
+  const breakoutTone = (t: string): 'good' | 'warn' | 'neutral' =>
+    t === 'breakout' ? 'good' : t === 'weakness' ? 'warn' : 'neutral';
+  const aiSignals = $derived(
+    data
+      ? [
+          { name: 'Verdict', label: hvVerdict?.head ?? data.analysis.verdict_label, value: null, tone: hvVerdict?.tone ?? 'neutral' },
+          { name: 'Premium signal', label: data.analysis.premium_signal, value: null, tone: premiumColor(data.analysis.premium_signal).includes('mint') ? 'good' : premiumColor(data.analysis.premium_signal).includes('danger') ? 'danger' : 'neutral' },
+          { name: 'Trend', label: data.analysis.trend_state, value: null, tone: 'neutral' },
+          { name: 'Strength vs BTC (30d)', label: fmtPct(data.strength_30d), value: data.strength_30d, tone: numTone(data.strength_30d) },
+          { name: 'Reaction score', label: data.reaction_label, value: data.reaction_score, tone: numTone(data.reaction_score) },
+          { name: 'Breakout', label: data.breakout_label, value: null, tone: breakoutTone(data.breakout_type) }
+        ]
+      : []
+  );
 
   const load = async () => {
     loading = true;
@@ -586,6 +605,11 @@
     <p class="mt-3 rounded-lg border border-edge bg-panel-2 px-3 py-2 text-sm text-soft">
       <span class="font-medium text-strong">Premium note:</span> {data.analysis.premium_note}
     </p>
+  </div>
+
+  <!-- AI interpretation -->
+  <div class="mb-4">
+    <AiInterpret module="altcoin_btc" title="Altcoin vs BTC Lab" signals={aiSignals} />
   </div>
 
   <!-- Signal / reaction card -->

@@ -4,6 +4,7 @@
   import Gauge from '$lib/components/Gauge.svelte';
   import Disclaimer from '$lib/components/Disclaimer.svelte';
   import LockedFeature from '$lib/components/LockedFeature.svelte';
+  import AiInterpret from '$lib/components/AiInterpret.svelte';
   import { membership, membershipReady, hasFeature } from '$lib/stores/membership';
   import { fmtPct, fmtUsd } from '$lib/format';
 
@@ -207,6 +208,31 @@
     const stance = curVal > med * 1.1 ? 'ahead of' : curVal < med * 0.9 ? 'behind' : 'in line with';
     return { lastDay, curVal, med, mean, stance, peers: vals.length };
   });
+
+  // Signals for the AI interpretation — built from values the page already computes.
+  const aiSignals = $derived.by(() => {
+    const out: import('$lib/components/AiInterpret.svelte').Signal[] = [];
+    if (risk) {
+      out.push({
+        name: 'Cycle risk',
+        label: risk.risk_label,
+        value: `${risk.risk_score}/100`,
+        tone: risk.risk_score >= 70 ? 'danger' : risk.risk_score <= 40 ? 'good' : 'neutral'
+      });
+      out.push({ name: 'DCA window', label: risk.dca_window, meaning: risk.reason });
+      if (risk.rsi != null) out.push({ name: 'RSI', label: 'RSI', value: risk.rsi, tone: risk.rsi >= 70 ? 'warn' : risk.rsi <= 30 ? 'good' : 'neutral' });
+      out.push({ name: 'From ATH', label: 'Drawdown from ATH', value: `${risk.drawdown_from_ath.toFixed(0)}%` });
+    }
+    if (positioning) {
+      out.push({
+        name: 'Cycle positioning',
+        label: `${positioning.stance} previous ${noun}s`,
+        value: `${positioning.curVal.toFixed(2)}× vs ${positioning.med.toFixed(2)}× median`,
+        tone: positioning.stance === 'ahead of' ? 'good' : positioning.stance === 'behind' ? 'warn' : 'neutral'
+      });
+    }
+    return out;
+  });
 </script>
 
 <header class="mb-5">
@@ -302,6 +328,10 @@
       </p>
     </div>
   {/if}
+
+  <div class="mb-4">
+    <AiInterpret module="btc_cycle" title="Bitcoin Cycle Lab" signals={aiSignals} />
+  </div>
 
   <!-- Toggle chips -->
   <div class="mb-3 flex flex-wrap gap-2">
