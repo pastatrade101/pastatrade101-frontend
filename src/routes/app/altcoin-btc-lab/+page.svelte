@@ -7,6 +7,7 @@
   import Disclaimer from '$lib/components/Disclaimer.svelte';
   import LockedFeature from '$lib/components/LockedFeature.svelte';
   import AiInterpret from '$lib/components/AiInterpret.svelte';
+  import AiLabel from '$lib/components/AiLabel.svelte';
   import { membership, membershipReady, hasFeature } from '$lib/stores/membership';
   import { changeColor, fmtPct, signalColor } from '$lib/format';
 
@@ -576,7 +577,7 @@
 {:else if data}
   <!-- Premium Takeaway -->
   <div class="card mb-4 border border-mint/30 bg-mint/5">
-    <p class="stat-label text-mint">Premium Takeaway</p>
+    <AiLabel />
     <p class="mt-1 text-sm leading-relaxed text-body">{premiumTakeaway}</p>
   </div>
 
@@ -651,7 +652,7 @@
 
   <!-- What this means -->
   <div class="card mt-4">
-    <h2 class="text-sm font-semibold text-strong">What this means</h2>
+    <AiLabel />
     <p class="mt-1 text-sm leading-relaxed text-soft">{data.analysis.what_this_means}</p>
   </div>
 

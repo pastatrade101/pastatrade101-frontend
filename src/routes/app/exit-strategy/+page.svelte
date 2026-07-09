@@ -7,6 +7,7 @@
   import LockedFeature from '$lib/components/LockedFeature.svelte';
   import AiInterpret from '$lib/components/AiInterpret.svelte';
   import AiLottie from '$lib/components/AiLottie.svelte';
+  import AiLabel from '$lib/components/AiLabel.svelte';
   import { fmtUsd } from '$lib/format';
 
   const canExit = $derived(hasFeature($membership, 'access_exit_strategy'));
@@ -329,7 +330,7 @@
 
   <!-- What this means -->
   <div class="card mb-3">
-    <p class="stat-label">What this means</p>
+    <AiLabel />
     <p class="mt-1 text-sm leading-relaxed text-soft">{r.interpretation}</p>
   </div>
 

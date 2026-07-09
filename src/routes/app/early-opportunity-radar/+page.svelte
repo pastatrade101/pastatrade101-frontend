@@ -4,6 +4,7 @@
   import { membership, membershipReady, hasFeature } from '$lib/stores/membership';
   import LockedFeature from '$lib/components/LockedFeature.svelte';
   import AiInterpret from '$lib/components/AiInterpret.svelte';
+  import AiLabel from '$lib/components/AiLabel.svelte';
 
   const canRadar = $derived(hasFeature($membership, 'access_early_opportunity_radar'));
 
@@ -232,7 +233,7 @@
   <!-- Takeaway -->
   {#if data?.takeaway}
     <div class="hero-card mb-3">
-      <p class="stat-label text-accent">Radar takeaway</p>
+      <AiLabel />
       <p class="mt-1 text-sm leading-relaxed text-soft">{data.takeaway}</p>
     </div>
   {/if}

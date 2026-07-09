@@ -5,6 +5,7 @@
   import Gauge from '$lib/components/Gauge.svelte';
   import LockedFeature from '$lib/components/LockedFeature.svelte';
   import AiInterpret from '$lib/components/AiInterpret.svelte';
+  import AiLabel from '$lib/components/AiLabel.svelte';
 
   const canUse = $derived(hasFeature($membership, 'access_macro_regime'));
 
@@ -145,7 +146,7 @@
     <div class="mx-auto"><Gauge value={r.regime_score / 100} title="Risk Appetite" /></div>
     <div class="min-w-0">
       <!-- Plain-language verdict first; the score + labels sit below as proof -->
-      <p class="text-[11px] font-semibold uppercase tracking-wide text-muted">The macro read</p>
+      <AiLabel />
       <p class="mt-0.5 text-xl font-bold leading-tight {scoreTone(r.regime_score)}">{macroVerdict.head}</p>
       <p class="mb-3 mt-1 text-sm text-soft">{macroVerdict.sub}</p>
       <div class="flex flex-wrap items-center gap-2">
@@ -184,7 +185,7 @@
 
   <!-- Final Interpretation — the plain-English bottom line -->
   <div class="card mb-3 border-accent/25 bg-accent/[0.04]">
-    <p class="stat-label">Final interpretation</p>
+    <AiLabel />
     <div class="mt-2 space-y-2 text-sm leading-relaxed">
       <p class="flex flex-wrap items-center gap-2"><span class="text-muted">Current regime:</span><span class="pill {pill(r.regime_score)}">{r.regime_label}</span></p>
       <p class="text-soft"><span class="font-medium text-strong">What it means for crypto:</span> {r.interpretation}</p>

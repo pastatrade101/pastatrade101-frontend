@@ -5,6 +5,7 @@
   import Disclaimer from '$lib/components/Disclaimer.svelte';
   import LockedFeature from '$lib/components/LockedFeature.svelte';
   import AiInterpret from '$lib/components/AiInterpret.svelte';
+  import AiLabel from '$lib/components/AiLabel.svelte';
   import { membership, membershipReady, hasFeature } from '$lib/stores/membership';
 
   interface MetricRow {
@@ -186,7 +187,10 @@
     </div>
     <div>
       <p class="text-sm leading-relaxed text-soft">{data.interpretation}</p>
-      <p class="mt-2 rounded-lg border border-mint/30 bg-mint/5 px-3 py-2 text-xs leading-relaxed text-soft"><span class="font-medium text-strong">Premium Takeaway:</span> {takeaway}</p>
+      <div class="mt-2 rounded-lg border border-mint/30 bg-mint/5 px-3 py-2">
+        <AiLabel />
+        <p class="mt-1 text-xs leading-relaxed text-soft">{takeaway}</p>
+      </div>
       <p class="mt-2 rounded-lg border border-edge bg-panel-2 px-3 py-1.5 text-xs text-muted">{data.coverage_status}</p>
     </div>
   </div>

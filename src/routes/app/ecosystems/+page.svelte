@@ -4,6 +4,7 @@
   import { fmtPct, fmtUsd } from '$lib/format';
   import Disclaimer from '$lib/components/Disclaimer.svelte';
   import AiInterpret from '$lib/components/AiInterpret.svelte';
+  import AiLabel from '$lib/components/AiLabel.svelte';
   import AiLottie from '$lib/components/AiLottie.svelte';
   import { Lock, ExternalLink, ChevronRight } from '@lucide/svelte';
   import { slide } from 'svelte/transition';
@@ -181,7 +182,7 @@
         </p>
 
         <div class="mb-1.5 mt-3 flex flex-wrap items-center gap-2 border-t border-edge/60 pt-3">
-          <span class="text-[11px] font-semibold uppercase tracking-[0.14em] text-accent">Premium Takeaway</span>
+          <AiLabel />
           <span class="pill {tonePill(regime.tone)}">{regime.label}</span>
         </div>
         {#if canInterp}

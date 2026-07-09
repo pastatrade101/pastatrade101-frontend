@@ -8,6 +8,7 @@
   import Disclaimer from '$lib/components/Disclaimer.svelte';
   import AiInterpret from '$lib/components/AiInterpret.svelte';
   import AiLottie from '$lib/components/AiLottie.svelte';
+  import AiLabel from '$lib/components/AiLabel.svelte';
   import { fmtPct, fmtUsd } from '$lib/format';
   import { membership, hasFeature } from '$lib/stores/membership';
 
@@ -956,14 +957,14 @@
   <!-- Premium takeaway -->
   {#if canInterp}
     <div class="card mb-4 border border-mint/30 bg-mint/5">
-      <p class="stat-label text-mint">Premium Takeaway</p>
+      <AiLabel />
       <p class="mt-1 text-sm leading-relaxed text-soft {expandedTakeaway ? '' : 'line-clamp-3 lg:line-clamp-none'}">{premiumTakeaway}</p>
       <button type="button" class="mt-2 text-xs font-medium text-accent lg:hidden" onclick={() => (expandedTakeaway = !expandedTakeaway)}>{expandedTakeaway ? 'Show less' : 'Read more'}</button>
     </div>
   {:else}
     <div class="relative mb-4">
       <div class="card border border-mint/30 bg-mint/5 blur-[3px]" aria-hidden="true">
-        <p class="stat-label text-mint">Premium Takeaway</p>
+        <AiLabel />
         <p class="mt-1 text-sm leading-relaxed text-soft">BTC risk is currently low-to-moderate. The model supports disciplined DCA, though it does not yet show an extreme bottom zone. On-chain and social metrics would give a fuller picture once connected.</p>
       </div>
       <div class="absolute inset-0 flex flex-col items-center justify-center gap-1.5 px-4 text-center">
@@ -1113,7 +1114,7 @@
       <!-- Takeaway + coverage note below chart -->
       <p class="mt-3 rounded-lg border border-edge bg-panel-2 px-3 py-2 text-xs leading-relaxed text-soft">
         {#if canInterp}
-          <span class="font-medium text-strong">Premium Takeaway:</span> {premiumTakeaway}
+          <AiLabel /><br /> {premiumTakeaway}
         {:else}
           <Lock class="mr-1 inline h-3 w-3 text-accent" /><span class="font-medium text-strong">Premium Takeaway</span> — the plain-language interpretation is a Mid &amp; Premium feature. <a href="/pricing" class="font-medium text-accent hover:underline">Upgrade</a>
         {/if}
@@ -1204,7 +1205,7 @@
 
       <!-- Premium takeaway -->
       <div class="mt-3 card border border-mint/30 bg-mint/5">
-        <p class="stat-label text-mint">Premium Takeaway</p>
+        <AiLabel />
         <p class="mt-1 text-sm leading-relaxed text-soft">{onchainPremiumTakeaway}</p>
       </div>
 
@@ -1363,7 +1364,7 @@
 
       <!-- Premium takeaway -->
       <div class="mt-3 card border border-mint/30 bg-mint/5">
-        <p class="stat-label text-mint">Premium Takeaway</p>
+        <AiLabel />
         <p class="mt-1 text-sm leading-relaxed text-soft">{supplyPL.premium_takeaway}</p>
       </div>
 

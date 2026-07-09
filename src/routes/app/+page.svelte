@@ -7,6 +7,7 @@
   import { changeColor, fmtPct, fmtUsd } from '$lib/format';
   import Disclaimer from '$lib/components/Disclaimer.svelte';
   import AiLottie from '$lib/components/AiLottie.svelte';
+  import AiLabel from '$lib/components/AiLabel.svelte';
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let data = $state<any>(null);
@@ -228,9 +229,7 @@
     <!-- 1 · Market Today — one clear verdict -->
     <div class="rounded-2xl border border-edge bg-gradient-to-br from-panel to-panel-2/60 p-4">
       <div class="flex items-center justify-between gap-2">
-        <span class="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted">Market Today
-          {#if marketRead}<span class="rounded-full bg-mint/15 px-1.5 py-0.5 text-[9px] font-bold tracking-normal text-mint">AI</span>{/if}
-        </span>
+        <AiLabel />
         {#if data.data_freshness?.market}
           <button type="button" class="inline-flex items-center gap-1 rounded-full bg-panel-2 px-2.5 py-1 text-[11px] text-muted" aria-expanded={freshnessOpen} onclick={() => (freshnessOpen = !freshnessOpen)}>
             <span class="h-1.5 w-1.5 rounded-full {anyStale ? 'bg-warn' : 'bg-mint'}"></span>
@@ -320,9 +319,8 @@
   <!-- ── Hero: Daily Market Read ── -->
   <div class="hero-card mb-4">
     <div class="flex flex-wrap items-center gap-2">
-      <span class="stat-label flex items-center gap-1.5"><Activity class="h-4 w-4 text-accent" /> Daily Market Read</span>
+      <AiLabel />
       <span class="pill {toneClass[data.signals?.btc_risk?.tone ?? 'neutral']}">{data.market_posture.label}</span>
-      {#if marketRead}<span class="rounded-full bg-mint/15 px-2 py-0.5 text-[10px] font-bold text-mint">AI</span>{/if}
     </div>
     {#if marketRead}
       <p class="mt-2 text-base font-semibold {textTone[stanceTone[marketRead.stance]]}">{marketRead.headline}</p>

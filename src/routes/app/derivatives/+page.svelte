@@ -6,6 +6,7 @@
   import LockedFeature from '$lib/components/LockedFeature.svelte';
   import EChart from '$lib/components/EChart.svelte';
   import AiInterpret from '$lib/components/AiInterpret.svelte';
+  import AiLabel from '$lib/components/AiLabel.svelte';
 
   const canDeriv = $derived(hasFeature($membership, 'access_derivatives'));
 
@@ -210,7 +211,7 @@
 
     <!-- How to read -->
     <div class="card mb-3">
-      <p class="stat-label">How to read this</p>
+      <AiLabel />
       <ul class="mt-1.5 space-y-1 text-sm text-muted">
         <li>• <span class="text-soft">Funding rate</span> — what longs pay shorts (or vice-versa) every 8h. Very high positive = crowded longs / overheated; negative = fear.</li>
         <li>• <span class="text-soft">Long / short ratio</span> — how traders are positioned. Extremes (very long or very short) often reverse.</li>

@@ -6,6 +6,7 @@
   import EChart from '$lib/components/EChart.svelte';
   import LockedFeature from '$lib/components/LockedFeature.svelte';
   import AiInterpret from '$lib/components/AiInterpret.svelte';
+  import AiLabel from '$lib/components/AiLabel.svelte';
   import { fmtUsd } from '$lib/format';
 
   let { asset = 'BTC' }: { asset?: 'BTC' | 'ETH' } = $props();
@@ -343,7 +344,7 @@
     <!-- Current reading (the headline answer) -->
     {#if currentReading}
       <div class="card mb-4 border-l-4 {isValueZone(l.zone_label) ? 'border-l-mint' : isHighZone(l.zone_label) ? 'border-l-danger' : 'border-l-warn'}">
-        <p class="stat-label">Current reading</p>
+        <AiLabel />
         <p class="mt-1 text-lg font-semibold text-strong">{currentReading.headline}</p>
         <div class="mt-2 space-y-1.5 text-sm">
           <p class="text-soft"><span class="font-medium text-muted">Meaning:</span> {currentReading.meaning}</p>
@@ -434,7 +435,7 @@
     <!-- Premium takeaway -->
     {#if result.takeaway}
       <div class="card mt-3">
-        <p class="stat-label">Premium takeaway</p>
+        <AiLabel />
         <p class="mt-1 text-sm leading-relaxed text-soft">{result.takeaway}</p>
       </div>
     {/if}

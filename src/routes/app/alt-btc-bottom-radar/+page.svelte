@@ -5,6 +5,7 @@
   import LockedFeature from '$lib/components/LockedFeature.svelte';
   import EChart from '$lib/components/EChart.svelte';
   import AiInterpret from '$lib/components/AiInterpret.svelte';
+  import AiLabel from '$lib/components/AiLabel.svelte';
 
   const canUse = $derived(hasFeature($membership, 'access_alt_btc_bottom_radar'));
 
@@ -226,11 +227,11 @@
           {bottomVerdict.action}
         </p>
         <div class="mt-3 border-t border-edge/60 pt-3">
-          <p class="stat-label text-accent">Radar takeaway</p>
+          <AiLabel />
           <p class="mt-1 text-sm leading-relaxed text-soft">{data.takeaway}</p>
         </div>
       {:else}
-        <p class="stat-label text-accent">Radar takeaway</p>
+        <AiLabel />
         <p class="mt-1 text-sm leading-relaxed text-soft">{data.takeaway}</p>
       {/if}
     </div>

@@ -4,6 +4,7 @@
   import { api } from '$lib/api';
   import { signalTone, tonePill } from '$lib/ecosystem-insight';
   import Sparkline from '$lib/components/Sparkline.svelte';
+  import AiLabel from '$lib/components/AiLabel.svelte';
   import { membership, hasFeature, limitOf } from '$lib/stores/membership';
 
   // Watchlist alerts are a Mid+ feature (backend enforces on create too).
@@ -279,14 +280,8 @@
   <!-- Premium takeaway -->
   <section class="hero-card mb-4">
     <div class="flex items-start gap-3.5">
-      <span class="icon-badge bg-accent/12 text-accent">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5">
-          <path d="M12 3l1.9 4.7L18.5 9.6l-4.6 1.9L12 16l-1.9-4.5L5.5 9.6l4.6-1.9z" />
-          <path d="M19 14l.7 1.8L21.5 16.5l-1.8.7L19 19l-.7-1.8L16.5 16.5l1.8-.7z" />
-        </svg>
-      </span>
       <div class="min-w-0 flex-1">
-        <span class="text-[11px] font-semibold uppercase tracking-[0.14em] text-accent">Premium Takeaway</span>
+        <AiLabel />
         <p class="mt-1 text-[15px] leading-relaxed text-body">{s.takeaway}</p>
         {#if s.mostImportantChange}
           <p class="mt-2 flex items-start gap-1.5 text-xs text-soft">

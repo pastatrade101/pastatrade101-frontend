@@ -8,6 +8,7 @@
   import Sparkline from '$lib/components/Sparkline.svelte';
   import AltcoinSeason from '$lib/components/AltcoinSeason.svelte';
   import Disclaimer from '$lib/components/Disclaimer.svelte';
+  import AiLabel from '$lib/components/AiLabel.svelte';
 
   interface ChartDef { key: string; title: string; category: string; render: string; asset: string; description: string }
 
@@ -348,9 +349,9 @@
 
         <!-- Takeaway -->
         {#if hasIntel && takeaway}
-          <div class="mt-3 flex items-start gap-2 rounded-lg border border-mint/30 bg-mint/5 px-3 py-2">
-            <Sparkles class="mt-0.5 h-4 w-4 shrink-0 text-mint" />
-            <p class="text-sm leading-relaxed text-soft"><span class="font-medium text-mint">Chart takeaway:</span> {takeaway}</p>
+          <div class="mt-3 rounded-lg border border-mint/30 bg-mint/5 px-3 py-2">
+            <AiLabel />
+            <p class="mt-1 text-sm leading-relaxed text-soft">{takeaway}</p>
           </div>
         {/if}
       </div>
