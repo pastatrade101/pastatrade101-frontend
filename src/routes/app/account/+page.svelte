@@ -14,6 +14,7 @@
     slug: string;
     description: string | null;
     monthly_price: number;
+    yearly_price: number;
     currency: string;
     badge: string | null;
     is_popular: boolean;
@@ -34,6 +35,10 @@
   let message = $state('');
   let error = $state('');
   let busy = $state(false);
+  // Billing interval — carried over from the pricing page (?interval=), toggleable here.
+  let billing = $state<'monthly' | 'yearly'>('monthly');
+  const priceOf = (p: Plan) => (billing === 'yearly' ? p.yearly_price : p.monthly_price);
+  const per = $derived(billing === 'yearly' ? 'yr' : 'mo');
 
   // Abandoned-checkout follow-up
   let pending = $state<PendingAttempt | null>(null);
@@ -69,9 +74,11 @@
       }
       return;
     }
-    // Deep link from a landing / pricing CTA: ?plan=<slug> → open its checkout
-    // straight away (or explain if the user already has it).
-    const wantPlan = new URLSearchParams(window.location.search).get('plan');
+    // Deep link from a landing / pricing CTA: ?plan=<slug>&interval=<monthly|yearly>
+    // → carry the interval over and open its checkout straight away.
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('interval') === 'yearly') billing = 'yearly';
+    const wantPlan = params.get('plan');
     if (wantPlan) {
       history.replaceState(null, '', '/app/account');
       if (!$membership) await loadMembership();
@@ -161,8 +168,8 @@
     if (p.slug === $membership.plan) return true;
     return isPaidActive && p.monthly_price <= currentPrice;
   };
-  // Live monthly offer for a plan (account checkout is always monthly).
-  const offerFor = (p: Plan) => activeOffer($offers, p.id, 'monthly');
+  // Live offer for a plan at the selected billing interval.
+  const offerFor = (p: Plan) => activeOffer($offers, p.id, billing);
   // On expiry: drop the lapsed offer instantly, then reconcile with the server.
   const onOfferExpire = (o: ReturnType<typeof offerFor>) => {
     offers.set($offers.filter((x) => x !== o));
@@ -194,7 +201,7 @@
     try {
       const res = await api<{ status: string; checkout_url?: string }>('/me/upgrade', {
         method: 'POST',
-        body: { plan_slug: slug, billing_interval: 'monthly', phone: phone?.trim() || undefined },
+        body: { plan_slug: slug, billing_interval: billing, phone: phone?.trim() || undefined },
         auth: true
       });
       payFor = null;
@@ -331,6 +338,13 @@
 
   <!-- Upgrade options -->
   {#if plans.length}
+    <div class="mb-3 flex items-center justify-between gap-2">
+      <h3 class="text-sm font-semibold text-strong">Upgrade options</h3>
+      <div class="inline-flex items-center gap-1 rounded-lg border border-edge p-1 text-xs">
+        <button class="rounded-md px-2.5 py-1 {billing === 'monthly' ? 'bg-accent/15 text-accent' : 'text-muted'}" onclick={() => (billing = 'monthly')}>Monthly</button>
+        <button class="rounded-md px-2.5 py-1 {billing === 'yearly' ? 'bg-accent/15 text-accent' : 'text-muted'}" onclick={() => (billing = 'yearly')}>Yearly</button>
+      </div>
+    </div>
     <div class="grid gap-3 md:grid-cols-3">
       {#each plans as p}
         {@const isCurrent = p.slug === m.plan}
@@ -345,7 +359,7 @@
             </div>
           </div>
           <div class="flex flex-wrap items-baseline gap-2 text-sm">
-            <span class="{po ? 'font-semibold text-strong' : 'text-muted'}">{fmtMoney(po ? po.offer_price : p.monthly_price, p.currency)}/mo</span>
+            <span class="{po ? 'font-semibold text-strong' : 'text-muted'}">{fmtMoney(po ? po.offer_price : priceOf(p), p.currency)}/{per}</span>
             {#if po}<span class="text-muted line-through">{fmtMoney(po.original_price, p.currency)}</span>{/if}
           </div>
 
@@ -385,7 +399,7 @@
         {#if mo}
           <div class="mt-2 flex flex-wrap items-center gap-2">
             <span class="pill bg-danger/15 text-danger">{mo.offer_label}</span>
-            <span class="text-lg font-semibold text-strong">{fmtMoney(mo.offer_price, payFor.currency)}/mo</span>
+            <span class="text-lg font-semibold text-strong">{fmtMoney(mo.offer_price, payFor.currency)}/{per}</span>
             <span class="text-sm text-muted line-through">{fmtMoney(mo.original_price, payFor.currency)}</span>
           </div>
           <div class="mt-2 flex items-center gap-2 text-danger">
@@ -394,11 +408,11 @@
           </div>
           <p class="mt-2 text-sm text-muted">Enter the mobile-money number you'll pay with — we'll pre-fill it at checkout.</p>
         {:else}
-          <p class="mt-1 text-sm text-muted">{fmtMoney(payFor.monthly_price, payFor.currency)}/mo. Enter the mobile-money number you'll pay with — we'll pre-fill it at checkout.</p>
+          <p class="mt-1 text-sm text-muted">{fmtMoney(priceOf(payFor), payFor.currency)}/{per}. Enter the mobile-money number you'll pay with — we'll pre-fill it at checkout.</p>
         {/if}
         {#if isPaidActive && ($membership?.days_left ?? 0) > 0}
           <p class="mt-3 rounded-lg border border-mint/30 bg-mint/5 px-3 py-2 text-xs leading-relaxed text-soft">
-            You still have <span class="font-semibold text-mint">{$membership?.days_left} {($membership?.days_left ?? 0) === 1 ? 'day' : 'days'}</span> left on {$membership?.plan_name}. You don't lose them — they carry over, so you'll get a full month of {payFor.name}
+            You still have <span class="font-semibold text-mint">{$membership?.days_left} {($membership?.days_left ?? 0) === 1 ? 'day' : 'days'}</span> left on {$membership?.plan_name}. You don't lose them — they carry over, so you'll get a full {billing === 'yearly' ? 'year' : 'month'} of {payFor.name}
             <span class="font-semibold">plus</span> your remaining {$membership?.plan_name} time on top.
           </p>
         {/if}

@@ -85,7 +85,7 @@
   // Carry the chosen plan through auth so checkout opens automatically afterwards.
   const planHref = (p: Plan) => {
     if (p.monthly_price === 0) return $user ? '/app' : '/register';
-    const intent = `/app/account?plan=${p.slug}`;
+    const intent = `/app/account?plan=${p.slug}${yearly ? '&interval=yearly' : ''}`;
     return $user ? intent : `/register?redirect=${encodeURIComponent(intent)}`;
   };
   // Show the headline limits on each card.
