@@ -4,6 +4,7 @@
   import { fmtPct, fmtUsd } from '$lib/format';
   import Disclaimer from '$lib/components/Disclaimer.svelte';
   import AiInterpret from '$lib/components/AiInterpret.svelte';
+  import AiLottie from '$lib/components/AiLottie.svelte';
   import { Lock, ExternalLink, ChevronRight } from '@lucide/svelte';
   import { slide } from 'svelte/transition';
   import { membership, hasFeature } from '$lib/stores/membership';
@@ -188,7 +189,8 @@
         {:else}
           <div class="relative">
             <p class="text-[15px] leading-relaxed text-body blur-[3px]" aria-hidden="true">Ecosystem rotation is selective — a few chains are improving while most remain neutral or weak. This favours disciplined, selective exposure rather than broad ecosystem bets until breadth improves.</p>
-            <div class="absolute inset-0 flex items-center justify-center">
+            <div class="absolute inset-0 flex flex-col items-center justify-center">
+              <AiLottie size={44} class="mb-2" />
               <a href="/pricing" class="btn-primary text-xs shadow-lg"><Lock class="h-3.5 w-3.5" /> Unlock with Premium</a>
             </div>
           </div>

@@ -7,6 +7,7 @@
   import EChart from '$lib/components/EChart.svelte';
   import Disclaimer from '$lib/components/Disclaimer.svelte';
   import AiInterpret from '$lib/components/AiInterpret.svelte';
+  import AiLottie from '$lib/components/AiLottie.svelte';
   import { fmtPct, fmtUsd } from '$lib/format';
   import { membership, hasFeature } from '$lib/stores/membership';
 
@@ -966,6 +967,7 @@
         <p class="mt-1 text-sm leading-relaxed text-soft">BTC risk is currently low-to-moderate. The model supports disciplined DCA, though it does not yet show an extreme bottom zone. On-chain and social metrics would give a fuller picture once connected.</p>
       </div>
       <div class="absolute inset-0 flex flex-col items-center justify-center gap-1.5 px-4 text-center">
+        <AiLottie size={44} class="mb-2" />
         <a href="/pricing" class="btn-primary text-sm shadow-lg"><Lock class="h-4 w-4" /> Unlock with Premium</a>
         <p class="text-xs text-muted">Plain-language risk interpretation is a Mid &amp; Premium feature.</p>
       </div>

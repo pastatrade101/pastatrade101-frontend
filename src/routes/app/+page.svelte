@@ -6,6 +6,7 @@
   import { locale } from '$lib/i18n';
   import { changeColor, fmtPct, fmtUsd } from '$lib/format';
   import Disclaimer from '$lib/components/Disclaimer.svelte';
+  import AiLottie from '$lib/components/AiLottie.svelte';
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let data = $state<any>(null);
@@ -286,7 +287,7 @@
         {/if}
       </div>
     {:else if !data.has_interpretation}
-      <a href="/pricing" class="flex items-center justify-center gap-1.5 rounded-2xl border border-mint/30 bg-mint/[0.05] p-3.5 text-sm font-medium text-mint"><Lock class="h-4 w-4" /> Unlock the strongest signal &amp; biggest warning</a>
+      <a href="/pricing" class="flex items-center justify-center gap-1.5 rounded-2xl border border-mint/30 bg-mint/[0.05] p-3.5 text-sm font-medium text-mint"><AiLottie size={26} /> Unlock the strongest signal &amp; biggest warning</a>
     {/if}
 
     <!-- 6 · Quick read — horizontal human-labelled signal cards -->
@@ -304,7 +305,7 @@
         </div>
       </div>
     {:else}
-      <a href="/pricing" class="flex items-center justify-center gap-1.5 rounded-2xl border border-edge bg-panel-2/40 p-3.5 text-sm font-medium text-accent"><Lock class="h-4 w-4" /> Unlock the full market read</a>
+      <a href="/pricing" class="flex items-center justify-center gap-1.5 rounded-2xl border border-edge bg-panel-2/40 p-3.5 text-sm font-medium text-accent"><AiLottie size={26} /> Unlock the full market read</a>
     {/if}
 
     <!-- See why — reveals the full analysis / Pro view -->
@@ -350,7 +351,8 @@
           <div class="flex items-start gap-2 rounded-lg border border-mint/30 bg-mint/5 px-3 py-2 text-sm"><Zap class="mt-0.5 h-4 w-4 shrink-0 text-mint" /><span><span class="font-medium text-mint">Strongest signal today:</span> <span class="text-soft">An altcoin is confirming strength against Bitcoin while overall breadth stays selective.</span></span></div>
           <div class="flex items-start gap-2 rounded-lg border border-warn/30 bg-warn/5 px-3 py-2 text-sm"><AlertTriangle class="mt-0.5 h-4 w-4 shrink-0 text-warn" /><span><span class="font-medium text-warn">Biggest warning today:</span> <span class="text-soft">Altcoin strength is still selective — do not assume full altcoin season yet.</span></span></div>
         </div>
-        <div class="absolute inset-0 flex items-center justify-center">
+        <div class="absolute inset-0 flex flex-col items-center justify-center">
+          <AiLottie size={44} class="mb-2" />
           <a href="/pricing" class="btn-primary text-sm shadow-lg"><Lock class="h-4 w-4" /> Unlock with Premium</a>
         </div>
       </div>
@@ -388,6 +390,7 @@
         {/each}
       </div>
       <div class="absolute inset-0 flex flex-col items-center justify-center gap-2 px-4 text-center">
+        <AiLottie size={44} class="mb-2" />
         <a href="/pricing" class="btn-primary text-sm shadow-lg"><Lock class="h-4 w-4" /> Unlock signal cards</a>
         <p class="text-xs text-muted">BTC risk · altcoin breadth · social · exit · ecosystem · liquidity — on Mid & Premium</p>
       </div>

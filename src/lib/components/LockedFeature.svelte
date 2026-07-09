@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Lock } from '@lucide/svelte';
+  import AiLottie from './AiLottie.svelte';
 
   interface Props {
     title?: string;
@@ -11,9 +11,7 @@
 </script>
 
 <div class="hero-card mx-auto max-w-xl text-center">
-  <div class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-accent/12 text-accent">
-    <Lock class="h-6 w-6" />
-  </div>
+  <AiLottie size={64} class="mx-auto mb-3" />
   <h2 class="text-lg font-semibold text-strong">{title}</h2>
   <p class="mt-1 text-sm text-muted">Available on <span class="font-medium text-body">{planLabel}</span>. Upgrade to unlock:</p>
   {#if bullets.length}

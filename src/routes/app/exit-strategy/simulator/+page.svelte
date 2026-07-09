@@ -4,6 +4,7 @@
   import { membership, membershipReady, hasFeature } from '$lib/stores/membership';
   import Gauge from '$lib/components/Gauge.svelte';
   import LockedFeature from '$lib/components/LockedFeature.svelte';
+  import AiLottie from '$lib/components/AiLottie.svelte';
 
   const canSim = $derived(hasFeature($membership, 'access_exit_simulator'));
   const isPremium = $derived(!!$membership && ($membership.is_admin || $membership.plan === 'premium'));
@@ -332,6 +333,7 @@
           {/if}
         {:else}
           <div class="card border-accent/30 bg-accent/5">
+            <AiLottie size={44} class="mx-auto mb-2" />
             <p class="flex items-center gap-1.5 stat-label text-accent"><Lock class="h-3.5 w-3.5" /> Upgrade to Premium</p>
             <p class="mt-1 text-sm text-soft">You're using the basic simulator (total-portfolio, current risk). Premium unlocks profit-only, recover-capital and moonbag modes, a custom risk score, the full scenario table, and saving your simulations privately.</p>
             <a href="/pricing" class="btn-primary mt-3 inline-flex">See Premium</a>

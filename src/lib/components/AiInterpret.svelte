@@ -1,9 +1,8 @@
 <script lang="ts">
   import { get } from 'svelte/store';
-  import { browser } from '$app/environment';
   import { Sparkles, Lock, ArrowRight } from '@lucide/svelte';
   import { slide } from 'svelte/transition';
-  import { DotLottieSvelte } from '@lottiefiles/dotlottie-svelte';
+  import AiLottie from './AiLottie.svelte';
   import { api } from '$lib/api';
   import { locale } from '$lib/i18n';
   import { aiUsage, loadAiUsage, setAiUsage } from '$lib/stores/aiUsage';
@@ -78,11 +77,7 @@
       <p class="mt-1 text-sm leading-relaxed text-soft">Bitcoin sits in a healthy zone without overheating, and the surrounding signals point to patience over chasing — a plain-language take, generated for you on demand.</p>
     </div>
     <div class="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-panel/40 text-center backdrop-blur-[2px]">
-      {#if browser}
-        <div class="h-11 w-11" aria-hidden="true"><DotLottieSvelte src="/Ai.lottie" loop autoplay /></div>
-      {:else}
-        <span class="flex h-11 w-11 items-center justify-center rounded-full bg-mint/15"><Sparkles class="h-5 w-5 text-mint" /></span>
-      {/if}
+      <AiLottie size={44} />
       <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-mint"><Lock class="h-3 w-3" /> AI interpretation</span>
       <p class="max-w-xs px-4 text-[13px] text-soft">Ask the AI to explain this module in plain language.</p>
       <a href="/pricing" class="btn-primary mt-0.5 px-4 py-1.5 text-sm">Unlock with Premium <ArrowRight class="h-4 w-4" /></a>

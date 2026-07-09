@@ -3,6 +3,7 @@
   import { fly } from 'svelte/transition';
   import { Crosshair, Search, ExternalLink, AlertTriangle, Info, ShieldCheck, Loader, TrendingUp, Activity, Wallet, Landmark, BarChart3, Globe, Timer, Coins, Users, Sparkles, Gauge, Zap, Lock, Network } from '@lucide/svelte';
   import { api } from '$lib/api';
+  import AiLottie from '$lib/components/AiLottie.svelte';
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   type Any = any;
@@ -397,6 +398,7 @@
   {#if limitInfo}
     <div class="relative overflow-hidden rounded-2xl p-[1px] shadow-[0_18px_40px_-20px_rgba(2,6,23,0.4)]" style="background: linear-gradient(135deg, rgba(55,224,166,0.55), rgba(91,140,255,0.55))">
       <div class="rounded-2xl bg-panel px-5 py-6">
+        <AiLottie size={44} class="mx-auto mb-2" />
         <div class="flex flex-col items-center gap-4 text-center sm:flex-row sm:text-left">
           <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-mint/20 to-accent/20 ring-1 ring-mint/30">
             <Lock class="h-6 w-6 text-mint" />

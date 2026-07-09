@@ -6,6 +6,7 @@
   import EChart from '$lib/components/EChart.svelte';
   import LockedFeature from '$lib/components/LockedFeature.svelte';
   import AiInterpret from '$lib/components/AiInterpret.svelte';
+  import AiLottie from '$lib/components/AiLottie.svelte';
   import { fmtUsd } from '$lib/format';
 
   const canExit = $derived(hasFeature($membership, 'access_exit_strategy'));
@@ -441,6 +442,7 @@
   {:else}
     <!-- Mid plan: invite to premium for the full tooling -->
     <div class="card mb-3 border-accent/30 bg-accent/5">
+      <AiLottie size={44} class="mx-auto mb-2" />
       <p class="flex items-center gap-1.5 stat-label text-accent"><Lock class="h-3.5 w-3.5" /> Upgrade to Premium</p>
       <p class="mt-1 text-sm text-soft">You're seeing the current exit signal and a limited breakdown. Premium adds the configurable exit ladder, Conservative / Balanced / Aggressive profiles, the full Social Risk breakdown, “what would change the signal”, the historical exit-risk chart and past high-risk zones.</p>
       <a href="/pricing" class="btn-primary mt-3 inline-flex">See Premium</a>

@@ -3,6 +3,7 @@
   import { api } from '$lib/api';
   import { membershipReady } from '$lib/stores/membership';
   import AiInterpret from '$lib/components/AiInterpret.svelte';
+  import AiLottie from '$lib/components/AiLottie.svelte';
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   type Project = any;
@@ -214,6 +215,7 @@
 
   {#if locked}
     <div class="mt-3 flex flex-col items-center gap-2 rounded-xl border border-accent/30 bg-accent/[0.06] px-4 py-6 text-center">
+      <AiLottie size={44} class="mb-2" />
       <Lock class="h-6 w-6 text-accent" />
       <p class="text-sm font-semibold text-strong">{total > 1 ? `${total - 1}+ more early projects are locked` : 'Unlock the full Early Project Radar'}</p>
       <p class="max-w-md text-xs text-muted">Upgrade to <span class="font-medium text-soft">{requiredPlan}</span> to see every scored project with backers, raise, tokenomics, vesting, rounds and red-flag screening — plus filters and search.</p>
