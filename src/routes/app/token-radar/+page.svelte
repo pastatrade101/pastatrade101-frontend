@@ -4,6 +4,7 @@
   import { Crosshair, Search, ExternalLink, AlertTriangle, Info, ShieldCheck, Loader, TrendingUp, Activity, Wallet, Landmark, BarChart3, Globe, Timer, Coins, Users, Sparkles, Gauge, Zap, Lock, Network } from '@lucide/svelte';
   import { api } from '$lib/api';
   import AiLottie from '$lib/components/AiLottie.svelte';
+  import AiInterpret from '$lib/components/AiInterpret.svelte';
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   type Any = any;
@@ -212,6 +213,17 @@
     if (s.contract_safety != null) d.push(chip('Contract', state3(s.contract_safety)));
     d.push({ k: 'Holders', word: report.holder?.verified ? 'Verified' : 'Unverified', st: report.holder?.verified ? 'good' : 'mid' });
     return d;
+  });
+
+  // Signals for the AI interpretation of the current token scan.
+  const aiSignals = $derived.by(() => {
+    const r = report;
+    if (!r?.rating) return [] as Any[];
+    const toneOf = (st: string) => (st === 'good' ? 'good' : st === 'bad' ? 'danger' : 'warn');
+    const arr: Any[] = [{ name: 'Overall rating', label: r.rating, meaning: r.action_label ? `Suggested: ${r.action_label}` : null, tone: toneOf(ratingTheme(r.rating)?.tone ?? 'mid') }];
+    for (const d of drivers) arr.push({ name: d.k, label: d.word, tone: toneOf(d.st) });
+    if (r.confidence?.combined != null) arr.push({ name: 'Confidence', label: `${r.confidence.combined}/100`, tone: toneOf(state3(r.confidence.combined)) });
+    return arr;
   });
 
   const sources = $derived.by(() => {
@@ -496,6 +508,9 @@
         <span class="text-[11px] text-muted">Suggested: {report.action_label}</span>
       </div>
     </div>
+
+    <!-- AI interpretation of this scan -->
+    <div in:fly={{ y: 18, duration: 450, delay: 100 }}><AiInterpret module="token_radar" title="{report.token?.symbol ?? 'Token'} scan" signals={aiSignals} /></div>
 
     <!-- Data quality warning -->
     {#if report.data_quality_warnings?.length}
