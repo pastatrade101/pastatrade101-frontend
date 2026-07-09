@@ -5,6 +5,7 @@
   import { membership, membershipReady, hasFeature } from '$lib/stores/membership';
   import EChart from '$lib/components/EChart.svelte';
   import LockedFeature from '$lib/components/LockedFeature.svelte';
+  import AiInterpret from '$lib/components/AiInterpret.svelte';
   import { fmtUsd } from '$lib/format';
 
   let { asset = 'BTC' }: { asset?: 'BTC' | 'ETH' } = $props();
@@ -106,6 +107,21 @@
       why: whyZone(a, l),
       important
     };
+  });
+
+  // Signals handed to the AI interpretation (labels/values already on the page).
+  const aiSignals = $derived.by(() => {
+    const l = result?.latest;
+    if (!l) return [];
+    const z = l.zone_label;
+    const tone = isValueZone(z) ? 'good' : isHighZone(z) ? 'danger' : 'warn';
+    return [
+      { name: 'Current zone', label: z, tone },
+      { name: 'Current price', label: usd(l.price_usd) },
+      { name: 'Fair value (fit)', label: usd(l.fit_price) },
+      { name: 'Distance from fit', label: `${l.distance_from_fit_percent}% ${l.distance_from_fit_percent >= 0 ? 'above' : 'below'} fair value`, tone },
+      { name: 'Risk score', label: `${l.risk_score.toFixed(2)} / 1`, tone }
+    ];
   });
 
   const soWhat = $derived.by(() => {
@@ -335,6 +351,7 @@
           <p class="text-muted"><span class="font-medium">Important:</span> {currentReading.important}</p>
         </div>
       </div>
+      <div class="mb-4"><AiInterpret module="log_regression" title="{ASSET} Regression Bands" signals={aiSignals} /></div>
     {/if}
   {/if}
 
