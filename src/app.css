@@ -329,3 +329,30 @@
 ::-webkit-scrollbar-thumb {
   @apply rounded-full bg-edge;
 }
+
+/* ── AI interpretation glow — colour sampled from the AI animation (coral #f87d7f) ── */
+.ai-glow {
+  border-color: rgb(248 125 127 / 0.5) !important;
+  box-shadow:
+    0 0 0 1px rgb(248 125 127 / 0.22),
+    0 12px 38px -10px rgb(248 125 127 / 0.42);
+  animation: ai-breathe 3.4s ease-in-out infinite;
+}
+@keyframes ai-breathe {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1px rgb(248 125 127 / 0.18),
+      0 10px 30px -12px rgb(248 125 127 / 0.32);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px rgb(248 125 127 / 0.45),
+      0 16px 46px -8px rgb(248 125 127 / 0.6);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ai-glow {
+    animation: none;
+  }
+}

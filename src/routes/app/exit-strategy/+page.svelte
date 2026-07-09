@@ -329,7 +329,7 @@
   {/if}
 
   <!-- What this means -->
-  <div class="card mb-3">
+  <div class="ai-glow card mb-3">
     <AiLabel />
     <p class="mt-1 text-sm leading-relaxed text-soft">{r.interpretation}</p>
   </div>

@@ -232,7 +232,7 @@
 {:else}
   <!-- Takeaway -->
   {#if data?.takeaway}
-    <div class="hero-card mb-3">
+    <div class="ai-glow hero-card mb-3">
       <AiLabel />
       <p class="mt-1 text-sm leading-relaxed text-soft">{data.takeaway}</p>
     </div>

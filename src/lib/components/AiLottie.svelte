@@ -13,7 +13,7 @@
     <DotLottieSvelte src="/Ai.lottie" loop autoplay />
   </div>
 {:else}
-  <span class="flex shrink-0 items-center justify-center rounded-full bg-mint/15 {klass}" style="width:{size}px;height:{size}px" aria-hidden="true">
-    <Sparkles class="text-mint" style="width:{Math.round(size * 0.5)}px;height:{Math.round(size * 0.5)}px" />
+  <span class="flex shrink-0 items-center justify-center rounded-full bg-[#f87d7f]/15 {klass}" style="width:{size}px;height:{size}px" aria-hidden="true">
+    <Sparkles class="text-[#f87d7f]" style="width:{Math.round(size * 0.5)}px;height:{Math.round(size * 0.5)}px" />
   </span>
 {/if}

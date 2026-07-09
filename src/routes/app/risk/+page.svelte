@@ -956,14 +956,14 @@
 
   <!-- Premium takeaway -->
   {#if canInterp}
-    <div class="card mb-4 border border-mint/30 bg-mint/5">
+    <div class="ai-glow card mb-4 border border-mint/30 bg-mint/5">
       <AiLabel />
       <p class="mt-1 text-sm leading-relaxed text-soft {expandedTakeaway ? '' : 'line-clamp-3 lg:line-clamp-none'}">{premiumTakeaway}</p>
       <button type="button" class="mt-2 text-xs font-medium text-accent lg:hidden" onclick={() => (expandedTakeaway = !expandedTakeaway)}>{expandedTakeaway ? 'Show less' : 'Read more'}</button>
     </div>
   {:else}
     <div class="relative mb-4">
-      <div class="card border border-mint/30 bg-mint/5 blur-[3px]" aria-hidden="true">
+      <div class="ai-glow card border border-mint/30 bg-mint/5 blur-[3px]" aria-hidden="true">
         <AiLabel />
         <p class="mt-1 text-sm leading-relaxed text-soft">BTC risk is currently low-to-moderate. The model supports disciplined DCA, though it does not yet show an extreme bottom zone. On-chain and social metrics would give a fuller picture once connected.</p>
       </div>
@@ -1204,7 +1204,7 @@
       </div>
 
       <!-- Premium takeaway -->
-      <div class="mt-3 card border border-mint/30 bg-mint/5">
+      <div class="ai-glow mt-3 card border border-mint/30 bg-mint/5">
         <AiLabel />
         <p class="mt-1 text-sm leading-relaxed text-soft">{onchainPremiumTakeaway}</p>
       </div>
@@ -1363,7 +1363,7 @@
       </div>
 
       <!-- Premium takeaway -->
-      <div class="mt-3 card border border-mint/30 bg-mint/5">
+      <div class="ai-glow mt-3 card border border-mint/30 bg-mint/5">
         <AiLabel />
         <p class="mt-1 text-sm leading-relaxed text-soft">{supplyPL.premium_takeaway}</p>
       </div>

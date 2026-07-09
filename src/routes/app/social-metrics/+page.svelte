@@ -187,7 +187,7 @@
     </div>
     <div>
       <p class="text-sm leading-relaxed text-soft">{data.interpretation}</p>
-      <div class="mt-2 rounded-lg border border-mint/30 bg-mint/5 px-3 py-2">
+      <div class="ai-glow mt-2 rounded-lg border border-mint/30 bg-mint/5 px-3 py-2">
         <AiLabel />
         <p class="mt-1 text-xs leading-relaxed text-soft">{takeaway}</p>
       </div>

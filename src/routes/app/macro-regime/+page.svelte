@@ -184,7 +184,7 @@
   <div class="mb-4"></div>
 
   <!-- Final Interpretation — the plain-English bottom line -->
-  <div class="card mb-3 border-accent/25 bg-accent/[0.04]">
+  <div class="ai-glow card mb-3 border-accent/25 bg-accent/[0.04]">
     <AiLabel />
     <div class="mt-2 space-y-2 text-sm leading-relaxed">
       <p class="flex flex-wrap items-center gap-2"><span class="text-muted">Current regime:</span><span class="pill {pill(r.regime_score)}">{r.regime_label}</span></p>

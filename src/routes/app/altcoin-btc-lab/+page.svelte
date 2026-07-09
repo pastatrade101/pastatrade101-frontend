@@ -576,7 +576,7 @@
   <div class="card border-danger/30 bg-danger/5 text-danger">{error}</div>
 {:else if data}
   <!-- Premium Takeaway -->
-  <div class="card mb-4 border border-mint/30 bg-mint/5">
+  <div class="ai-glow card mb-4 border border-mint/30 bg-mint/5">
     <AiLabel />
     <p class="mt-1 text-sm leading-relaxed text-body">{premiumTakeaway}</p>
   </div>
@@ -651,7 +651,7 @@
   </div>
 
   <!-- What this means -->
-  <div class="card mt-4">
+  <div class="ai-glow card mt-4">
     <AiLabel />
     <p class="mt-1 text-sm leading-relaxed text-soft">{data.analysis.what_this_means}</p>
   </div>
