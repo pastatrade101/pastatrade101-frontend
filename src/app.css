@@ -66,8 +66,13 @@
     background-color: rgb(var(--c-ink));
     color: rgb(var(--c-body));
     -webkit-font-smoothing: antialiased;
+    /* Kill the sub-pixel / scrollbar-width horizontal scroll from full-bleed
+       (100vw) bands and decorative overflow. `clip` (not `hidden`) does not
+       create a scroll container, so position: sticky keeps working. */
+    overflow-x: clip;
   }
   body {
+    overflow-x: clip;
     background-color: rgb(var(--c-ink));
     background-image: var(--app-bg);
     background-size: cover;

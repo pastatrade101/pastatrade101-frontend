@@ -112,6 +112,11 @@
     { icon: FileText, tKey: 'landing.feat.reports.t', bKey: 'landing.feat.reports.b', color: '--c-accent' },
     { icon: Star, tKey: 'landing.feat.watch.t', bKey: 'landing.feat.watch.b', color: '--c-mint' }
   ];
+  const videoSignals = [
+    { icon: LineChart, tKey: 'landing.videos.signal.1.t', bKey: 'landing.videos.signal.1.b', color: '--c-mint' },
+    { icon: ShieldCheck, tKey: 'landing.videos.signal.2.t', bKey: 'landing.videos.signal.2.b', color: '--c-danger' },
+    { icon: Activity, tKey: 'landing.videos.signal.3.t', bKey: 'landing.videos.signal.3.b', color: '--c-accent' }
+  ];
   const steps = [
     { n: '01', icon: UserPlus, tKey: 'landing.steps.1.t', bKey: 'landing.steps.1.b' },
     { n: '02', icon: LineChart, tKey: 'landing.steps.2.t', bKey: 'landing.steps.2.b' },
@@ -269,9 +274,9 @@
         <span class="hidden h-8 w-px bg-edge sm:block"></span>
 
         <div class="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs font-semibold uppercase tracking-wide text-soft">
-          <span class="flex items-center gap-1.5"><BarChart3 class="h-4 w-4 text-[#5b8cff]" /> Macro</span>
-          <span class="flex items-center gap-1.5"><TrendingUp class="h-4 w-4 text-[#37e0a6]" /> Crypto</span>
-          <span class="flex items-center gap-1.5"><Activity class="h-4 w-4 text-[#a855f7]" /> TradFi</span>
+          <span class="flex items-center gap-1.5"><BarChart3 class="h-4 w-4 text-accent" /> Macro</span>
+          <span class="flex items-center gap-1.5"><TrendingUp class="h-4 w-4 text-mint" /> Crypto</span>
+          <span class="flex items-center gap-1.5"><Activity class="h-4 w-4 text-warn" /> TradFi</span>
         </div>
       </div>
     </div>
@@ -321,17 +326,19 @@
 <section class="py-10 sm:py-14">
   <div class="feature-map">
     <div class="feature-map-grid"></div>
-    <div class="relative z-[1] grid gap-8 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)] lg:gap-10">
-      <div class="min-w-0">
-        <span class="pill bg-mint/10 text-mint">{$t('landing.feat.eyebrow')}</span>
-        <h2 class="mt-4 text-2xl font-semibold leading-tight text-strong sm:text-3xl lg:text-4xl">{$t('landing.feat.title')}</h2>
-        <p class="mt-3 max-w-xl text-sm leading-relaxed text-muted sm:text-base">{$t(commandFeature.bKey)}</p>
+    <div class="relative z-[1]">
+      <div class="feature-top">
+        <div class="min-w-0">
+          <span class="pill bg-mint/10 text-mint">{$t('landing.feat.eyebrow')}</span>
+          <h2 class="mt-4 text-2xl font-semibold leading-tight text-strong sm:text-3xl lg:text-4xl">{$t('landing.feat.title')}</h2>
+          <p class="mt-3 max-w-xl text-sm leading-relaxed text-muted sm:text-base">{$t(commandFeature.bKey)}</p>
+        </div>
 
-        <div class="feature-preview mt-7" use:inview>
-          <div class="flex items-start justify-between gap-4">
+        <div class="feature-command-strip" use:inview>
+          <div class="feature-command-head">
             <div>
               <p class="text-xs font-semibold uppercase tracking-wider text-muted">{$t('landing.feat.map.command')}</p>
-              <h3 class="mt-1 text-lg font-semibold text-strong">{$t(commandFeature.tKey)}</h3>
+              <h3 class="mt-1 text-base font-semibold text-strong">{$t(commandFeature.tKey)}</h3>
             </div>
             <span class="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-mint/25 bg-mint/10 px-2.5 py-1 text-xs font-medium text-mint">
               <span class="h-1.5 w-1.5 rounded-full bg-mint"></span>
@@ -339,105 +346,107 @@
             </span>
           </div>
 
-          <div class="mt-5 grid gap-3 sm:grid-cols-3">
+          <div class="feature-command-metrics">
             {#each featurePreviewStats as stat}
-              <div class="feature-metric" style="--signal: var({stat.color}); --level: {stat.level};">
+              <div class="feature-command-metric" style="--signal: var({stat.color}); --level: {stat.level};">
                 <p class="text-xs text-muted">{$t(stat.labelKey)}</p>
-                <p class="mt-1 text-sm font-semibold text-strong">{$t(stat.valueKey)}</p>
-                <div class="feature-meter mt-3"><span></span></div>
+                <div class="mt-1 flex items-center justify-between gap-3">
+                  <p class="truncate text-sm font-semibold text-strong">{$t(stat.valueKey)}</p>
+                  <div class="feature-meter"><span></span></div>
+                </div>
               </div>
-            {/each}
-          </div>
-
-          <div class="market-tape mt-5" aria-hidden="true">
-            {#each [52, 68, 44, 74, 58, 82, 63, 90, 70, 78, 61, 84] as h, i}
-              <span style="height: {h}%; --bar-delay: {i * 60}ms"></span>
             {/each}
           </div>
         </div>
       </div>
 
-      <div class="min-w-0 space-y-4">
-        <div class="feature-cluster feature-cluster-risk" use:inview={{ delay: 80 }}>
-          <div class="flex items-center justify-between gap-3">
-            <div>
+      <div class="feature-board mt-5" use:inview={{ delay: 80 }}>
+        <section class="feature-column" style="--group: var(--c-mint);">
+          <div class="feature-column-head">
+            <div class="min-w-0">
               <p class="text-xs font-semibold uppercase tracking-wider text-muted">{$t('landing.feat.map.risk')}</p>
               <h3 class="mt-1 text-lg font-semibold text-strong">{$t('landing.feat.radar.t')}</h3>
             </div>
-            <span class="icon-badge bg-mint/12 text-mint"><Radar class="h-5 w-5" /></span>
+            <Radar class="h-5 w-5 shrink-0 text-mint" />
           </div>
-
-          <div class="mt-4 space-y-3">
+          <div class="feature-list">
             {#each riskSignals as item, i}
-              <div class="signal-row" style="--signal: var({item.color}); --level: {item.level};" use:inview={{ delay: 120 + i * 70 }}>
+              <div class="feature-list-row" style="--signal: var({item.color}); --level: {item.level};" use:inview={{ delay: 120 + i * 45 }}>
                 <span class="signal-icon"><item.icon class="h-4 w-4" /></span>
-                <div class="min-w-0 flex-1">
-                  <div class="flex items-center justify-between gap-3">
-                    <h4 class="truncate text-sm font-semibold text-strong">{$t(item.tKey)}</h4>
-                    <div class="signal-line"><span></span></div>
-                  </div>
-                  <p class="mt-1 line-clamp-2 text-xs leading-relaxed text-muted">{$t(item.bKey)}</p>
+                <div class="feature-list-copy">
+                  <h4>{$t(item.tKey)}</h4>
+                  <p>{$t(item.bKey)}</p>
                 </div>
+                <div class="feature-row-meter"><span></span></div>
               </div>
             {/each}
           </div>
-        </div>
+        </section>
 
-        <div class="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
-          <div class="feature-stack" use:inview={{ delay: 160 }}>
-            <div class="mb-4 flex items-center justify-between gap-3">
+        <section class="feature-column" style="--group: var(--c-accent);">
+          <div class="feature-column-head">
+            <div class="min-w-0">
               <p class="text-xs font-semibold uppercase tracking-wider text-muted">{$t('landing.feat.map.rotation')}</p>
-              <span class="h-px flex-1 bg-edge/70"></span>
+              <h3 class="mt-1 text-lg font-semibold text-strong">{$t('landing.feat.alt.t')}</h3>
             </div>
-            <div class="space-y-3">
-              {#each rotationSignals as item, i}
-                <div class="compact-signal" style="--signal: var({item.color}); --level: {item.level};" use:inview={{ delay: 180 + i * 60 }}>
-                  <span class="signal-icon"><item.icon class="h-4 w-4" /></span>
-                  <div class="min-w-0">
-                    <h4 class="text-sm font-semibold text-strong">{$t(item.tKey)}</h4>
-                    <p class="mt-1 line-clamp-2 text-xs leading-relaxed text-muted">{$t(item.bKey)}</p>
-                  </div>
-                </div>
-              {/each}
-            </div>
+            <TrendingUp class="h-5 w-5 shrink-0 text-accent" />
           </div>
-
-          <div class="feature-stack" use:inview={{ delay: 220 }}>
-            <div class="mb-4 flex items-center justify-between gap-3">
-              <p class="text-xs font-semibold uppercase tracking-wider text-muted">{$t('landing.feat.map.context')}</p>
-              <span class="h-px flex-1 bg-edge/70"></span>
-            </div>
-            <div class="space-y-3">
-              {#each contextSignals as item, i}
-                <div class="compact-signal" style="--signal: var({item.color}); --level: {item.level};" use:inview={{ delay: 240 + i * 60 }}>
-                  <span class="signal-icon"><item.icon class="h-4 w-4" /></span>
-                  <div class="min-w-0">
-                    <h4 class="text-sm font-semibold text-strong">{$t(item.tKey)}</h4>
-                    <p class="mt-1 line-clamp-2 text-xs leading-relaxed text-muted">{$t(item.bKey)}</p>
-                  </div>
-                </div>
-              {/each}
-            </div>
-          </div>
-        </div>
-
-        <div class="delivery-strip" use:inview={{ delay: 260 }}>
-          <div class="mb-4 flex items-center justify-between gap-3">
-            <p class="text-xs font-semibold uppercase tracking-wider text-muted">{$t('landing.feat.map.delivery')}</p>
-            <span class="h-px flex-1 bg-edge/70"></span>
-          </div>
-          <div class="grid gap-3 md:grid-cols-2">
-            {#each deliverySignals as item}
-              <div class="delivery-item" style="--signal: var({item.color});">
+          <div class="feature-list">
+            {#each rotationSignals as item, i}
+              <div class="feature-list-row" style="--signal: var({item.color}); --level: {item.level};" use:inview={{ delay: 180 + i * 45 }}>
                 <span class="signal-icon"><item.icon class="h-4 w-4" /></span>
-                <div>
-                  <h4 class="text-sm font-semibold text-strong">{$t(item.tKey)}</h4>
-                  <p class="mt-1 text-xs leading-relaxed text-muted">{$t(item.bKey)}</p>
+                <div class="feature-list-copy">
+                  <h4>{$t(item.tKey)}</h4>
+                  <p>{$t(item.bKey)}</p>
+                </div>
+                <div class="feature-row-meter"><span></span></div>
+              </div>
+            {/each}
+          </div>
+        </section>
+
+        <section class="feature-column" style="--group: var(--c-warn);">
+          <div class="feature-column-head">
+            <div class="min-w-0">
+              <p class="text-xs font-semibold uppercase tracking-wider text-muted">{$t('landing.feat.map.context')}</p>
+              <h3 class="mt-1 text-lg font-semibold text-strong">{$t('landing.feat.logreg.t')}</h3>
+            </div>
+            <Spline class="h-5 w-5 shrink-0 text-warn" />
+          </div>
+          <div class="feature-list">
+            {#each contextSignals as item, i}
+              <div class="feature-list-row" style="--signal: var({item.color}); --level: {item.level};" use:inview={{ delay: 240 + i * 45 }}>
+                <span class="signal-icon"><item.icon class="h-4 w-4" /></span>
+                <div class="feature-list-copy">
+                  <h4>{$t(item.tKey)}</h4>
+                  <p>{$t(item.bKey)}</p>
+                </div>
+                <div class="feature-row-meter"><span></span></div>
+              </div>
+            {/each}
+          </div>
+        </section>
+
+        <section class="feature-column" style="--group: var(--c-mint);">
+          <div class="feature-column-head">
+            <div class="min-w-0">
+              <p class="text-xs font-semibold uppercase tracking-wider text-muted">{$t('landing.feat.map.delivery')}</p>
+              <h3 class="mt-1 text-lg font-semibold text-strong">{$t('landing.feat.reports.t')}</h3>
+            </div>
+            <FileText class="h-5 w-5 shrink-0 text-mint" />
+          </div>
+          <div class="feature-list">
+            {#each deliverySignals as item}
+              <div class="feature-list-row feature-list-row-delivery" style="--signal: var({item.color}); --level: 72%;">
+                <span class="signal-icon"><item.icon class="h-4 w-4" /></span>
+                <div class="feature-list-copy">
+                  <h4>{$t(item.tKey)}</h4>
+                  <p>{$t(item.bKey)}</p>
                 </div>
               </div>
             {/each}
           </div>
-        </div>
+        </section>
       </div>
     </div>
   </div>
@@ -481,19 +490,68 @@
 
 <!-- ── 5b · VIDEOS (latest YouTube uploads) ───────────────────────────────── -->
 {#if videos.length}
-  <section class="mx-auto max-w-[1100px] px-4 py-14" use:inview>
-    <div class="mb-8 text-center">
-      <span class="pill bg-danger/10 text-danger">{$t('landing.videos.eyebrow')}</span>
-      <h2 class="mt-3 text-2xl font-bold text-strong sm:text-3xl">{$t('landing.videos.title')}</h2>
-      <p class="mx-auto mt-2 max-w-xl text-muted">{$t('landing.videos.sub')}</p>
-    </div>
-    <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-      {#each videos.slice(0, 3) as v}
-        <LiteYouTube id={v.id} title={v.title} views={v.views} />
-      {/each}
-    </div>
-    <div class="mt-8 text-center">
-      <a href="https://www.youtube.com/@pastatrade101" target="_blank" rel="noopener noreferrer" class="btn-ghost inline-flex">{$t('landing.videos.cta')} <ArrowRight class="h-4 w-4" /></a>
+  <section class="video-studio py-12 sm:py-16" use:inview>
+    <div class="video-studio-grid"></div>
+
+    <div class="relative z-[1]">
+      <div class="grid gap-6 lg:grid-cols-[minmax(0,0.95fr)_minmax(340px,0.45fr)] lg:items-end">
+        <div>
+          <span class="pill border border-danger/25 bg-danger/10 text-danger"><Flame class="h-3.5 w-3.5" /> {$t('landing.videos.eyebrow')}</span>
+          <h2 class="mt-4 max-w-3xl text-3xl font-semibold leading-tight text-strong sm:text-4xl lg:text-5xl">{$t('landing.videos.title')}</h2>
+          <p class="mt-3 max-w-2xl text-sm leading-relaxed text-muted sm:text-base">{$t('landing.videos.sub')}</p>
+        </div>
+
+        <div class="video-channel-panel">
+          <p class="text-xs font-semibold uppercase tracking-wider text-muted">{$t('landing.videos.channel')}</p>
+          <div class="mt-3 grid grid-cols-3 gap-2">
+            {#each videoSignals as signal}
+              <div class="video-signal" style="--signal: var({signal.color});">
+                <signal.icon class="h-4 w-4" />
+                <span>{$t(signal.tKey)}</span>
+              </div>
+            {/each}
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-8 grid items-stretch gap-5 lg:grid-cols-[minmax(0,1.3fr)_minmax(320px,0.72fr)]">
+        <div class="video-hero-card">
+          <div class="mb-3 flex items-center justify-between gap-3">
+            <span class="text-xs font-semibold uppercase tracking-wider text-muted">{$t('landing.videos.featured')}</span>
+            <span class="rounded-full border border-edge bg-panel-2/60 px-2.5 py-1 text-xs font-medium text-muted">{$t('landing.videos.signal.1.b')}</span>
+          </div>
+          <LiteYouTube id={videos[0].id} title={videos[0].title} views={videos[0].views} featured fill />
+        </div>
+
+        <div class="video-queue">
+          <div class="flex items-center justify-between gap-3">
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-wider text-muted">{$t('landing.videos.watchNext')}</p>
+              <h3 class="mt-1 text-lg font-semibold text-strong">{$t('landing.videos.playlist')}</h3>
+            </div>
+            <span class="flex h-10 w-10 items-center justify-center rounded-2xl border border-edge bg-panel-2/60 text-danger">
+              <Flame class="h-5 w-5" />
+            </span>
+          </div>
+
+          <div class="mt-4 space-y-3">
+            {#each videos.slice(1, 3) as v, i}
+              <div class="video-queue-item">
+                <span class="video-queue-index">0{i + 2}</span>
+                <LiteYouTube id={v.id} title={v.title} views={v.views} compact />
+              </div>
+            {/each}
+          </div>
+
+          <div class="mt-auto pt-4">
+            <p class="mb-3 text-sm leading-relaxed text-muted">{$t('landing.videos.note')}</p>
+            <a href="https://www.youtube.com/@pastatrade101" target="_blank" rel="noopener noreferrer" class="video-youtube-link">
+              <span>{$t('landing.videos.cta')}</span>
+              <ArrowRight class="h-4 w-4" />
+            </a>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 {/if}
@@ -718,6 +776,154 @@
 </section>
 
 <style>
+  .video-studio {
+    position: relative;
+    overflow: hidden;
+    max-width: 100vw;
+    margin-inline: calc(50% - 50vw);
+    padding-inline: max(1rem, calc((100vw - 1440px) / 2 + 2rem));
+    border-block: 1px solid rgb(var(--c-edge) / 0.6);
+    background:
+      radial-gradient(90% 80% at 8% 0%, rgb(var(--c-danger) / 0.1), transparent 52%),
+      radial-gradient(80% 80% at 100% 20%, rgb(var(--c-accent) / 0.1), transparent 50%),
+      radial-gradient(72% 82% at 60% 120%, rgb(var(--c-mint) / 0.08), transparent 54%),
+      rgb(var(--c-panel-2) / calc(var(--card-a) + 0.12));
+  }
+  .video-studio::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      radial-gradient(circle at center, rgb(127 140 160 / 0.22) 1px, transparent 1.5px),
+      linear-gradient(110deg, transparent 12%, rgb(var(--c-danger) / 0.14) 44%, transparent 72%);
+    background-size: 20px 20px, 100% 100%;
+    -webkit-mask-image: linear-gradient(90deg, #000 0%, rgb(0 0 0 / 0.85) 28%, transparent 72%);
+    mask-image: linear-gradient(90deg, #000 0%, rgb(0 0 0 / 0.85) 28%, transparent 72%);
+    pointer-events: none;
+  }
+  .video-studio::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(100deg, transparent 0 18%, rgb(var(--c-edge) / 0.5) 18% 18.12%, transparent 18.12% 100%),
+      linear-gradient(100deg, transparent 0 66%, rgb(var(--c-accent) / 0.2) 66% 66.1%, transparent 66.1% 100%);
+    opacity: 0.6;
+    pointer-events: none;
+  }
+  .video-studio-grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgb(127 140 160 / 0.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(127 140 160 / 0.08) 1px, transparent 1px);
+    background-size: 72px 72px;
+    -webkit-mask-image: linear-gradient(180deg, transparent, #000 16%, #000 72%, transparent);
+    mask-image: linear-gradient(180deg, transparent, #000 16%, #000 72%, transparent);
+    pointer-events: none;
+  }
+  .video-channel-panel,
+  .video-hero-card,
+  .video-queue {
+    border: 1px solid rgb(var(--glass-brd) / var(--glass-brd-a));
+    background: rgb(var(--c-panel) / var(--card-a));
+    backdrop-filter: blur(18px) saturate(150%);
+    -webkit-backdrop-filter: blur(18px) saturate(150%);
+  }
+  .video-channel-panel {
+    border-radius: 1.5rem;
+    padding: 1rem;
+  }
+  .video-signal {
+    display: flex;
+    min-height: 5.25rem;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 0.7rem;
+    border-radius: 1rem;
+    border: 1px solid rgb(var(--c-edge) / 0.7);
+    background: linear-gradient(180deg, rgb(var(--c-panel-2) / 0.7), rgb(var(--c-panel-2) / 0.4));
+    padding: 0.8rem;
+    color: rgb(var(--signal));
+  }
+  .video-signal span {
+    color: rgb(var(--c-strong));
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  .video-hero-card,
+  .video-queue {
+    border-radius: 1.75rem;
+    padding: 1rem;
+  }
+  .video-hero-card {
+    display: flex;
+    min-height: 100%;
+    flex-direction: column;
+  }
+  .video-queue {
+    display: flex;
+    min-height: 100%;
+    flex-direction: column;
+  }
+  .video-queue-item {
+    display: grid;
+    grid-template-columns: 2.4rem minmax(0, 1fr);
+    gap: 0.8rem;
+    align-items: start;
+    border-radius: 1.25rem;
+    border: 1px solid rgb(var(--c-edge) / 0.6);
+    background: rgb(var(--c-panel-2) / 0.5);
+    padding: 0.65rem;
+  }
+  .video-queue-index {
+    display: flex;
+    height: 2rem;
+    width: 2rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    border: 1px solid rgb(var(--c-edge) / 0.7);
+    background: rgb(var(--c-panel-2) / 0.8);
+    color: rgb(var(--c-muted));
+    font-size: 0.7rem;
+    font-weight: 800;
+  }
+  .video-youtube-link {
+    display: inline-flex;
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    border-radius: 1rem;
+    border: 1px solid rgb(var(--c-danger) / 0.35);
+    background: rgb(var(--c-danger) / 0.13);
+    padding: 0.9rem 1rem;
+    color: rgb(var(--c-danger));
+    font-weight: 700;
+    transition:
+      border-color 180ms ease,
+      background-color 180ms ease,
+      color 180ms ease;
+  }
+  .video-youtube-link:hover {
+    border-color: rgb(var(--c-danger) / 0.55);
+    background: rgb(var(--c-danger) / 0.2);
+    color: rgb(var(--c-danger));
+  }
+  @media (max-width: 640px) {
+    .video-studio {
+      padding-inline: 1rem;
+    }
+    .video-signal {
+      min-height: auto;
+    }
+    .video-queue-item {
+      grid-template-columns: 1fr;
+    }
+  }
+
   .feature-map {
     position: relative;
     overflow: hidden;
@@ -756,39 +962,40 @@
     mask-image: radial-gradient(72% 78% at 50% 38%, #000, transparent 78%);
     pointer-events: none;
   }
-  .feature-preview,
-  .feature-cluster,
-  .feature-stack,
-  .delivery-strip {
+  .feature-top {
+    display: grid;
+    gap: 1.15rem;
+    align-items: end;
+  }
+  .feature-command-strip {
     position: relative;
     overflow: hidden;
+    border-radius: 1.35rem;
     border: 1px solid rgb(var(--c-edge) / 0.72);
-    background: rgb(var(--c-panel) / calc(var(--card-a) + 0.2));
-    box-shadow: 0 18px 45px rgb(0 0 0 / 0.12);
+    background:
+      radial-gradient(80% 120% at 0% 0%, rgb(var(--c-mint) / 0.1), transparent 52%),
+      rgb(var(--c-panel) / calc(var(--card-a) + 0.14));
+    padding: 1rem;
   }
-  .feature-preview {
-    border-radius: 1.5rem;
-    padding: 1.15rem;
+  .feature-command-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
   }
-  .feature-preview::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: radial-gradient(90% 80% at 10% 0%, rgb(var(--c-mint) / 0.12), transparent 52%);
-    pointer-events: none;
+  .feature-command-metrics {
+    display: grid;
+    margin-top: 0.85rem;
+    border-top: 1px solid rgb(var(--c-edge) / 0.62);
   }
-  .feature-preview > * {
-    position: relative;
-    z-index: 1;
-  }
-  .feature-metric {
-    border-radius: 1rem;
-    border: 1px solid rgb(var(--signal) / 0.18);
-    background: rgb(var(--signal) / 0.08);
-    padding: 0.85rem;
+  .feature-command-metric {
+    min-width: 0;
+    padding: 0.75rem 0 0;
   }
   .feature-meter {
     height: 0.35rem;
+    width: min(8.5rem, 38%);
+    flex: 0 0 auto;
     overflow: hidden;
     border-radius: 9999px;
     background: rgb(var(--c-panel-2) / 0.85);
@@ -800,63 +1007,44 @@
     border-radius: inherit;
     background: linear-gradient(90deg, rgb(var(--signal) / 0.45), rgb(var(--signal)));
   }
-  .market-tape {
+  .feature-board {
     display: grid;
-    height: 8.5rem;
-    grid-template-columns: repeat(12, minmax(0, 1fr));
-    align-items: end;
-    gap: 0.45rem;
-    border-radius: 1.1rem;
-    border: 1px solid rgb(var(--c-edge) / 0.65);
+    overflow: hidden;
+    border-radius: 1.5rem;
+    border: 1px solid rgb(var(--c-edge) / 0.72);
     background:
-      linear-gradient(180deg, rgb(var(--c-panel-2) / 0.4), transparent),
-      repeating-linear-gradient(180deg, transparent 0 2rem, rgb(var(--c-edge) / 0.36) 2rem calc(2rem + 1px));
-    padding: 0.8rem;
+      linear-gradient(180deg, rgb(var(--c-panel) / calc(var(--card-a) + 0.18)), rgb(var(--c-panel) / calc(var(--card-a) + 0.08))),
+      rgb(var(--c-panel));
   }
-  .market-tape span {
-    display: block;
-    min-height: 1.2rem;
-    border-radius: 9999px 9999px 0.35rem 0.35rem;
-    background: linear-gradient(180deg, rgb(var(--c-mint)), rgb(var(--c-accent)));
-    box-shadow: 0 0 18px rgb(var(--c-mint) / 0.16);
-    animation: tape-rise 720ms cubic-bezier(0.22, 1, 0.36, 1) both;
-    animation-delay: var(--bar-delay);
-    transform-origin: bottom;
-  }
-  .market-tape span:nth-child(3n) {
-    background: linear-gradient(180deg, rgb(var(--c-warn)), rgb(var(--c-accent)));
-  }
-  .market-tape span:nth-child(4n) {
-    background: linear-gradient(180deg, rgb(var(--c-danger)), rgb(var(--c-warn)));
-  }
-  .feature-cluster,
-  .feature-stack,
-  .delivery-strip {
-    border-radius: 1.35rem;
+  .feature-column {
+    min-width: 0;
+    border-top: 1px solid rgb(var(--c-edge) / 0.62);
     padding: 1rem;
   }
-  .feature-cluster-risk {
-    background:
-      radial-gradient(80% 100% at 100% 0%, rgb(var(--c-mint) / 0.11), transparent 48%),
-      rgb(var(--c-panel) / calc(var(--card-a) + 0.2));
+  .feature-column:first-child {
+    border-top: 0;
   }
-  .signal-row,
-  .compact-signal,
-  .delivery-item {
+  .feature-column-head {
     display: flex;
-    min-width: 0;
-    gap: 0.85rem;
-    border-radius: 1rem;
-    border: 1px solid rgb(var(--signal) / 0.16);
-    background: rgb(var(--signal) / 0.06);
-    padding: 0.85rem;
-  }
-  .signal-row {
     align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    border-bottom: 1px solid rgb(var(--group) / 0.24);
+    padding-bottom: 0.8rem;
   }
-  .compact-signal,
-  .delivery-item {
-    align-items: flex-start;
+  .feature-list {
+    margin-top: 0.35rem;
+  }
+  .feature-list-row {
+    display: grid;
+    grid-template-columns: 2rem minmax(0, 1fr);
+    gap: 0.7rem;
+    align-items: center;
+    border-top: 1px solid rgb(var(--c-edge) / 0.55);
+    padding: 0.72rem 0;
+  }
+  .feature-list-row:first-child {
+    border-top: 0;
   }
   .signal-icon {
     display: inline-flex;
@@ -869,55 +1057,97 @@
     color: rgb(var(--signal));
     background: rgb(var(--signal) / 0.13);
   }
-  .signal-line {
+  .feature-list-copy {
+    min-width: 0;
+  }
+  .feature-list-copy h4 {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.9rem;
+    font-weight: 650;
+    color: rgb(var(--c-strong));
+  }
+  .feature-list-copy p {
+    margin-top: 0.15rem;
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
+    font-size: 0.78rem;
+    line-height: 1.45;
+    color: rgb(var(--c-muted));
+  }
+  .feature-row-meter {
     height: 0.35rem;
-    width: min(8rem, 34%);
-    flex: 0 0 auto;
     overflow: hidden;
     border-radius: 9999px;
     background: rgb(var(--c-panel-2) / 0.9);
   }
-  .signal-line span {
+  .feature-row-meter span {
     display: block;
     height: 100%;
     width: var(--level);
     border-radius: inherit;
     background: rgb(var(--signal));
   }
-  .delivery-strip {
-    background:
-      radial-gradient(90% 100% at 0% 100%, rgb(var(--c-accent) / 0.1), transparent 48%),
-      rgb(var(--c-panel) / calc(var(--card-a) + 0.2));
-  }
-  @keyframes tape-rise {
-    from {
-      transform: scaleY(0.35);
-      opacity: 0.35;
-    }
-    to {
-      transform: scaleY(1);
-      opacity: 1;
-    }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .market-tape span {
-      animation: none;
-    }
+  .feature-list-row-delivery {
+    grid-template-columns: 2rem minmax(0, 1fr);
   }
   @media (min-width: 640px) {
     .feature-map {
       padding: 2rem;
     }
-    .feature-preview,
-    .feature-cluster,
-    .feature-stack,
-    .delivery-strip {
-      padding: 1.25rem;
+    .feature-command-metrics {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .feature-command-metric {
+      border-left: 1px solid rgb(var(--c-edge) / 0.56);
+      padding: 0.15rem 0.85rem 0;
+    }
+    .feature-command-metric:first-child {
+      border-left: 0;
+      padding-left: 0;
+    }
+    .feature-list-row {
+      grid-template-columns: 2rem minmax(0, 1fr) minmax(4.5rem, 6.5rem);
+      gap: 0.8rem;
     }
   }
   @media (min-width: 1024px) {
     .feature-map {
       padding: 2.5rem;
+    }
+    .feature-top {
+      grid-template-columns: minmax(0, 0.78fr) minmax(520px, 1fr);
+    }
+    .feature-board {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .feature-column {
+      border-top: 0;
+      border-left: 1px solid rgb(var(--c-edge) / 0.58);
+      padding: 1.1rem;
+    }
+    .feature-column:nth-child(odd) {
+      border-left: 0;
+    }
+    .feature-column:nth-child(n + 3) {
+      border-top: 1px solid rgb(var(--c-edge) / 0.58);
+    }
+  }
+  @media (min-width: 1280px) {
+    .feature-board {
+      grid-template-columns: 1.05fr 1.12fr 1fr 0.95fr;
+    }
+    .feature-column,
+    .feature-column:nth-child(odd) {
+      border-left: 1px solid rgb(var(--c-edge) / 0.58);
+      border-top: 0;
+    }
+    .feature-column:first-child {
+      border-left: 0;
     }
   }
   @media (max-width: 520px) {
@@ -925,24 +1155,19 @@
       border-radius: 1.45rem;
       padding: 1rem;
     }
-    .feature-preview,
-    .feature-cluster,
-    .feature-stack,
-    .delivery-strip {
+    .feature-command-strip,
+    .feature-board {
       border-radius: 1.1rem;
     }
-    .signal-row,
-    .compact-signal,
-    .delivery-item {
-      gap: 0.7rem;
-      padding: 0.75rem;
+    .feature-command-head {
+      display: grid;
     }
-    .signal-line {
+    .feature-column {
+      padding: 0.85rem;
+    }
+    .feature-row-meter,
+    .feature-meter {
       display: none;
-    }
-    .market-tape {
-      height: 6.5rem;
-      gap: 0.3rem;
     }
   }
 
