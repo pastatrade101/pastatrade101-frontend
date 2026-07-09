@@ -195,7 +195,12 @@
             <label class="block text-xs text-muted">Name<input class="input mt-1" bind:value={p.name} /></label>
             <label class="block text-xs text-muted">Badge<input class="input mt-1" bind:value={p.badge} placeholder="Popular" /></label>
             <label class="block text-xs text-muted">Monthly price<input type="number" class="input mt-1" bind:value={p.monthly_price} /></label>
-            <label class="block text-xs text-muted">Yearly price<input type="number" class="input mt-1" bind:value={p.yearly_price} /></label>
+            <label class="block text-xs text-muted">
+              <span class="flex items-center justify-between gap-2">Yearly price
+                <button type="button" class="text-[10px] font-medium text-mint hover:underline" onclick={() => (p.yearly_price = Math.round(p.monthly_price * 10))} title="Set yearly to 10× monthly">2 months free</button>
+              </span>
+              <input type="number" class="input mt-1" bind:value={p.yearly_price} />
+            </label>
             <label class="block text-xs text-muted">Currency<select class="input mt-1" bind:value={p.currency}>
               {#each CURRENCIES as c}<option value={c}>{c}</option>{/each}
             </select></label>

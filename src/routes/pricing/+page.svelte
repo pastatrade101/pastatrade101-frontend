@@ -51,6 +51,18 @@
   };
 
   const price = (p: Plan) => (yearly ? p.yearly_price : p.monthly_price);
+
+  // Real yearly saving, computed from the actual prices (never a hard-coded
+  // claim). Uses the smallest discount across paid plans so the badge never
+  // over-promises; hides entirely when yearly isn't actually cheaper.
+  const yearlySaving = $derived.by(() => {
+    const paid = plans.filter((p) => p.monthly_price > 0 && p.yearly_price > 0);
+    if (!paid.length) return null;
+    const months = Math.min(...paid.map((p) => 12 - p.yearly_price / p.monthly_price));
+    if (months >= 0.9) return { months: Math.round(months), pct: 0 };
+    const pct = Math.min(...paid.map((p) => Math.round((1 - p.yearly_price / (p.monthly_price * 12)) * 100)));
+    return pct >= 3 ? { months: 0, pct } : null;
+  });
   // Live offer for a plan at the currently-selected interval (or null).
   const interval = $derived<'monthly' | 'yearly'>(yearly ? 'yearly' : 'monthly');
   const offerFor = (p: Plan) => activeOffer($offers, p.id, interval);
@@ -98,7 +110,8 @@
     <p class="mx-auto mt-2 max-w-xl text-muted">{$t('pricing.sub')}</p>
     <div class="mt-5 inline-flex items-center gap-1 rounded-lg border border-edge p-1 text-sm">
       <button class="rounded-md px-3 py-1.5 {!yearly ? 'bg-accent/15 text-accent' : 'text-muted'}" onclick={() => (yearly = false)}>{$t('pricing.monthly')}</button>
-      <button class="rounded-md px-3 py-1.5 {yearly ? 'bg-accent/15 text-accent' : 'text-muted'}" onclick={() => (yearly = true)}>{$t('pricing.yearly')} <span class="text-mint">{$t('pricing.yearlyNote')}</span></button>
+      <button class="rounded-md px-3 py-1.5 {yearly ? 'bg-accent/15 text-accent' : 'text-muted'}" onclick={() => (yearly = true)}>{$t('pricing.yearly')}{#if yearlySaving}
+          <span class="text-mint"> ·{yearlySaving.months ? $t('pricing.yearlyMonthsFree', { months: yearlySaving.months }) : $t('pricing.yearlySavePct', { pct: yearlySaving.pct })}</span>{/if}</button>
     </div>
   </header>
 
