@@ -33,7 +33,7 @@
     g.accounts.id.initialize({ client_id: CLIENT_ID, callback: onCredential });
     const theme = document.documentElement.getAttribute('data-theme') === 'light' ? 'outline' : 'filled_black';
     const width = Math.min(400, Math.max(240, Math.floor(wrap?.clientWidth || 320)));
-    g.accounts.id.renderButton(btn, { type: 'standard', theme, size: 'large', shape: 'pill', text: 'continue_with', logo_alignment: 'center', width });
+    g.accounts.id.renderButton(btn, { type: 'standard', theme, size: 'large', shape: 'rectangular', text: 'continue_with', logo_alignment: 'center', width });
     return true;
   };
 
