@@ -17,7 +17,7 @@
   ];
 </script>
 
-<div class="mx-auto grid w-full max-w-5xl overflow-hidden rounded-2xl border border-edge shadow-2xl lg:grid-cols-2">
+<div class="mx-auto grid w-full max-w-5xl overflow-hidden rounded-2xl lg:grid-cols-2 {mobileBrand ? 'border border-edge shadow-2xl' : 'lg:border lg:border-edge lg:shadow-2xl'}">
   <!-- Left brand / value panel -->
   <aside class="brand relative {mobileBrand ? 'flex' : 'hidden lg:flex'} flex-col overflow-hidden p-7 lg:p-10">
     <div class="grid-layer"></div>
@@ -78,7 +78,7 @@
   </aside>
 
   <!-- Right form card -->
-  <section class="flex items-center justify-center p-6 sm:p-10" style="background: rgb(var(--c-ink))">
+  <section class="flex items-center justify-center p-6 sm:p-10 {mobileBrand ? 'bg-ink' : 'lg:bg-ink'}">
     <div class="auth-card w-full max-w-[420px]">
       {@render children()}
     </div>
