@@ -32,8 +32,8 @@
         </span>
       {/if}
       <!-- Play button -->
-      <span class="absolute left-1/2 top-1/2 flex h-16 w-16 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 shadow-xl backdrop-blur transition duration-300 group-hover:scale-110 group-hover:bg-white">
-        <svg viewBox="0 0 24 24" class="ml-1 h-7 w-7" fill="#111827" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>
+      <span class="absolute left-1/2 top-1/2 flex h-11 w-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 shadow-lg backdrop-blur transition duration-300 group-hover:scale-110 group-hover:bg-white">
+        <svg viewBox="0 0 24 24" class="ml-0.5 h-5 w-5" fill="#111827" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>
       </span>
       {#if title}
         <span class="absolute inset-x-0 bottom-0 line-clamp-2 px-3.5 pb-3 pt-8 text-sm font-semibold leading-snug text-white">{title}</span>

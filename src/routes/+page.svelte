@@ -63,6 +63,11 @@
   });
   // Every feature the plan includes (ordered). No longer truncated to 4.
   const planFeatures = (p: Plan) => FEATURE_ORDER.filter((k) => p.features?.[k]);
+  const teaserFeatures = (p: Plan) => planFeatures(p).slice(0, p.is_popular ? 6 : 5);
+  const extraFeatureCount = (p: Plan) => Math.max(0, planFeatures(p).length - teaserFeatures(p).length);
+  const planAccent = (p: Plan, i: number) => (p.is_popular ? '--c-accent' : p.monthly_price === 0 ? '--c-mint' : i % 2 === 0 ? '--c-warn' : '--c-accent');
+  const planAudienceKey = (p: Plan) => (p.monthly_price === 0 ? 'landing.price.audience.free' : p.is_popular ? 'landing.price.audience.mid' : 'landing.price.audience.premium');
+  const maxPlanFeatureCount = () => plans.reduce((max, p) => Math.max(max, planFeatures(p).length), 0);
 
   // Real user count → friendly label (e.g. 1240 → "1.2k+", 127 → "120+", 8 → "8").
   const fmtInvestors = (n: number): string =>
@@ -495,42 +500,87 @@
 
 <!-- ── 6 · PRICING TEASER ─────────────────────────────────────────────────── -->
 {#if plans.length}
-  <section class="py-6" use:whenInView={() => (pricingVisible = true)}>
-    <div class="mx-auto mb-8 max-w-2xl text-center">
-      <span class="pill bg-accent/10 text-accent">{$t('landing.price.eyebrow')}</span>
-      <h2 class="mt-3 text-2xl font-semibold text-strong sm:text-3xl">{$t('landing.price.title')}</h2>
-      <p class="mt-2 text-muted">{$t('landing.price.sub')}</p>
-    </div>
-    <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
-      {#if pricingVisible}
-        {#each plans as p, i}
-        <div
-          class="card rail-card flex flex-col {p.is_popular ? 'border-accent/40' : ''}"
-          style={p.is_popular ? '--rail: var(--c-accent)' : '--rail: var(--c-edge)'}
-          in:fly={{ y: reduceMotion ? 0 : 28, duration: reduceMotion ? 0 : 600, delay: reduceMotion ? 0 : i * 160, easing: cubicOut }}
-        >
-          <div class="flex items-center justify-between">
-            <h3 class="text-lg font-semibold text-strong">{p.name}</h3>
-            {#if p.badge}<span class="pill bg-accent/15 text-accent">{p.badge}</span>{/if}
+  <section class="pricing-studio py-10 sm:py-14" use:whenInView={() => (pricingVisible = true)}>
+    <div class="grid gap-8 lg:grid-cols-[minmax(0,0.78fr)_minmax(0,1.22fr)] lg:items-start">
+      <div class="pricing-story" use:inview>
+        <span class="pill bg-accent/10 text-accent">{$t('landing.price.eyebrow')}</span>
+        <h2 class="mt-4 text-2xl font-semibold leading-tight text-strong sm:text-3xl lg:text-4xl">{$t('landing.price.title')}</h2>
+        <p class="mt-3 max-w-xl text-sm leading-relaxed text-muted sm:text-base">{$t('landing.price.sub')}</p>
+
+        <div class="mt-6 space-y-3">
+          <div class="pricing-route">
+            <span class="icon-badge bg-accent/12 text-accent"><Rocket class="h-5 w-5" /></span>
+            <div>
+              <p class="text-sm font-semibold text-strong">{$t('landing.price.route')}</p>
+              <p class="mt-1 text-xs leading-relaxed text-muted">{$t('landing.price.route.copy')}</p>
+            </div>
           </div>
-          <div class="mt-1 flex items-end gap-1">
-            <span class="text-3xl font-semibold text-strong">{fmtMoney(p.monthly_price, p.currency)}</span>
-            <span class="mb-1 text-sm text-muted">{$t('common.perMonth')}</span>
+          <div class="grid grid-cols-3 gap-2">
+            <div class="pricing-mini-stat">
+              <span class="text-lg font-semibold text-strong">{plans.length}</span>
+              <span>{$t('landing.price.stat.plans')}</span>
+            </div>
+            <div class="pricing-mini-stat">
+              <span class="text-lg font-semibold text-strong">{maxPlanFeatureCount()}</span>
+              <span>{$t('landing.price.stat.tools')}</span>
+            </div>
+            <div class="pricing-mini-stat">
+              <span class="text-lg font-semibold text-strong">0</span>
+              <span>{$t('landing.price.stat.keys')}</span>
+            </div>
           </div>
-          {#if p.description}<p class="mt-1 text-sm text-muted">{p.description}</p>{/if}
-          <ul class="my-4 space-y-1.5 text-sm">
-            {#each planFeatures(p) as fk}
-              <li class="flex items-center gap-2 text-soft"><Check class="h-4 w-4 shrink-0 text-mint" />{FEATURE_LABELS[fk] ?? fk}</li>
-            {/each}
-          </ul>
-          <a href="/register" class="{p.is_popular ? 'btn-primary' : 'btn-ghost'} mt-auto w-full">
-            {p.monthly_price === 0 ? $t('landing.price.startFree') : $t('landing.price.get', { name: p.name })}
-          </a>
         </div>
-        {/each}
-      {/if}
+
+        <a href="/pricing" class="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-mint hover:underline">
+          {$t('landing.price.compare')} <ArrowRight class="h-4 w-4" />
+        </a>
+      </div>
+
+      <div class="pricing-plan-grid">
+        {#if pricingVisible}
+          {#each plans as p, i}
+            <article
+              class="pricing-plan {p.is_popular ? 'pricing-plan-featured' : ''}"
+              style="--signal: var({planAccent(p, i)});"
+              in:fly={{ y: reduceMotion ? 0 : 24, duration: reduceMotion ? 0 : 520, delay: reduceMotion ? 0 : i * 120, easing: cubicOut }}
+            >
+              <div class="flex items-start justify-between gap-3">
+                <div>
+                  <h3 class="text-lg font-semibold text-strong">{p.name}</h3>
+                  <p class="mt-1 text-xs font-medium text-muted">{$t(planAudienceKey(p))}</p>
+                </div>
+                {#if p.badge}<span class="pill shrink-0 bg-accent/15 text-accent">{p.badge}</span>{/if}
+              </div>
+
+              <div class="mt-5 flex items-end gap-1">
+                <span class="text-3xl font-semibold tracking-tight text-strong">{fmtMoney(p.monthly_price, p.currency)}</span>
+                <span class="mb-1 text-sm text-muted">{$t('common.perMonth')}</span>
+              </div>
+              {#if p.description}<p class="mt-2 min-h-[2.5rem] text-sm leading-relaxed text-muted">{p.description}</p>{/if}
+
+              <div class="mt-5 rounded-xl border border-edge/70 bg-panel-2/35 p-3">
+                <div class="flex items-center justify-between gap-3">
+                  <span class="text-xs font-semibold uppercase tracking-wider text-muted">{$t('landing.price.included')}</span>
+                  <span class="rounded-full bg-mint/10 px-2 py-0.5 text-xs font-semibold text-mint">{planFeatures(p).length}</span>
+                </div>
+                <ul class="mt-3 space-y-2 text-sm">
+                  {#each teaserFeatures(p) as fk}
+                    <li class="flex items-center gap-2 text-soft"><Check class="h-4 w-4 shrink-0 text-mint" />{FEATURE_LABELS[fk] ?? fk}</li>
+                  {/each}
+                </ul>
+                {#if extraFeatureCount(p) > 0}
+                  <p class="mt-3 text-xs font-medium text-accent">{$t('landing.price.more', { count: extraFeatureCount(p) })}</p>
+                {/if}
+              </div>
+
+              <a href="/register" class="{p.is_popular ? 'btn-primary' : 'btn-ghost'} mt-5 w-full">
+                {p.monthly_price === 0 ? $t('landing.price.startFree') : $t('landing.price.get', { name: p.name })}
+              </a>
+            </article>
+          {/each}
+        {/if}
+      </div>
     </div>
-    <div class="mt-4 text-center"><a href="/pricing" class="text-sm text-mint hover:underline">{$t('landing.price.compare')}</a></div>
   </section>
 {/if}
 
@@ -893,6 +943,121 @@
     .market-tape {
       height: 6.5rem;
       gap: 0.3rem;
+    }
+  }
+
+  .pricing-studio {
+    position: relative;
+  }
+  .pricing-story {
+    position: relative;
+    overflow: hidden;
+    border-radius: 1.5rem;
+    border: 1px solid rgb(var(--c-edge) / 0.72);
+    background:
+      radial-gradient(90% 90% at 0% 0%, rgb(var(--c-accent) / 0.12), transparent 54%),
+      radial-gradient(80% 80% at 100% 100%, rgb(var(--c-mint) / 0.08), transparent 58%),
+      rgb(var(--c-panel) / calc(var(--card-a) + 0.16));
+    box-shadow: var(--glass-sh);
+    padding: 1.25rem;
+  }
+  .pricing-story::after {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 1px;
+    background: linear-gradient(90deg, rgb(var(--c-accent) / 0.55), transparent 72%);
+    pointer-events: none;
+  }
+  .pricing-route {
+    display: flex;
+    gap: 0.85rem;
+    border-radius: 1.1rem;
+    border: 1px solid rgb(var(--c-accent) / 0.18);
+    background: rgb(var(--c-accent) / 0.08);
+    padding: 0.9rem;
+  }
+  .pricing-mini-stat {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 0.15rem;
+    border-radius: 1rem;
+    border: 1px solid rgb(var(--c-edge) / 0.7);
+    background: rgb(var(--c-panel) / 0.58);
+    padding: 0.75rem;
+  }
+  .pricing-mini-stat span:last-child {
+    color: rgb(var(--c-muted));
+    font-size: 0.72rem;
+    line-height: 1.25;
+  }
+  .pricing-plan-grid {
+    display: grid;
+    gap: 1rem;
+  }
+  .pricing-plan {
+    position: relative;
+    overflow: hidden;
+    border-radius: 1.35rem;
+    border: 1px solid rgb(var(--c-edge) / 0.78);
+    background:
+      linear-gradient(180deg, rgb(var(--c-panel) / calc(var(--card-a) + 0.2)), rgb(var(--c-panel-2) / calc(var(--card-a) + 0.08))),
+      rgb(var(--c-panel));
+    box-shadow: 0 14px 34px rgb(0 0 0 / 0.08);
+    padding: 1.15rem;
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  .pricing-plan::after {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, rgb(var(--signal) / 0.7), transparent);
+    pointer-events: none;
+  }
+  .pricing-plan:hover {
+    transform: translateY(-2px);
+    border-color: rgb(var(--signal) / 0.32);
+    box-shadow: 0 18px 42px rgb(0 0 0 / 0.14);
+  }
+  .pricing-plan-featured {
+    border-color: rgb(var(--c-accent) / 0.45);
+    box-shadow: 0 20px 48px rgb(var(--c-accent) / 0.12);
+  }
+  @supports ((backdrop-filter: blur(2px)) or (-webkit-backdrop-filter: blur(2px))) {
+    .pricing-story,
+    .pricing-plan {
+      backdrop-filter: blur(20px) saturate(165%);
+      -webkit-backdrop-filter: blur(20px) saturate(165%);
+    }
+  }
+  @media (min-width: 768px) {
+    .pricing-plan-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .pricing-plan-featured {
+      transform: translateY(-0.5rem);
+    }
+    .pricing-plan-featured:hover {
+      transform: translateY(-0.7rem);
+    }
+  }
+  @media (min-width: 1024px) {
+    .pricing-story {
+      position: sticky;
+      top: 6rem;
+      padding: 1.45rem;
+    }
+  }
+  @media (max-width: 520px) {
+    .pricing-story,
+    .pricing-plan {
+      border-radius: 1.15rem;
+      padding: 1rem;
+    }
+    .pricing-mini-stat {
+      padding: 0.65rem;
     }
   }
 
