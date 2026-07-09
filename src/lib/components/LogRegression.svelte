@@ -434,7 +434,7 @@
 
     <!-- Premium takeaway -->
     {#if result.takeaway}
-      <div class="ai-glow card mt-3">
+      <div class="card mt-3">
         <AiLabel />
         <p class="mt-1 text-sm leading-relaxed text-soft">{result.takeaway}</p>
       </div>

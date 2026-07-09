@@ -1,13 +1,12 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { Lock, ChevronDown } from '@lucide/svelte';
+  import { Lock, ChevronDown, Activity } from '@lucide/svelte';
   import { slide } from 'svelte/transition';
   import { api } from '$lib/api';
   import Gauge from '$lib/components/Gauge.svelte';
   import EChart from '$lib/components/EChart.svelte';
   import Disclaimer from '$lib/components/Disclaimer.svelte';
   import AiInterpret from '$lib/components/AiInterpret.svelte';
-  import AiLottie from '$lib/components/AiLottie.svelte';
   import AiLabel from '$lib/components/AiLabel.svelte';
   import { fmtPct, fmtUsd } from '$lib/format';
   import { membership, hasFeature } from '$lib/stores/membership';
@@ -956,19 +955,19 @@
 
   <!-- Premium takeaway -->
   {#if canInterp}
-    <div class="ai-glow card mb-4 border border-mint/30 bg-mint/5">
+    <div class="card mb-4 border border-mint/30 bg-mint/5">
       <AiLabel />
       <p class="mt-1 text-sm leading-relaxed text-soft {expandedTakeaway ? '' : 'line-clamp-3 lg:line-clamp-none'}">{premiumTakeaway}</p>
       <button type="button" class="mt-2 text-xs font-medium text-accent lg:hidden" onclick={() => (expandedTakeaway = !expandedTakeaway)}>{expandedTakeaway ? 'Show less' : 'Read more'}</button>
     </div>
   {:else}
     <div class="relative mb-4">
-      <div class="ai-glow card border border-mint/30 bg-mint/5 blur-[3px]" aria-hidden="true">
+      <div class="card border border-mint/30 bg-mint/5 blur-[3px]" aria-hidden="true">
         <AiLabel />
         <p class="mt-1 text-sm leading-relaxed text-soft">BTC risk is currently low-to-moderate. The model supports disciplined DCA, though it does not yet show an extreme bottom zone. On-chain and social metrics would give a fuller picture once connected.</p>
       </div>
       <div class="absolute inset-0 flex flex-col items-center justify-center gap-1.5 px-4 text-center">
-        <AiLottie size={44} class="mb-2" />
+        <span class="mb-2 flex h-11 w-11 items-center justify-center rounded-full bg-mint/15"><Activity class="h-5 w-5 text-mint" /></span>
         <a href="/pricing" class="btn-primary text-sm shadow-lg"><Lock class="h-4 w-4" /> Unlock with Premium</a>
         <p class="text-xs text-muted">Plain-language risk interpretation is a Mid &amp; Premium feature.</p>
       </div>
@@ -1116,7 +1115,7 @@
         {#if canInterp}
           <AiLabel /><br /> {premiumTakeaway}
         {:else}
-          <Lock class="mr-1 inline h-3 w-3 text-accent" /><span class="font-medium text-strong">Premium Takeaway</span> — the plain-language interpretation is a Mid &amp; Premium feature. <a href="/pricing" class="font-medium text-accent hover:underline">Upgrade</a>
+          <Lock class="mr-1 inline h-3 w-3 text-accent" /><span class="font-medium text-strong">Signal read</span> — the plain-language interpretation is a Mid &amp; Premium feature. <a href="/pricing" class="font-medium text-accent hover:underline">Upgrade</a>
         {/if}
       </p>
       <p class="mt-2 text-xs leading-relaxed text-muted">
@@ -1204,7 +1203,7 @@
       </div>
 
       <!-- Premium takeaway -->
-      <div class="ai-glow mt-3 card border border-mint/30 bg-mint/5">
+      <div class="mt-3 card border border-mint/30 bg-mint/5">
         <AiLabel />
         <p class="mt-1 text-sm leading-relaxed text-soft">{onchainPremiumTakeaway}</p>
       </div>
@@ -1363,7 +1362,7 @@
       </div>
 
       <!-- Premium takeaway -->
-      <div class="ai-glow mt-3 card border border-mint/30 bg-mint/5">
+      <div class="mt-3 card border border-mint/30 bg-mint/5">
         <AiLabel />
         <p class="mt-1 text-sm leading-relaxed text-soft">{supplyPL.premium_takeaway}</p>
       </div>

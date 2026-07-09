@@ -28,6 +28,7 @@
   let read = $state<Read | null>(null);
   let busy = $state(false);
   let error = $state('');
+  let lastFree = $state(false); // the most recent read was served free (data unchanged)
 
   loadAiUsage(); // shared, cached across all instances
 
@@ -44,12 +45,13 @@
     busy = true;
     error = '';
     try {
-      const res = await api<{ read: Read; used: number; limit: number | null; remaining: number | null }>('/ai/interpret', {
+      const res = await api<{ read: Read; charged?: boolean; used: number; limit: number | null; remaining: number | null }>('/ai/interpret', {
         method: 'POST',
         body: { module, title, lang: $locale === 'sw' ? 'sw' : 'en', signals: payloadSignals },
         auth: true
       });
       read = res.read;
+      lastFree = res.charged === false; // same data → served free
       const cur = get(aiUsage);
       setAiUsage({ enabled: cur?.enabled ?? true, allowed: cur?.allowed ?? true, used: res.used, limit: res.limit, remaining: res.remaining });
     } catch (e) {
@@ -88,22 +90,23 @@
     {#if read}
       <div class="flex items-center justify-between gap-2">
         <span class="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted"><AiLottie size={22} /> AI interpretation</span>
-        <button type="button" class="text-[11px] font-medium text-accent hover:underline disabled:opacity-50" onclick={ask} disabled={busy || $aiUsage.remaining === 0}>{busy ? '…' : 'Ask again'}</button>
+        <button type="button" class="text-[11px] font-medium text-accent hover:underline disabled:opacity-50" onclick={ask} disabled={busy} title="Free unless the data has changed">{busy ? '…' : 'Refresh'}</button>
       </div>
       <p class="mt-1.5 text-[15px] font-semibold leading-snug {stanceText[read.stance] ?? 'text-strong'}">{read.headline}</p>
       <p class="mt-1 text-sm leading-relaxed text-soft" transition:slide={{ duration: 150 }}>{read.body}</p>
+      {#if lastFree}<p class="mt-1.5 text-[11px] text-muted">Same data as before — no credit used.</p>{/if}
     {:else}
       <div class="flex flex-wrap items-center justify-between gap-2">
         <div>
           <p class="inline-flex items-center gap-1.5 text-sm font-semibold text-strong"><AiLottie size={24} /> Ask AI to interpret this</p>
-          <p class="mt-0.5 text-xs text-muted">Get a plain-language read of {title.toLowerCase()}.{remainingLabel ? ` ${remainingLabel}.` : ''}</p>
+          <p class="mt-0.5 text-xs text-muted">Get a plain-language read of {title.toLowerCase()}. 1 credit per fresh read — re-reads are free until the data changes.{remainingLabel ? ` ${remainingLabel}.` : ''}</p>
         </div>
-        <button type="button" class="btn-primary shrink-0" onclick={ask} disabled={busy || $aiUsage.remaining === 0 || payloadSignals.length === 0}>
+        <button type="button" class="btn-primary shrink-0" onclick={ask} disabled={busy || payloadSignals.length === 0}>
           {busy ? 'Thinking…' : 'Interpret with AI'}
         </button>
       </div>
       {#if $aiUsage.remaining === 0}
-        <p class="mt-2 rounded-lg border border-warn/25 bg-warn/5 px-3 py-2 text-xs text-warn">You've used all your AI interpretations this month. They reset next month — or <a href="/pricing" class="underline">upgrade</a> for more.</p>
+        <p class="mt-2 rounded-lg border border-warn/25 bg-warn/5 px-3 py-2 text-xs text-warn">You've used all your fresh AI reads this month (you can still re-open reads you've already run). They reset next month — or <a href="/pricing" class="underline">upgrade</a> for more.</p>
       {/if}
     {/if}
     {#if error}<p class="mt-2 text-xs text-danger">{error}</p>{/if}

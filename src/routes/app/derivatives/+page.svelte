@@ -210,7 +210,7 @@
     {/if}
 
     <!-- How to read -->
-    <div class="ai-glow card mb-3">
+    <div class="card mb-3">
       <AiLabel />
       <ul class="mt-1.5 space-y-1 text-sm text-muted">
         <li>• <span class="text-soft">Funding rate</span> — what longs pay shorts (or vice-versa) every 8h. Very high positive = crowded longs / overheated; negative = fear.</li>

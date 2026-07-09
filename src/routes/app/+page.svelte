@@ -227,9 +227,9 @@
   <!-- ═══ MOBILE: "Just Tell Me" advisor experience ═══ -->
   <section class="mb-4 space-y-3 lg:hidden">
     <!-- 1 · Market Today — one clear verdict -->
-    <div class="rounded-2xl border border-edge bg-gradient-to-br from-panel to-panel-2/60 p-4">
+    <div class="rounded-2xl border border-edge bg-gradient-to-br from-panel to-panel-2/60 p-4" class:ai-glow={!!marketRead}>
       <div class="flex items-center justify-between gap-2">
-        <AiLabel />
+        <AiLabel ai={!!marketRead} />
         {#if data.data_freshness?.market}
           <button type="button" class="inline-flex items-center gap-1 rounded-full bg-panel-2 px-2.5 py-1 text-[11px] text-muted" aria-expanded={freshnessOpen} onclick={() => (freshnessOpen = !freshnessOpen)}>
             <span class="h-1.5 w-1.5 rounded-full {anyStale ? 'bg-warn' : 'bg-mint'}"></span>
@@ -317,9 +317,9 @@
   <!-- ═══ Full analysis / Pro view — always on desktop, revealed on mobile ═══ -->
   <div class="{mobileFull ? '' : 'hidden'} lg:block">
   <!-- ── Hero: Daily Market Read ── -->
-  <div class="hero-card mb-4">
+  <div class="hero-card mb-4" class:ai-glow={!!marketRead}>
     <div class="flex flex-wrap items-center gap-2">
-      <AiLabel />
+      <AiLabel ai={!!marketRead} />
       <span class="pill {toneClass[data.signals?.btc_risk?.tone ?? 'neutral']}">{data.market_posture.label}</span>
     </div>
     {#if marketRead}
