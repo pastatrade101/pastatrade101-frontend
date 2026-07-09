@@ -1,5 +1,6 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
+  import { page } from '$app/stores';
   import { User, Mail, Lock, Eye, EyeOff, ArrowRight } from '@lucide/svelte';
   import { register, user, authReady } from '$lib/stores/auth';
   import { t } from '$lib/i18n';
@@ -7,9 +8,13 @@
   import GoogleButton from '$lib/components/GoogleButton.svelte';
   import Seo from '$lib/components/Seo.svelte';
 
+  // Where the user was heading (e.g. a plan checkout) before signing up.
+  const redirectTarget = $derived($page.url.searchParams.get('redirect'));
+  const safeRedirect = $derived(redirectTarget && redirectTarget.startsWith('/') ? redirectTarget : null);
+
   // Already signed in (e.g. a logged-in user clicked "Start free") → go to the app.
   $effect(() => {
-    if ($authReady && $user) goto($user.role === 'admin' ? '/admin' : '/app');
+    if ($authReady && $user) goto(safeRedirect ?? ($user.role === 'admin' ? '/admin' : '/app'));
   });
 
   let fullName = $state('');
@@ -30,7 +35,7 @@
     loading = true;
     try {
       await register(email, password, fullName || undefined);
-      goto('/app');
+      goto(safeRedirect ?? '/app');
     } catch (err) {
       error = err instanceof Error ? err.message : $t('auth.register.failed');
     } finally {
@@ -92,10 +97,10 @@
     </form>
 
     <div class="my-4 flex items-center gap-3 text-xs text-muted"><span class="h-px flex-1 bg-edge"></span>{$t('auth.or')}<span class="h-px flex-1 bg-edge"></span></div>
-    <GoogleButton redirect="/app" />
+    <GoogleButton redirect={safeRedirect ?? '/app'} />
 
     <p class="mt-4 rounded-lg border border-mint/25 bg-mint/5 px-3 py-2 text-center text-xs text-soft">{$t('auth.register.note')}</p>
 
-    <p class="mt-4 text-center text-sm text-muted">{$t('auth.register.have')} <a href="/login" class="text-mint hover:underline">{$t('auth.register.signin')}</a></p>
+    <p class="mt-4 text-center text-sm text-muted">{$t('auth.register.have')} <a href={safeRedirect ? `/login?redirect=${encodeURIComponent(safeRedirect)}` : '/login'} class="text-mint hover:underline">{$t('auth.register.signin')}</a></p>
   </AuthShell>
 </div>

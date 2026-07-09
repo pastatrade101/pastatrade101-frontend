@@ -109,7 +109,7 @@
     <div class="my-5 flex items-center gap-3 text-xs text-muted"><span class="h-px flex-1 bg-edge"></span>{$t('auth.login.newhere')}<span class="h-px flex-1 bg-edge"></span></div>
 
     <div class="flex items-center gap-2">
-      <a href="/register" class="btn-ghost flex-1">{$t('auth.login.create')}</a>
+      <a href={redirectTarget && redirectTarget.startsWith('/') ? `/register?redirect=${encodeURIComponent(redirectTarget)}` : '/register'} class="btn-ghost flex-1">{$t('auth.login.create')}</a>
       <a href="/pricing" class="btn-ghost flex-1">{$t('auth.login.viewpricing')}</a>
     </div>
 

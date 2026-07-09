@@ -42,9 +42,28 @@
   });
 
   const price = (p: Plan) => (yearly ? p.yearly_price : p.monthly_price);
-  const cta = (p: Plan) =>
-    p.slug === ($membership?.plan ?? 'free') ? $t('pricing.current') : p.monthly_price === 0 ? $t('pricing.startFree') : $t('pricing.get', { name: p.name });
-  const ctaHref = (p: Plan) => (!$user ? '/register' : '/app/account');
+
+  // A user "owns" a plan if it's their exact plan, or a lower/equal tier already
+  // covered by their active paid plan — those must not be payable again.
+  const activeStatuses = new Set(['active', 'trialing', 'manual']);
+  const currentPrice = $derived(plans.find((pl) => pl.slug === $membership?.plan)?.monthly_price ?? 0);
+  const isPaidActive = $derived(!!$membership && activeStatuses.has($membership.status) && ($membership.plan ?? 'free') !== 'free');
+  const owns = (p: Plan) => {
+    if (!$membership) return false;
+    if (p.slug === $membership.plan) return true;
+    return isPaidActive && p.monthly_price <= currentPrice;
+  };
+  const cta = (p: Plan) => {
+    if ($membership && p.slug === $membership.plan) return $t('pricing.current');
+    if (owns(p)) return $t('pricing.included');
+    return p.monthly_price === 0 ? $t('pricing.startFree') : $t('pricing.get', { name: p.name });
+  };
+  // Carry the chosen plan through auth so checkout opens automatically afterwards.
+  const planHref = (p: Plan) => {
+    if (p.monthly_price === 0) return $user ? '/app' : '/register';
+    const intent = `/app/account?plan=${p.slug}`;
+    return $user ? intent : `/register?redirect=${encodeURIComponent(intent)}`;
+  };
   // Show the headline limits on each card.
   const KEY_LIMITS = ['max_watchlist_items', 'max_alerts', 'max_history_years'];
 
@@ -92,7 +111,11 @@
           {#if p.description}<p class="mb-3 text-sm text-muted">{p.description}</p>{/if}
           {#if p.trial_days > 0}<p class="mb-3 text-xs text-mint">{$t('pricing.trial', { days: p.trial_days })}</p>{/if}
 
-          <a href={ctaHref(p)} class="{p.slug === ($membership?.plan ?? 'free') ? 'btn-ghost' : 'btn-primary'} mb-4 w-full">{cta(p)}</a>
+          {#if owns(p)}
+            <span class="btn-ghost mb-4 w-full cursor-default justify-center">{cta(p)}</span>
+          {:else}
+            <a href={planHref(p)} class="btn-primary mb-4 w-full">{cta(p)}</a>
+          {/if}
 
           <ul class="space-y-2 text-sm">
             {#each KEY_LIMITS as lk}

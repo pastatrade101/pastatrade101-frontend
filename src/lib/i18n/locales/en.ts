@@ -325,6 +325,7 @@ export const en: Record<string, string> = {
   'pricing.yearly': 'Yearly',
   'pricing.yearlyNote': '·2 months free',
   'pricing.current': 'Current plan',
+  'pricing.included': 'Included in your plan',
   'pricing.startFree': 'Start free',
   'pricing.get': 'Get {name}',
   'pricing.trial': '{days}-day free trial',

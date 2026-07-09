@@ -66,6 +66,22 @@
       }
       return;
     }
+    // Deep link from a landing / pricing CTA: ?plan=<slug> → open its checkout
+    // straight away (or explain if the user already has it).
+    const wantPlan = new URLSearchParams(window.location.search).get('plan');
+    if (wantPlan) {
+      history.replaceState(null, '', '/app/account');
+      if (!$membership) await loadMembership();
+      const target = plans.find((p) => p.slug === wantPlan);
+      if (target) {
+        if (owns(target)) {
+          message = `You're already on ${$membership?.plan_name ?? 'your current plan'} — no need to pay again.`;
+        } else {
+          chooseUpgrade(target);
+          return;
+        }
+      }
+    }
     // Otherwise check for an unfinished upgrade so we can prompt / follow up.
     try {
       pending = (await api<{ attempt: PendingAttempt | null }>('/me/payment-attempts/pending', { auth: true })).attempt;
@@ -132,10 +148,27 @@
     ];
   });
 
+  // A user "owns" a plan if it's their exact plan, or a lower/equal tier already
+  // covered by their active paid plan — those must never be payable again.
+  const activeStatuses = new Set(['active', 'trialing', 'manual']);
+  const currentPrice = $derived(plans.find((pl) => pl.slug === $membership?.plan)?.monthly_price ?? 0);
+  const isPaidActive = $derived(!!$membership && activeStatuses.has($membership.status) && ($membership.plan ?? 'free') !== 'free');
+  const owns = (p: Plan) => {
+    if (!$membership) return false;
+    if (p.slug === $membership.plan) return true;
+    return isPaidActive && p.monthly_price <= currentPrice;
+  };
+
   // Phone prompt before checkout (so the mobile-money number is pre-filled).
   let payFor = $state<Plan | null>(null);
   let payPhone = $state('');
   const chooseUpgrade = (p: Plan) => {
+    // Never let an already-covered plan be paid for again (defence-in-depth; the
+    // backend enforces this too).
+    if (owns(p)) {
+      message = `You're already on ${$membership?.plan_name ?? 'your current plan'} — no need to pay again.`;
+      return;
+    }
     if (p.monthly_price > 0) {
       payFor = p;
       payPhone = $membership?.phone ?? '';
@@ -291,6 +324,7 @@
     <div class="grid gap-3 md:grid-cols-3">
       {#each plans as p}
         {@const isCurrent = p.slug === m.plan}
+        {@const covered = owns(p)}
         <div class="card rail-card flex flex-col {p.is_popular ? 'border-accent/40' : ''}" style={p.is_popular ? '--rail: var(--c-accent)' : '--rail: var(--c-edge)'}>
           <div class="flex items-center justify-between gap-2">
             <h3 class="text-lg font-semibold text-strong">{p.name}</h3>
@@ -313,8 +347,8 @@
             {/each}
           </ul>
 
-          {#if isCurrent}
-            <span class="btn-ghost mt-4 w-full cursor-default justify-center">Current plan</span>
+          {#if covered}
+            <span class="btn-ghost mt-4 w-full cursor-default justify-center">{isCurrent ? 'Current plan' : 'Included in your plan'}</span>
           {:else}
             <button class="btn-primary mt-4 w-full" onclick={() => chooseUpgrade(p)} disabled={busy}>Choose {p.name}</button>
           {/if}

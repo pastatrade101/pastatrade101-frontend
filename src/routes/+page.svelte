@@ -7,6 +7,7 @@
     DoorOpen, Spline, Flame
   } from '@lucide/svelte';
   import { api } from '$lib/api';
+  import { user } from '$lib/stores/auth';
   import { fmtMoney } from '$lib/format';
   import { FEATURE_LABELS, FEATURE_ORDER } from '$lib/membership-labels';
   import { t } from '$lib/i18n';
@@ -41,6 +42,12 @@
     features: Record<string, boolean>;
   }
   let plans = $state<Plan[]>([]);
+  // Carry the chosen plan through signup/login so checkout opens automatically after.
+  const planHref = (p: Plan) => {
+    if (p.monthly_price === 0) return $user ? '/app' : '/register';
+    const intent = `/app/account?plan=${p.slug}`;
+    return $user ? intent : `/register?redirect=${encodeURIComponent(intent)}`;
+  };
   let pricingVisible = $state(false); // gates the staggered fly-in for pricing cards
   let userCount = $state<number | null>(null); // real registered users (from /stats)
   let videos = $state<{ id: string; title: string; views: number | null }[]>([]); // latest YouTube uploads
@@ -631,7 +638,7 @@
                 {/if}
               </div>
 
-              <a href="/register" class="{p.is_popular ? 'btn-primary' : 'btn-ghost'} mt-5 w-full">
+              <a href={planHref(p)} class="{p.is_popular ? 'btn-primary' : 'btn-ghost'} mt-5 w-full">
                 {p.monthly_price === 0 ? $t('landing.price.startFree') : $t('landing.price.get', { name: p.name })}
               </a>
             </article>
