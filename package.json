@@ -10,6 +10,7 @@
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json"
   },
   "dependencies": {
+    "@lottiefiles/dotlottie-svelte": "^0.10.7",
     "echarts": "^5.5.1"
   },
   "devDependencies": {

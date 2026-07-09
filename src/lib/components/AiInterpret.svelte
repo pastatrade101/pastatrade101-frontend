@@ -1,7 +1,9 @@
 <script lang="ts">
   import { get } from 'svelte/store';
+  import { browser } from '$app/environment';
   import { Sparkles, Lock, ArrowRight } from '@lucide/svelte';
   import { slide } from 'svelte/transition';
+  import { DotLottieSvelte } from '@lottiefiles/dotlottie-svelte';
   import { api } from '$lib/api';
   import { locale } from '$lib/i18n';
   import { aiUsage, loadAiUsage, setAiUsage } from '$lib/stores/aiUsage';
@@ -70,14 +72,19 @@
 
 {#if $aiUsage && !$aiUsage.allowed}
   <!-- Locked upsell teaser (free / mid) — sells the feature -->
-  <div class="relative overflow-hidden rounded-2xl border border-mint/30 bg-mint/[0.04] p-4">
+  <div class="relative min-h-[168px] overflow-hidden rounded-2xl border border-mint/30 bg-mint/[0.04] p-4">
     <div class="pointer-events-none select-none blur-[6px]" aria-hidden="true">
       <p class="text-sm font-semibold text-mint">The AI's read on {title.toLowerCase()}</p>
       <p class="mt-1 text-sm leading-relaxed text-soft">Bitcoin sits in a healthy zone without overheating, and the surrounding signals point to patience over chasing — a plain-language take, generated for you on demand.</p>
     </div>
-    <div class="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-panel/40 text-center backdrop-blur-[2px]">
-      <span class="inline-flex items-center gap-1.5 rounded-full bg-mint/15 px-2.5 py-1 text-xs font-semibold text-mint"><Sparkles class="h-3.5 w-3.5" /> AI interpretation</span>
-      <p class="max-w-xs px-4 text-sm text-soft"><Lock class="mb-0.5 mr-1 inline h-3.5 w-3.5 text-muted" />Ask the AI to explain this module in plain language.</p>
+    <div class="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-panel/40 text-center backdrop-blur-[2px]">
+      {#if browser}
+        <div class="h-11 w-11" aria-hidden="true"><DotLottieSvelte src="/Ai.lottie" loop autoplay /></div>
+      {:else}
+        <span class="flex h-11 w-11 items-center justify-center rounded-full bg-mint/15"><Sparkles class="h-5 w-5 text-mint" /></span>
+      {/if}
+      <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-mint"><Lock class="h-3 w-3" /> AI interpretation</span>
+      <p class="max-w-xs px-4 text-[13px] text-soft">Ask the AI to explain this module in plain language.</p>
       <a href="/pricing" class="btn-primary mt-0.5 px-4 py-1.5 text-sm">Unlock with Premium <ArrowRight class="h-4 w-4" /></a>
     </div>
   </div>
