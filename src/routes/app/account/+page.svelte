@@ -3,7 +3,9 @@
   import { Check } from '@lucide/svelte';
   import { api } from '$lib/api';
   import { membership, loadMembership } from '$lib/stores/membership';
+  import { offers, loadOffers, activeOffer } from '$lib/stores/offers';
   import { fmtMoney } from '$lib/format';
+  import Countdown from '$lib/components/Countdown.svelte';
   import { FEATURE_LABELS, FEATURE_ORDER, LIMIT_LABELS, fmtLimit } from '$lib/membership-labels';
 
   interface Plan {
@@ -45,6 +47,7 @@
     } catch (err) {
       error = err instanceof Error ? err.message : 'Failed to load plans.';
     }
+    loadOffers(); // temporary discounts, if any
     // Returning from the hosted checkout — actively verify instead of waiting on
     // the webhook (which may be delayed or misconfigured).
     if (new URLSearchParams(window.location.search).get('upgrade') === 'success') {
@@ -157,6 +160,13 @@
     if (!$membership) return false;
     if (p.slug === $membership.plan) return true;
     return isPaidActive && p.monthly_price <= currentPrice;
+  };
+  // Live monthly offer for a plan (account checkout is always monthly).
+  const offerFor = (p: Plan) => activeOffer($offers, p.id, 'monthly');
+  // On expiry: drop the lapsed offer instantly, then reconcile with the server.
+  const onOfferExpire = (o: ReturnType<typeof offerFor>) => {
+    offers.set($offers.filter((x) => x !== o));
+    loadOffers();
   };
 
   // Phone prompt before checkout (so the mobile-money number is pre-filled).
@@ -325,12 +335,19 @@
       {#each plans as p}
         {@const isCurrent = p.slug === m.plan}
         {@const covered = owns(p)}
-        <div class="card rail-card flex flex-col {p.is_popular ? 'border-accent/40' : ''}" style={p.is_popular ? '--rail: var(--c-accent)' : '--rail: var(--c-edge)'}>
+        {@const po = offerFor(p)}
+        <div class="card rail-card flex flex-col {po ? 'border-danger/40' : p.is_popular ? 'border-accent/40' : ''}" style={po ? '--rail: var(--c-danger)' : p.is_popular ? '--rail: var(--c-accent)' : '--rail: var(--c-edge)'}>
           <div class="flex items-center justify-between gap-2">
             <h3 class="text-lg font-semibold text-strong">{p.name}</h3>
-            {#if p.badge}<span class="pill bg-accent/15 text-accent text-[10px]">{p.badge}</span>{/if}
+            <div class="flex items-center gap-1.5">
+              {#if po}<span class="pill bg-danger/15 text-danger text-[10px]">{po.offer_label}</span>{/if}
+              {#if p.badge}<span class="pill bg-accent/15 text-accent text-[10px]">{p.badge}</span>{/if}
+            </div>
           </div>
-          <div class="text-sm text-muted">{fmtMoney(p.monthly_price, p.currency)}/mo</div>
+          <div class="flex flex-wrap items-baseline gap-2 text-sm">
+            <span class="{po ? 'font-semibold text-strong' : 'text-muted'}">{fmtMoney(po ? po.offer_price : p.monthly_price, p.currency)}/mo</span>
+            {#if po}<span class="text-muted line-through">{fmtMoney(po.original_price, p.currency)}</span>{/if}
+          </div>
 
           <dl class="mt-3 space-y-1 text-xs">
             {#each KEY_LIMITS as lk}
@@ -360,11 +377,25 @@
 
   <!-- Phone prompt before checkout -->
   {#if payFor}
+    {@const mo = offerFor(payFor)}
     <div class="fixed inset-0 z-40 bg-black/50" onclick={() => (payFor = null)} role="presentation"></div>
     <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div class="w-full max-w-sm rounded-2xl border border-edge bg-panel p-5 shadow-2xl">
         <h2 class="text-lg font-semibold text-strong">Pay for {payFor.name}</h2>
-        <p class="mt-1 text-sm text-muted">{fmtMoney(payFor.monthly_price, payFor.currency)}/mo. Enter the mobile-money number you'll pay with — we'll pre-fill it at checkout.</p>
+        {#if mo}
+          <div class="mt-2 flex flex-wrap items-center gap-2">
+            <span class="pill bg-danger/15 text-danger">{mo.offer_label}</span>
+            <span class="text-lg font-semibold text-strong">{fmtMoney(mo.offer_price, payFor.currency)}/mo</span>
+            <span class="text-sm text-muted line-through">{fmtMoney(mo.original_price, payFor.currency)}</span>
+          </div>
+          <div class="mt-2 flex items-center gap-2 text-danger">
+            <span class="text-[11px] font-semibold uppercase tracking-wide">Ends in</span>
+            <Countdown endsAt={mo.ends_at} onExpire={() => onOfferExpire(mo)} label="{payFor.name} offer" />
+          </div>
+          <p class="mt-2 text-sm text-muted">Enter the mobile-money number you'll pay with — we'll pre-fill it at checkout.</p>
+        {:else}
+          <p class="mt-1 text-sm text-muted">{fmtMoney(payFor.monthly_price, payFor.currency)}/mo. Enter the mobile-money number you'll pay with — we'll pre-fill it at checkout.</p>
+        {/if}
         {#if isPaidActive && ($membership?.days_left ?? 0) > 0}
           <p class="mt-3 rounded-lg border border-mint/30 bg-mint/5 px-3 py-2 text-xs leading-relaxed text-soft">
             You still have <span class="font-semibold text-mint">{$membership?.days_left} {($membership?.days_left ?? 0) === 1 ? 'day' : 'days'}</span> left on {$membership?.plan_name}. You don't lose them — they carry over, so you'll get a full month of {payFor.name}

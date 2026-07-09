@@ -327,6 +327,7 @@ export const sw: Record<string, string> = {
   'pricing.yearlyNote': '·miezi 2 bure',
   'pricing.current': 'Mpango wa sasa',
   'pricing.included': 'Ipo kwenye mpango wako',
+  'pricing.offerEndsIn': 'Ofa inaisha baada ya',
   'pricing.startFree': 'Anza bure',
   'pricing.get': 'Pata {name}',
   'pricing.trial': 'Jaribio la bure la siku {days}',

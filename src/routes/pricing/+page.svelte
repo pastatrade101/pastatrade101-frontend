@@ -5,8 +5,10 @@
   import { fmtMoney } from '$lib/format';
   import { user } from '$lib/stores/auth';
   import { membership } from '$lib/stores/membership';
+  import { offers, loadOffers, activeOffer } from '$lib/stores/offers';
   import { FEATURE_LABELS, FEATURE_ORDER, LIMIT_LABELS, fmtLimit } from '$lib/membership-labels';
   import Seo from '$lib/components/Seo.svelte';
+  import Countdown from '$lib/components/Countdown.svelte';
   import { t } from '$lib/i18n';
 
   interface Plan {
@@ -39,9 +41,19 @@
     } finally {
       loading = false;
     }
+    loadOffers(); // optional; never blocks the page
   });
 
+  // On expiry: drop the lapsed offer instantly, then reconcile with the server.
+  const onOfferExpire = (o: ReturnType<typeof offerFor>) => {
+    offers.set($offers.filter((x) => x !== o));
+    loadOffers();
+  };
+
   const price = (p: Plan) => (yearly ? p.yearly_price : p.monthly_price);
+  // Live offer for a plan at the currently-selected interval (or null).
+  const interval = $derived<'monthly' | 'yearly'>(yearly ? 'yearly' : 'monthly');
+  const offerFor = (p: Plan) => activeOffer($offers, p.id, interval);
 
   // A user "owns" a plan if it's their exact plan, or a lower/equal tier already
   // covered by their active paid plan — those must not be payable again.
@@ -98,16 +110,27 @@
     <div class="grid gap-4 md:grid-cols-3">
       {#each plans as p}
         {@const identity = p.tagline ?? IDENTITY[p.slug]}
-        <div class="card rail-card flex flex-col {p.is_popular ? 'border-accent/40' : ''}" style={p.is_popular ? '--rail: var(--c-accent)' : '--rail: var(--c-edge)'}>
-          <div class="mb-1.5 flex items-center justify-between">
+        {@const o = offerFor(p)}
+        <div class="card rail-card flex flex-col {o ? 'border-danger/40' : p.is_popular ? 'border-accent/40' : ''}" style={o ? '--rail: var(--c-danger)' : p.is_popular ? '--rail: var(--c-accent)' : '--rail: var(--c-edge)'}>
+          <div class="mb-1.5 flex items-center justify-between gap-2">
             <h2 class="text-lg font-semibold text-strong">{p.name}</h2>
-            {#if p.badge}<span class="pill bg-accent/15 text-accent">{p.badge}</span>{/if}
+            <div class="flex flex-wrap items-center justify-end gap-1.5">
+              {#if o}<span class="pill bg-danger/15 text-danger">{o.offer_label}</span>{/if}
+              {#if p.badge}<span class="pill bg-accent/15 text-accent">{p.badge}</span>{/if}
+            </div>
           </div>
           {#if identity}<p class="mb-3 text-sm font-medium text-soft">{identity}</p>{/if}
-          <div class="mb-1 flex items-end gap-1">
-            <span class="text-3xl font-semibold text-strong">{fmtMoney(price(p), p.currency)}</span>
+          <div class="mb-1 flex flex-wrap items-end gap-x-2 gap-y-1">
+            <span class="text-3xl font-semibold text-strong">{fmtMoney(o ? o.offer_price : price(p), p.currency)}</span>
             <span class="mb-1 text-sm text-muted">/{yearly ? 'yr' : 'mo'}</span>
+            {#if o}<span class="mb-1 text-sm text-muted line-through">{fmtMoney(o.original_price, p.currency)}</span>{/if}
           </div>
+          {#if o}
+            <div class="mb-3 mt-1 rounded-xl border border-danger/25 bg-danger/5 px-3 py-2">
+              <p class="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-danger">{$t('pricing.offerEndsIn')}</p>
+              <Countdown endsAt={o.ends_at} onExpire={() => onOfferExpire(o)} label="{p.name} offer" />
+            </div>
+          {/if}
           {#if p.description}<p class="mb-3 text-sm text-muted">{p.description}</p>{/if}
           {#if p.trial_days > 0}<p class="mb-3 text-xs text-mint">{$t('pricing.trial', { days: p.trial_days })}</p>{/if}
 
