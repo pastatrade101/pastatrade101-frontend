@@ -4,6 +4,7 @@
   import { register, user, authReady } from '$lib/stores/auth';
   import { t } from '$lib/i18n';
   import AuthShell from '$lib/components/AuthShell.svelte';
+  import GoogleButton from '$lib/components/GoogleButton.svelte';
   import Seo from '$lib/components/Seo.svelte';
 
   // Already signed in (e.g. a logged-in user clicked "Start free") → go to the app.
@@ -89,6 +90,9 @@
         {#if loading}{$t('auth.register.creating')}{:else}{$t('auth.register.create')} <ArrowRight class="h-4 w-4" />{/if}
       </button>
     </form>
+
+    <div class="my-4 flex items-center gap-3 text-xs text-muted"><span class="h-px flex-1 bg-edge"></span>{$t('auth.or')}<span class="h-px flex-1 bg-edge"></span></div>
+    <GoogleButton redirect="/app" />
 
     <p class="mt-4 rounded-lg border border-mint/25 bg-mint/5 px-3 py-2 text-center text-xs text-soft">{$t('auth.register.note')}</p>
 

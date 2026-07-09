@@ -32,6 +32,11 @@ export const register = async (email: string, password: string, full_name?: stri
   applySession(result);
 };
 
+export const loginWithGoogle = async (credential: string) => {
+  const result = await api<AuthResult>('/auth/google', { method: 'POST', body: { credential } });
+  applySession(result);
+};
+
 export const logout = () => {
   clearToken();
   user.set(null);

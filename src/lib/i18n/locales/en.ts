@@ -64,6 +64,8 @@ export const en: Record<string, string> = {
   'auth.login.continue': 'Sign in to continue to {target}.',
   'auth.email': 'Email',
   'auth.password': 'Password',
+  'auth.or': 'or',
+  'auth.google': 'Continue with Google',
   'auth.login.remember': 'Remember me',
   'auth.login.forgot': 'Forgot password?',
   'auth.login.signin': 'Sign in',

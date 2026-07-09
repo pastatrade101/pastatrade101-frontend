@@ -65,6 +65,8 @@ export const sw: Record<string, string> = {
   'auth.login.continue': 'Ingia ili kuendelea hadi {target}.',
   'auth.email': 'Barua pepe',
   'auth.password': 'Nywila',
+  'auth.or': 'au',
+  'auth.google': 'Endelea na Google',
   'auth.login.remember': 'Nikumbuke',
   'auth.login.forgot': 'Umesahau nywila?',
   'auth.login.signin': 'Ingia',

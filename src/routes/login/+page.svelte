@@ -6,6 +6,7 @@
   import { login, user, authReady } from '$lib/stores/auth';
   import { t } from '$lib/i18n';
   import AuthShell from '$lib/components/AuthShell.svelte';
+  import GoogleButton from '$lib/components/GoogleButton.svelte';
   import Seo from '$lib/components/Seo.svelte';
 
   let email = $state('');
@@ -101,6 +102,9 @@
         {#if loading}{$t('auth.login.signingin')}{:else}{$t('auth.login.signin')} <ArrowRight class="h-4 w-4" />{/if}
       </button>
     </form>
+
+    <div class="my-4 flex items-center gap-3 text-xs text-muted"><span class="h-px flex-1 bg-edge"></span>{$t('auth.or')}<span class="h-px flex-1 bg-edge"></span></div>
+    <GoogleButton redirect={redirectTarget && redirectTarget.startsWith('/') ? redirectTarget : '/app'} />
 
     <div class="my-5 flex items-center gap-3 text-xs text-muted"><span class="h-px flex-1 bg-edge"></span>{$t('auth.login.newhere')}<span class="h-px flex-1 bg-edge"></span></div>
 
