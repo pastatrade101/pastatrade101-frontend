@@ -48,7 +48,7 @@
 <Seo title="Sign in" description="Sign in to your Pastatrade account." noindex />
 
 <div class="flex min-h-[78vh] items-center">
-  <AuthShell>
+  <AuthShell mobileBrand={false}>
     <h2 class="text-2xl font-semibold text-strong">{$t('auth.login.title')}</h2>
     <p class="mt-1 text-sm text-muted">{$t('auth.login.sub')}</p>
 

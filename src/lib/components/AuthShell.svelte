@@ -4,7 +4,9 @@
   import type { Snippet } from 'svelte';
   import { t } from '$lib/i18n';
 
-  let { children }: { children: Snippet } = $props();
+  // mobileBrand=false hides the left brand panel on phones (form-only), while
+  // keeping the two-column layout on desktop.
+  let { children, mobileBrand = true }: { children: Snippet; mobileBrand?: boolean } = $props();
 
   const bullets = ['brand.b1', 'brand.b2', 'brand.b3', 'brand.b4', 'brand.b5'];
   const stats: { label: string; value: string; tone: string }[] = [
@@ -17,7 +19,7 @@
 
 <div class="mx-auto grid w-full max-w-5xl overflow-hidden rounded-2xl border border-edge shadow-2xl lg:grid-cols-2">
   <!-- Left brand / value panel -->
-  <aside class="brand relative flex flex-col overflow-hidden p-7 lg:p-10">
+  <aside class="brand relative {mobileBrand ? 'flex' : 'hidden lg:flex'} flex-col overflow-hidden p-7 lg:p-10">
     <div class="grid-layer"></div>
     <svg class="chart-layer" viewBox="0 0 600 160" preserveAspectRatio="none" aria-hidden="true">
       <defs>
