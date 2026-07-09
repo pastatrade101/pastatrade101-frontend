@@ -365,6 +365,12 @@
       <div class="w-full max-w-sm rounded-2xl border border-edge bg-panel p-5 shadow-2xl">
         <h2 class="text-lg font-semibold text-strong">Pay for {payFor.name}</h2>
         <p class="mt-1 text-sm text-muted">{fmtMoney(payFor.monthly_price, payFor.currency)}/mo. Enter the mobile-money number you'll pay with — we'll pre-fill it at checkout.</p>
+        {#if isPaidActive && ($membership?.days_left ?? 0) > 0}
+          <p class="mt-3 rounded-lg border border-mint/30 bg-mint/5 px-3 py-2 text-xs leading-relaxed text-soft">
+            You still have <span class="font-semibold text-mint">{$membership?.days_left} {($membership?.days_left ?? 0) === 1 ? 'day' : 'days'}</span> left on {$membership?.plan_name}. You don't lose them — they carry over, so you'll get a full month of {payFor.name}
+            <span class="font-semibold">plus</span> your remaining {$membership?.plan_name} time on top.
+          </p>
+        {/if}
         <label class="stat-label mt-4 block" for="payphone">Mobile money number</label>
         <input id="payphone" class="input mt-1" type="tel" placeholder="2557XXXXXXXX" bind:value={payPhone} />
         <div class="mt-4 flex gap-2">

@@ -10,6 +10,8 @@ export interface Membership {
   status: string;
   is_admin: boolean;
   phone: string | null;
+  current_period_end: string | null;
+  days_left: number | null;
   features: Record<string, boolean>;
   limits: Record<string, number | null>;
   usage: { watchlist_items: number; alerts: number };
