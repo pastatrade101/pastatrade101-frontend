@@ -9,7 +9,7 @@
 // chart silently renders blank. That single line is the whole cost of the diet.
 
 import * as echarts from 'echarts/core';
-import { LineChart } from 'echarts/charts';
+import { LineChart, GaugeChart } from 'echarts/charts';
 import {
   GridComponent,
   TooltipComponent,
@@ -24,8 +24,9 @@ import {
 import { CanvasRenderer } from 'echarts/renderers';
 
 echarts.use([
-  // charts — `line` is the only series type used anywhere in the app
-  LineChart,
+  // charts
+  LineChart, // every time-series chart in the app
+  GaugeChart, // the speedometer risk gauges (Gauge.svelte)
   // components, per the call-site inventory
   GridComponent, // cartesian grid + xAxis/yAxis (incl. time & log axes)
   TooltipComponent,

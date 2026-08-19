@@ -166,6 +166,140 @@ export const lineSeries = ({ name, data, color, width = 1.6, dashed = false, z, 
   ...extra
 });
 
+/* ── Speedometer gauge ──────────────────────────────────────────────────── */
+
+/** The 0→1 risk bands (green → red) the gauges have always used. */
+const GAUGE_BANDS: readonly [number, string][] = [
+  [0.2, '#2fbf71'],
+  [0.4, '#9acd3e'],
+  [0.6, '#ffd23f'],
+  [0.8, '#ff8c42'],
+  [1.0, '#ff5d6c']
+];
+
+/** Band colour for a 0→1 value (used for the needle + readout). */
+export const gaugeBandColor = (v: number, adapt: (h: string) => string): string =>
+  adapt((GAUGE_BANDS.find(([to]) => v < to) ?? GAUGE_BANDS[GAUGE_BANDS.length - 1])[1]);
+
+export interface GaugeOpts {
+  /** 0..1, or null when the metric is unavailable/locked. */
+  value: number | null;
+  /** Rendered pixel width — tick/label/readout sizes scale off this. */
+  size?: number;
+  /** Digits in the centre readout. */
+  precision?: number;
+  /** Small caption under the number (the demo's "km / h" slot). */
+  label?: string;
+  /** Muted colour for ticks/labels (pass a themed token). */
+  muted: string;
+  /** Strong colour for the readout text. */
+  strong: string;
+  /** Track colour behind the bands. */
+  track: string;
+  /** Surface colour — fills the anchor hub, as `#001122` does in the demo. */
+  panel: string;
+  /** Theme-aware hue adapter, so the bands stay legible on white. */
+  adapt: (hex: string) => string;
+}
+
+/** Re-alpha a colour for the glow gradient. Handles #rgb/#rrggbb and rgb(a)(). */
+const withAlpha = (color: string, a: number): string => {
+  if (color.startsWith('#')) {
+    const h = color.slice(1);
+    const f = h.length === 3 ? h.split('').map((c) => c + c).join('') : h;
+    const [r, g, b] = [0, 2, 4].map((i) => parseInt(f.slice(i, i + 2), 16));
+    return `rgba(${r}, ${g}, ${b}, ${a})`;
+  }
+  const m = color.match(/(\d+(?:\.\d+)?)/g);
+  return m && m.length >= 3 ? `rgba(${m[0]}, ${m[1]}, ${m[2]}, ${a})` : color;
+};
+
+/** Tapered needle from the ECharts speed-gauge demo. */
+const NEEDLE =
+  'path://M2.9,0.7L2.9,0.7c1.4,0,2.6,1.2,2.6,2.6V285c0,0.7-0.6,1.3-1.3,1.3l0,0c-0.7,0-1.3-0.6-1.3-1.3V3.3C0.3,1.9,1.5,0.7,2.9,0.7z';
+
+/**
+ * Speedometer modelled on the ECharts "Gauge Speed" demo: a thin track with a
+ * red danger zone at the top of the scale, a glowing progress sweep, fine tick
+ * marks, a long tapered needle and a ring hub — with the value and its label
+ * stacked under the centre.
+ *
+ * Values are 0→1, matching every risk score in the app. Sizes are derived from
+ * `size` because these render anywhere from 150px to 220px wide and fixed pixel
+ * type would collide with the readout at the small end.
+ */
+export const gaugeOption = ({ value, size = 180, precision = 3, label, muted, strong, track, panel, adapt }: GaugeOpts): Obj => {
+  const v = value == null ? null : Math.max(0, Math.min(1, value));
+  const s = size / 220; // scale factor against the largest gauge in the app
+  const px = (n: number) => Math.max(7, Math.round(n * s));
+  const sweep = v == null ? track : gaugeBandColor(v, adapt);
+  const danger = adapt('#ff5d6c');
+
+  // The demo's signature glow is NOT a shadow — it is a very wide `progress`
+  // bar (width 200 there) painted with a radial gradient that is transparent at
+  // the centre and saturated at the rim, so the lit sector appears to bloom
+  // inward. Width scales with the gauge so it reads the same at 150px as 220px.
+  const glow = {
+    type: 'radial',
+    x: 0.5,
+    y: 0.5,
+    r: 0.5,
+    colorStops: [
+      { offset: 0, color: 'transparent' },
+      { offset: 0.76, color: 'transparent' },
+      { offset: 0.9, color: withAlpha(sweep, 0.1) },
+      { offset: 0.97, color: withAlpha(sweep, 0.32) },
+      { offset: 1, color: withAlpha(sweep, 0.75) }
+    ]
+  };
+
+  return {
+    series: [
+      {
+        type: 'gauge',
+        min: 0,
+        max: 1,
+        startAngle: 225,
+        endAngle: -45,
+        radius: '80%',
+        center: ['50%', '52%'],
+        splitNumber: 5,
+        // Thin track; the last fifth is the redline, exactly as in the demo.
+        axisLine: { lineStyle: { width: Math.max(1.5, 2 * s), color: [[0.8, track], [1, danger]] } },
+        progress: { show: v != null, width: Math.round(size * 0.3), itemStyle: { color: glow } },
+        axisTick: { splitNumber: 5, distance: 0, length: px(5), lineStyle: { color: muted, width: 1 } },
+        splitLine: { distance: 0, length: px(11), lineStyle: { color: strong, width: Math.max(1.5, 2 * s) } },
+        // The 0.0 and 1.0 labels sit at the arc's lower tips, exactly where the
+        // readout goes on a gauge this small — the bands already imply the range.
+        axisLabel: { distance: px(14), fontSize: px(9), color: muted, formatter: (n: number) => (n === 0 || n === 1 ? '' : n.toFixed(1)) },
+        pointer: v == null
+          ? { show: false }
+          : { icon: NEEDLE, width: Math.max(3, 5 * s), length: '88%', offsetCenter: [0, '8%'], itemStyle: { color: strong } },
+        // Hub: filled with the surface colour, ringed and glowing.
+        anchor: v == null
+          ? { show: false }
+          : {
+              show: true,
+              showAbove: false,
+              size: px(22),
+              itemStyle: { color: panel, borderColor: strong, borderWidth: Math.max(1.5, 2 * s), shadowBlur: Math.round(22 * s), shadowColor: withAlpha(strong, 0.5) }
+            },
+        // Value + caption stacked below the hub, like the demo's "160 / km / h".
+        title: { show: !!label, offsetCenter: [0, '80%'], fontSize: px(10), color: muted },
+        detail: {
+          valueAnimation: true,
+          offsetCenter: [0, label ? '54%' : '62%'],
+          fontSize: px(24),
+          fontWeight: 700,
+          color: v == null ? muted : strong,
+          formatter: () => (v == null ? '—' : v.toFixed(precision))
+        },
+        data: [{ value: v ?? 0, name: label ?? '' }]
+      }
+    ]
+  };
+};
+
 /* ── HTML tooltip helpers ───────────────────────────────────────────────── */
 // Custom `formatter` strings are the one place the theme layer cannot reach
 // (it can style the tooltip box, not the HTML inside it), so the colours passed
