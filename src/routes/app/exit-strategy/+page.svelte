@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Check, AlertTriangle, GitCompareArrows, Info, ArrowUpRight, ArrowDownRight, Lock, ChevronDown, Activity, Calculator } from '@lucide/svelte';
   import { api } from '$lib/api';
+  import { adaptHue, axisTooltip, grid, lineSeries, logAxis, timeAxis, valueAxis } from '$lib/charts/presets';
   import { membership, membershipReady, hasFeature } from '$lib/stores/membership';
   import Gauge from '$lib/components/Gauge.svelte';
   import EChart from '$lib/components/EChart.svelte';
@@ -115,13 +116,16 @@
   };
 
   // ── History chart (toggleable series + 6 strategy zones + markers) ──
-  const SERIES = [
-    { key: 'exit', name: 'Exit risk', color: '#EF4444', axis: 0, width: 2.4, field: 'exit_risk' as const },
-    { key: 'price', name: 'BTC price', color: '#37e0a6', axis: 1, width: 1.3, field: 'btc_price' as const },
-    { key: 'btc', name: 'BTC risk', color: '#F59E0B', axis: 0, width: 1.4, field: 'btc_risk' as const },
-    { key: 'onchain', name: 'On-chain risk', color: '#8B5CF6', axis: 0, width: 1.4, field: 'onchain_risk' as const },
-    { key: 'social', name: 'Social risk', color: '#22D3EE', axis: 0, width: 1.4, field: 'social_risk' as const }
-  ];
+  // Each series is named in the legend buttons below, so its hue is semantic and
+  // must not be remapped onto the categorical scale. $adaptHue keeps the exact
+  // dark-mode colour and only darkens it for legibility on a white card.
+  const SERIES = $derived([
+    { key: 'exit', name: 'Exit risk', color: $adaptHue('#EF4444'), axis: 0, width: 2.4, field: 'exit_risk' as const },
+    { key: 'price', name: 'BTC price', color: $adaptHue('#37e0a6'), axis: 1, width: 1.3, field: 'btc_price' as const },
+    { key: 'btc', name: 'BTC risk', color: $adaptHue('#F59E0B'), axis: 0, width: 1.4, field: 'btc_risk' as const },
+    { key: 'onchain', name: 'On-chain risk', color: $adaptHue('#8B5CF6'), axis: 0, width: 1.4, field: 'onchain_risk' as const },
+    { key: 'social', name: 'Social risk', color: $adaptHue('#22D3EE'), axis: 0, width: 1.4, field: 'social_risk' as const }
+  ]);
   let visible = $state<Record<string, boolean>>({ exit: true, price: true, btc: false, onchain: false, social: false });
   const toggleSeries = (k: string) => (visible[k] = !visible[k]);
 
@@ -145,37 +149,35 @@
         { yAxis: z.hi }
       ])
     };
+    // The "current" line marks the Exit risk series, so it tracks that series' hue.
+    const exitColor = SERIES[0].color;
     const markLine = {
       silent: true,
       symbol: 'none',
       data: [
-        cur != null ? { yAxis: cur, lineStyle: { color: '#EF4444', width: 1.4 }, label: { color: '#EF4444', fontSize: 9, formatter: `Current ${cur.toFixed(2)}` } } : null,
+        cur != null ? { yAxis: cur, lineStyle: { color: exitColor, width: 1.4 }, label: { color: exitColor, fontSize: 9, formatter: `Current ${cur.toFixed(2)}` } } : null,
         next != null ? { yAxis: next, lineStyle: { color: '#9CA3AF', type: 'dashed' as const, width: 1 }, label: { color: '#9CA3AF', fontSize: 9, formatter: `Next ${next.toFixed(2)}` } } : null,
         { yAxis: 0.75, lineStyle: { color: '#F87171', type: 'dotted' as const, width: 1 }, label: { color: '#F87171', fontSize: 9, formatter: 'Major exit zone 0.75+' } }
       ].filter(Boolean)
     };
 
-    const activeSeries = SERIES.filter((s) => visible[s.key]).map((s, idx) => ({
-      name: s.name,
-      type: 'line' as const,
-      yAxisIndex: s.axis,
-      showSymbol: false,
-      smooth: true,
-      z: s.key === 'exit' ? 5 : 3,
-      itemStyle: { color: s.color },
-      lineStyle: { width: s.width, color: s.color },
-      data: history.filter((p) => p[s.field] != null).map((p) => [ts(p.date), p[s.field]]),
-      ...(idx === 0 ? { markArea, markLine } : {})
-    }));
+    const activeSeries = SERIES.filter((s) => visible[s.key]).map((s, idx) =>
+      lineSeries({
+        name: s.name,
+        color: s.color,
+        width: s.width,
+        smooth: true,
+        z: s.key === 'exit' ? 5 : 3,
+        data: history.filter((p) => p[s.field] != null).map((p) => [ts(p.date), p[s.field]]),
+        extra: { yAxisIndex: s.axis, ...(idx === 0 ? { markArea, markLine } : {}) }
+      })
+    );
     // Always render the zone bands even if no risk-series is first; attach to a hidden helper.
     const base = activeSeries.length ? activeSeries : [{ name: '', type: 'line' as const, yAxisIndex: 0, data: [], silent: true, markArea, markLine }];
 
     return {
-      tooltip: {
-        trigger: 'axis',
-        backgroundColor: '#0E1117',
-        borderColor: '#1F2937',
-        textStyle: { color: '#F9FAFB', fontSize: 11 },
+      tooltip: axisTooltip({
+        textStyle: { fontSize: 11 },
         formatter: (p: { axisValue: number; seriesName: string; value: [number, number] }[]) => {
           if (!p?.length) return '';
           const d = new Date(p[0].axisValue).toISOString().slice(0, 10);
@@ -188,13 +190,10 @@
           }
           return h;
         }
-      },
-      grid: { left: 8, right: 8, top: 12, bottom: 8, containLabel: true },
-      xAxis: { type: 'time', axisLabel: { color: '#9CA3AF' } },
-      yAxis: [
-        { type: 'value', name: 'Risk', min: 0, max: 1, position: 'left', nameTextStyle: { color: '#9CA3AF' }, axisLabel: { color: '#9CA3AF' }, splitLine: { lineStyle: { color: '#1F2937' } } },
-        { type: 'log', name: 'BTC', position: 'right', nameTextStyle: { color: '#9CA3AF' }, axisLabel: { color: '#9CA3AF' }, splitLine: { show: false } }
-      ],
+      }),
+      grid: grid({ top: 12 }),
+      xAxis: timeAxis(),
+      yAxis: [valueAxis({ name: 'Risk', min: 0, max: 1, position: 'left' }), logAxis({ name: 'BTC', position: 'right', splitLine: { show: false } })],
       series: base
     };
   });

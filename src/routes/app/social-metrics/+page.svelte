@@ -7,6 +7,7 @@
   import AiInterpret from '$lib/components/AiInterpret.svelte';
   import AiLabel from '$lib/components/AiLabel.svelte';
   import { membership, membershipReady, hasFeature } from '$lib/stores/membership';
+  import { axisTooltip, categorical, grid, lineSeries, logAxis, timeAxis, valueAxis } from '$lib/charts/presets';
 
   interface MetricRow {
     key: string;
@@ -116,46 +117,66 @@
     });
 
   const compact = (v: number) => '$' + new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(v);
-  const axisBase = (name: string) => ({ nameTextStyle: { color: '#9CA3AF' }, axisLabel: { color: '#9CA3AF' }, axisLine: { lineStyle: { color: '#1F2937' } }, name });
+
+  // Source hues come from the shared theme-reactive categorical scale; its dark
+  // values are the ones these charts already used, so dark mode is unchanged.
+  const hue = $derived({
+    social: $categorical[0],
+    trends: $categorical[1],
+    youtube: $categorical[3],
+    fearGreed: $categorical[4]
+  });
+
+  // The BTC reference line takes no explicit colour: the theme layer's own
+  // palette starts at the --c-mint token, which in dark is the exact mint these
+  // lines already used — so dark is unchanged and light/Branding now follow.
+  const btcLine = () =>
+    lineSeries({ name: 'BTC price', data: hist.filter((p) => p.btc_price != null).map((p) => [ts(p.date), p.btc_price]), width: 1.2, extra: { yAxisIndex: 0 } });
+
+  // Fixed left/right gutters were tuned without containLabel; keep it off.
+  const socialGrid = () => grid({ left: 58, right: 48, top: 24, bottom: 30, containLabel: false });
+  const btcAxis = () => logAxis({ position: 'left', scale: true, name: 'BTC', axisLabel: { formatter: compact } });
 
   const riskOption = $derived.by(() => {
     if (!hist.length) return {};
     const socialSm = smooth(hist.map((p) => p.social_risk_score));
     return {
       backgroundColor: 'transparent',
-      grid: { left: 58, right: 48, top: 24, bottom: 30 },
-      legend: { data: ['BTC price', 'Social risk'], textStyle: { color: '#9CA3AF' }, top: 0 },
-      tooltip: { trigger: 'axis', backgroundColor: '#0E1117', borderColor: '#1F2937', textStyle: { color: '#F9FAFB', fontSize: 11 } },
-      xAxis: { type: 'time', axisLabel: { color: '#9CA3AF' }, axisLine: { lineStyle: { color: '#1F2937' } }, splitLine: { show: false } },
-      yAxis: [
-        { type: 'log', position: 'left', scale: true, ...axisBase('BTC'), axisLabel: { color: '#9CA3AF', formatter: compact }, splitLine: { lineStyle: { color: '#1F2937' } } },
-        { type: 'value', min: 0, max: 1, position: 'right', ...axisBase('Risk'), splitLine: { show: false } }
-      ],
+      grid: socialGrid(),
+      legend: { data: ['BTC price', 'Social risk'], top: 0 },
+      tooltip: axisTooltip({ textStyle: { fontSize: 11 } }),
+      xAxis: timeAxis({ splitLine: { show: false } }),
+      yAxis: [btcAxis(), valueAxis({ min: 0, max: 1, position: 'right', name: 'Risk', splitLine: { show: false } })],
       series: [
-        { name: 'BTC price', type: 'line', yAxisIndex: 0, showSymbol: false, itemStyle: { color: '#37e0a6' }, lineStyle: { width: 1.2, color: '#37e0a6' }, data: hist.filter((p) => p.btc_price != null).map((p) => [ts(p.date), p.btc_price]) },
-        { name: 'Social risk', type: 'line', yAxisIndex: 1, showSymbol: false, smooth: true, itemStyle: { color: '#F59E0B' }, lineStyle: { width: 2, color: '#F59E0B' }, data: hist.map((p, i) => [ts(p.date), socialSm[i]]).filter((d) => d[1] != null) }
+        btcLine(),
+        lineSeries({
+          name: 'Social risk',
+          data: hist.map((p, i) => [ts(p.date), socialSm[i]]).filter((d) => d[1] != null),
+          color: hue.social,
+          width: 2,
+          smooth: true,
+          extra: { yAxisIndex: 1 }
+        })
       ]
     };
   });
 
   const sourcesOption = $derived.by(() => {
     if (!hist.length) return {};
-    const line = (name: string, color: string, vals: (number | null)[]) => ({ name, type: 'line', yAxisIndex: 1, showSymbol: false, itemStyle: { color }, lineStyle: { width: 1.2, color }, data: hist.map((p, i) => [ts(p.date), vals[i]]).filter((d) => d[1] != null) });
+    const line = (name: string, color: string, vals: (number | null)[]) =>
+      lineSeries({ name, color, width: 1.2, data: hist.map((p, i) => [ts(p.date), vals[i]]).filter((d) => d[1] != null), extra: { yAxisIndex: 1 } });
     return {
       backgroundColor: 'transparent',
-      grid: { left: 58, right: 48, top: 24, bottom: 30 },
-      legend: { data: ['BTC price', 'Trends', 'Fear & Greed', 'YouTube'], textStyle: { color: '#9CA3AF' }, top: 0 },
-      tooltip: { trigger: 'axis', backgroundColor: '#0E1117', borderColor: '#1F2937', textStyle: { color: '#F9FAFB', fontSize: 11 } },
-      xAxis: { type: 'time', axisLabel: { color: '#9CA3AF' }, axisLine: { lineStyle: { color: '#1F2937' } }, splitLine: { show: false } },
-      yAxis: [
-        { type: 'log', position: 'left', scale: true, ...axisBase('BTC'), axisLabel: { color: '#9CA3AF', formatter: compact }, splitLine: { lineStyle: { color: '#1F2937' } } },
-        { type: 'value', min: 0, max: 1, position: 'right', ...axisBase('0–1'), splitLine: { show: false } }
-      ],
+      grid: socialGrid(),
+      legend: { data: ['BTC price', 'Trends', 'Fear & Greed', 'YouTube'], top: 0 },
+      tooltip: axisTooltip({ textStyle: { fontSize: 11 } }),
+      xAxis: timeAxis({ splitLine: { show: false } }),
+      yAxis: [btcAxis(), valueAxis({ min: 0, max: 1, position: 'right', name: '0–1', splitLine: { show: false } })],
       series: [
-        { name: 'BTC price', type: 'line', yAxisIndex: 0, showSymbol: false, itemStyle: { color: '#37e0a6' }, lineStyle: { width: 1.2, color: '#37e0a6' }, data: hist.filter((p) => p.btc_price != null).map((p) => [ts(p.date), p.btc_price]) },
-        line('Trends', '#3B82F6', hist.map((p) => (p.trends_bitcoin == null ? null : p.trends_bitcoin / 100))),
-        line('Fear & Greed', '#c084fc', hist.map((p) => (p.fear_greed == null ? null : p.fear_greed / 100))),
-        line('YouTube', '#EF4444', hist.map((p) => (p.youtube_attention == null ? null : p.youtube_attention / 100)))
+        btcLine(),
+        line('Trends', hue.trends, hist.map((p) => (p.trends_bitcoin == null ? null : p.trends_bitcoin / 100))),
+        line('Fear & Greed', hue.fearGreed, hist.map((p) => (p.fear_greed == null ? null : p.fear_greed / 100))),
+        line('YouTube', hue.youtube, hist.map((p) => (p.youtube_attention == null ? null : p.youtube_attention / 100)))
       ]
     };
   });

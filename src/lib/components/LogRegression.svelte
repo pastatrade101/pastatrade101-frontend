@@ -8,6 +8,7 @@
   import AiInterpret from '$lib/components/AiInterpret.svelte';
   import AiLabel from '$lib/components/AiLabel.svelte';
   import { fmtUsd } from '$lib/format';
+  import { grid, timeAxis, valueAxis, logAxis, axisTooltip, lineSeries, tipRow, tipBody, riskRamp } from '$lib/charts/presets';
 
   let { asset = 'BTC' }: { asset?: 'BTC' | 'ETH' } = $props();
 
@@ -48,7 +49,7 @@
   const usd = (n: number | null | undefined) => (n == null ? '—' : fmtUsd(n, { compact: true }));
 
   // One colour per line, reused by the chart series, tooltip markers and chips.
-  const C = { price: '#22D3EE', fit: '#34D399', lower: '#2DD4BF', upper: '#A3E635', bubbleLower: '#FB923C', bubbleUpper: '#EF4444' };
+  const C = $derived($riskRamp);
 
   const zoneTone = (z: string | null | undefined) => {
     if (!z) return 'bg-edge text-muted';
@@ -200,17 +201,16 @@
     const pts = result?.points ?? [];
     if (!pts.length) return {};
     const priceMin = Math.min(...pts.map((p) => p.price_usd).filter((v) => v > 0));
-    const line = (field: keyof Point, color: string, width: number, z: number, dashed = false, endLabel = '') => ({
-      name: field,
-      type: 'line' as const,
-      showSymbol: false,
-      smooth: false,
-      z,
-      lineStyle: { width, color, type: dashed ? ('dashed' as const) : ('solid' as const) },
-      itemStyle: { color },
-      endLabel: endLabel ? { show: true, formatter: endLabel, color, fontSize: 9, distance: 4 } : { show: false },
-      data: pts.map((p) => [ts(p.date), p[field] as number])
-    });
+    const line = (field: keyof Point, color: string, width: number, z: number, dashed = false, endLabel = '') =>
+      lineSeries({
+        name: field,
+        color,
+        width,
+        dashed,
+        z,
+        endLabel,
+        data: pts.map((p) => [ts(p.date), p[field] as number])
+      });
     const series: unknown[] = [];
     const valid = result?.fit_valid !== false;
     if (valid && show.bubbleUpper) series.push(line('bubble_upper_band', C.bubbleUpper, 1.6, 2, false, 'Bubble upper'));
@@ -221,65 +221,57 @@
     if (show.price) {
       const priceLine = line('price_usd', C.price, 2.2, 5);
       const last = pts[pts.length - 1];
-      // @ts-expect-error markPoint is valid on a line series
       priceLine.markPoint = {
         symbol: 'circle',
         symbolSize: 9,
-        data: [{ coord: [ts(last.date), last.price_usd], itemStyle: { color: '#22D3EE' } }],
-        label: { show: true, position: 'top', color: '#22D3EE', fontSize: 10, formatter: `Now ${usd(last.price_usd)}` }
+        data: [{ coord: [ts(last.date), last.price_usd], itemStyle: { color: C.price } }],
+        label: { show: true, position: 'top', color: C.price, fontSize: 10, formatter: `Now ${usd(last.price_usd)}` }
       };
       series.push(priceLine);
     }
     return {
       animation: false,
-      tooltip: {
-        trigger: 'axis',
-        backgroundColor: '#0E1117',
-        borderColor: '#1F2937',
-        textStyle: { color: '#F9FAFB', fontSize: 11 },
+      tooltip: axisTooltip({
+        textStyle: { fontSize: 11 },
         formatter: (params: { axisValue: number }[]) => {
           const p = pointByDate.get(params?.[0]?.axisValue);
           if (!p) return '';
           const d = new Date(ts(p.date)).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' });
-          const dot = (c: string) => `<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${c};margin-right:6px;vertical-align:middle"></span>`;
-          const row = (c: string, label: string, val: string) => `${dot(c)}${label}: <b>${val}</b>`;
           const rows = [`<b>${d}</b>`];
-          if (show.price) rows.push(row(C.price, `${result?.asset} price`, usd(p.price_usd)));
+          if (show.price) rows.push(tipRow(C.price, `${result?.asset} price`, usd(p.price_usd)));
           if (result?.fit_valid !== false) {
-            if (viewMode === 'analyst' && show.bubbleUpper) rows.push(row(C.bubbleUpper, 'Bubble upper', usd(p.bubble_upper_band)));
-            if (viewMode === 'analyst' && show.bubbleLower) rows.push(row(C.bubbleLower, 'Bubble lower', usd(p.bubble_lower_band)));
-            if (viewMode === 'analyst' && show.upper) rows.push(row(C.upper, 'Upper band', usd(p.upper_band)));
-            if (show.fit) rows.push(row(C.fit, 'Regression fit', usd(p.fit_price)));
-            if (show.lower) rows.push(row(C.lower, 'Lower band', usd(p.lower_band)));
+            if (viewMode === 'analyst' && show.bubbleUpper) rows.push(tipRow(C.bubbleUpper, 'Bubble upper', usd(p.bubble_upper_band)));
+            if (viewMode === 'analyst' && show.bubbleLower) rows.push(tipRow(C.bubbleLower, 'Bubble lower', usd(p.bubble_lower_band)));
+            if (viewMode === 'analyst' && show.upper) rows.push(tipRow(C.upper, 'Upper band', usd(p.upper_band)));
+            if (show.fit) rows.push(tipRow(C.fit, 'Regression fit', usd(p.fit_price)));
+            if (show.lower) rows.push(tipRow(C.lower, 'Lower band', usd(p.lower_band)));
             rows.push(`Distance from fit: <b>${p.distance_from_fit_percent}%</b>`);
             if (viewMode === 'analyst') rows.push(`Risk score: <b>${p.risk_score.toFixed(2)}</b>`);
             rows.push(`Zone: <b>${p.zone_label}</b>`);
           }
-          return rows.join('<br/>');
+          return tipBody(rows);
         }
-      },
-      grid: { left: 8, right: viewMode === 'analyst' ? 64 : 48, top: 12, bottom: 8, containLabel: true },
-      xAxis: { type: 'time', axisLabel: { color: '#9CA3AF' } },
-      yAxis: {
-        type: scale === 'log' ? 'log' : 'value',
-        // On log scale, anchor the floor near the price range so the (meaningless)
-        // sub-cent early-history fit doesn't squash everything into the top decade.
-        ...(scale === 'log' ? { min: Math.max(0.01, priceMin * 0.5) } : {}),
-        axisLabel: { color: '#9CA3AF', formatter: (v: number) => usd(v) },
-        splitLine: { lineStyle: { color: '#1F2937' } }
-      },
+      }),
+      grid: grid({ right: viewMode === 'analyst' ? 64 : 48, top: 12 }),
+      xAxis: timeAxis(),
+      // On log scale, anchor the floor near the price range so the (meaningless)
+      // sub-cent early-history fit doesn't squash everything into the top decade.
+      yAxis:
+        scale === 'log'
+          ? logAxis({ min: Math.max(0.01, priceMin * 0.5), axisLabel: { formatter: (v: number) => usd(v) } })
+          : valueAxis({ axisLabel: { formatter: (v: number) => usd(v) } }),
       series
     };
   });
 
-  const BANDS: { key: keyof typeof show; label: string; color: string; dashed: boolean; tip: string }[] = [
+  const BANDS: { key: keyof typeof show; label: string; color: string; dashed: boolean; tip: string }[] = $derived([
     { key: 'price', label: 'Price', color: C.price, dashed: false, tip: 'Actual market price.' },
     { key: 'fit', label: 'Fit', color: C.fit, dashed: true, tip: "The model's estimated long-term growth curve (fair value)." },
     { key: 'lower', label: 'Lower', color: C.lower, dashed: true, tip: 'A historically lower-risk area below fair value.' },
     { key: 'upper', label: 'Upper', color: C.upper, dashed: false, tip: 'A higher-risk area above fair value.' },
     { key: 'bubbleLower', label: 'Bubble lower', color: C.bubbleLower, dashed: true, tip: 'The beginning of the historically overheated zone.' },
     { key: 'bubbleUpper', label: 'Bubble upper', color: C.bubbleUpper, dashed: false, tip: 'Extreme overheating zone in this model.' }
-  ];
+  ]);
 </script>
 
 <header class="mb-4">

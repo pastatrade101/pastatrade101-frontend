@@ -4,6 +4,7 @@
   import { membership, membershipReady, hasFeature } from '$lib/stores/membership';
   import LockedFeature from '$lib/components/LockedFeature.svelte';
   import EChart from '$lib/components/EChart.svelte';
+  import { axisTooltip, grid, valueAxis } from '$lib/charts/presets';
   import AiInterpret from '$lib/components/AiInterpret.svelte';
   import AiLabel from '$lib/components/AiLabel.svelte';
 
@@ -170,11 +171,11 @@
     if (!c || !c.dates?.length) return null;
     const line = (name: string, dataArr: (number | null)[], color: string, width = 1.5, dashed = false) => ({ name, type: 'line', data: dataArr, smooth: true, symbol: 'none', connectNulls: true, lineStyle: { color, width, type: dashed ? 'dashed' : 'solid' } });
     return {
-      grid: { left: 52, right: 14, top: 24, bottom: 24 },
-      legend: { top: 0, textStyle: { color: '#7d8590', fontSize: 9 }, itemWidth: 14, itemHeight: 8 },
-      tooltip: { trigger: 'axis' },
-      xAxis: { type: 'category', data: c.dates, axisLabel: { color: '#7d8590', fontSize: 9, showMaxLabel: true }, axisLine: { lineStyle: { color: '#30363d' } } },
-      yAxis: { type: 'value', scale: true, axisLabel: { color: '#7d8590', fontSize: 9, formatter: (v: number) => v.toExponential(1) }, splitLine: { lineStyle: { color: 'rgba(48,54,61,0.4)' } } },
+      grid: grid({ left: 52, right: 14, top: 24, bottom: 24, containLabel: false }),
+      legend: { top: 0, textStyle: { fontSize: 9 }, itemWidth: 14, itemHeight: 8 },
+      tooltip: axisTooltip(),
+      xAxis: { type: 'category', data: c.dates, axisLabel: { fontSize: 9, showMaxLabel: true } },
+      yAxis: valueAxis({ scale: true, axisLabel: { fontSize: 9, formatter: (v: number) => v.toExponential(1) } }),
       series: [
         line('ALT/BTC', c.ratio, '#F9FAFB', 2),
         line('MA20', c.ma20, '#37E0A6'),

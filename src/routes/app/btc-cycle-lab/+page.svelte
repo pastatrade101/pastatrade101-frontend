@@ -7,6 +7,7 @@
   import AiInterpret from '$lib/components/AiInterpret.svelte';
   import { membership, membershipReady, hasFeature } from '$lib/stores/membership';
   import { fmtPct, fmtUsd } from '$lib/format';
+  import { grid, valueAxis, logAxis, axisTooltip, lineSeries, adaptHue } from '$lib/charts/presets';
 
   interface RoiPoint {
     days_since_event: number;
@@ -46,7 +47,15 @@
     halving: '/btc-cycle/roi-from-halving',
     'year-overlay': '/btc-cycle/year-overlay'
   };
-  const NON_CURRENT = ['#3B82F6', '#22C55E', '#EF4444', '#c084fc', '#22d3ee', '#f472b6', '#fb923c', '#34d399'];
+  // One hue per cycle/year. The current cycle is pinned to amber; peers rotate
+  // through their own 8-hue ring. Kept as explicit hues (not the categorical
+  // scale) because the ring includes an orange the scale does not carry, and
+  // dropping it would reshuffle every year's colour on the overlay chart.
+  // $adaptHue leaves dark mode byte-identical and darkens for light.
+  const CURRENT_HUE = $derived($adaptHue('#F59E0B'));
+  const NON_CURRENT = $derived(
+    ['#3B82F6', '#22C55E', '#EF4444', '#c084fc', '#22d3ee', '#f472b6', '#fb923c', '#34d399'].map((h) => $adaptHue(h))
+  );
 
   let chartType = $state<ChartType>('cycle-low');
   let scale = $state<'linear' | 'log'>('log');
@@ -67,7 +76,7 @@
     const map: Record<string, string> = {};
     let i = 0;
     for (const s of data?.series ?? []) {
-      map[s.key] = s.key === currentKey ? '#F59E0B' : NON_CURRENT[i++ % NON_CURRENT.length];
+      map[s.key] = s.key === currentKey ? CURRENT_HUE : NON_CURRENT[i++ % NON_CURRENT.length];
     }
     return map;
   });
@@ -142,14 +151,16 @@
     const isMultiple = valueKey === 'roi_multiple';
     const visible = data.series.filter((s) => !hidden.has(s.key));
 
+    const yAxisOpts = {
+      name: isMultiple ? 'ROI (×)' : 'ROI (%)',
+      axisLabel: { formatter: (v: number) => (isMultiple ? `${v}×` : `${v}%`) }
+    };
+
     return {
       backgroundColor: 'transparent',
-      grid: { left: 56, right: 18, top: 16, bottom: 44 },
-      tooltip: {
-        trigger: 'axis',
-        backgroundColor: '#0E1117',
-        borderColor: '#1F2937',
-        textStyle: { color: '#F9FAFB', fontSize: 11 },
+      grid: grid({ left: 56, right: 18, top: 16, bottom: 44, containLabel: false }),
+      tooltip: axisTooltip({
+        textStyle: { fontSize: 11 },
         formatter: (params: any[]) => {
           const head = `Day ${params[0]?.axisValue}`;
           const lines = params
@@ -157,33 +168,26 @@
             .join('<br/>');
           return `${head}<br/>${lines}`;
         }
-      },
-      xAxis: {
-        type: 'value',
+      }),
+      xAxis: valueAxis({
         name: data.x_label,
         nameLocation: 'middle',
-        nameGap: 26,
-        nameTextStyle: { color: '#9CA3AF' },
-        axisLabel: { color: '#9CA3AF' },
-        axisLine: { lineStyle: { color: '#1F2937' } },
-        splitLine: { lineStyle: { color: '#1F2937' } }
-      },
-      yAxis: {
-        type: useLog ? 'log' : 'value',
-        name: isMultiple ? 'ROI (×)' : 'ROI (%)',
-        nameTextStyle: { color: '#9CA3AF' },
-        axisLabel: { color: '#9CA3AF', formatter: (v: number) => (isMultiple ? `${v}×` : `${v}%`) },
-        axisLine: { lineStyle: { color: '#1F2937' } },
-        splitLine: { lineStyle: { color: '#1F2937' } }
-      },
-      series: visible.map((s) => ({
-        name: s.label,
-        type: 'line',
-        showSymbol: false,
-        z: s.key === currentKey ? 10 : 1,
-        lineStyle: { width: s.key === currentKey ? 3 : 1.5, color: colorMap[s.key], opacity: s.key === currentKey ? 1 : 0.8 },
-        data: s.points.map((p) => [p.days_since_event, p[valueKey]])
-      }))
+        nameGap: 26
+      }),
+      yAxis: useLog ? logAxis(yAxisOpts) : valueAxis(yAxisOpts),
+      series: visible.map((s) => {
+        const isCurrent = s.key === currentKey;
+        const width = isCurrent ? 3 : 1.5;
+        const color = colorMap[s.key];
+        return lineSeries({
+          name: s.label,
+          data: s.points.map((p) => [p.days_since_event, p[valueKey]]),
+          color,
+          width,
+          z: isCurrent ? 10 : 1,
+          extra: { lineStyle: { width, color, opacity: isCurrent ? 1 : 0.8 } }
+        });
+      })
     };
   });
 

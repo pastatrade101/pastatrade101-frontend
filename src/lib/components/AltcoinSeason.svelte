@@ -4,6 +4,7 @@
   import { api } from '$lib/api';
   import Disclaimer from './Disclaimer.svelte';
   import EChart from './EChart.svelte';
+  import { grid, timeAxis, valueAxis, logAxis, axisTooltip, lineSeries } from '$lib/charts/presets';
 
   interface CoinRow {
     symbol: string;
@@ -77,11 +78,8 @@
   const histOption = $derived.by((): any => {
     if (!history.length) return {};
     return {
-      tooltip: {
-        trigger: 'axis',
-        backgroundColor: '#0E1117',
-        borderColor: '#1F2937',
-        textStyle: { color: '#F9FAFB', fontSize: 11 },
+      tooltip: axisTooltip({
+        textStyle: { fontSize: 11 },
         formatter: (p: { axisValue: number; seriesName: string; value: [number, number] }[]) => {
           if (!p?.length) return '';
           const dd = new Date(p[0].axisValue).toISOString().slice(0, 10);
@@ -95,34 +93,39 @@
           if (btc != null) h += `<br/>BTC: $${Math.round(btc).toLocaleString()}`;
           return h;
         }
-      },
-      legend: { data: ['Season Index', 'Positive %', 'BTC'], top: 0, textStyle: { color: '#9CA3AF' } },
-      grid: { left: 8, right: 8, top: 28, bottom: 8, containLabel: true },
-      xAxis: { type: 'time', axisLabel: { color: '#9CA3AF' } },
+      }),
+      legend: { data: ['Season Index', 'Positive %', 'BTC'], top: 0 },
+      grid: grid({ top: 28 }),
+      xAxis: timeAxis(),
       yAxis: [
-        { type: 'value', name: '%', min: 0, max: 100, position: 'left', nameTextStyle: { color: '#9CA3AF' }, axisLabel: { color: '#9CA3AF' }, splitLine: { lineStyle: { color: '#1F2937' } } },
-        { type: 'log', name: 'BTC', position: 'right', nameTextStyle: { color: '#9CA3AF' }, axisLabel: { color: '#9CA3AF' }, splitLine: { show: false } }
+        valueAxis({ name: '%', min: 0, max: 100, position: 'left' }),
+        logAxis({ name: 'BTC', position: 'right', splitLine: { show: false } })
       ],
       series: [
-        {
+        lineSeries({
           name: 'Season Index',
-          type: 'line',
-          yAxisIndex: 0,
-          showSymbol: false,
-          smooth: true,
-          itemStyle: { color: '#5B8CFF' },
-          lineStyle: { width: 2, color: '#5B8CFF' },
           data: history.map((p) => [ts2(p.date), p.index]),
-          markArea: {
-            silent: true,
-            data: [
-              [{ yAxis: 0, itemStyle: { color: 'rgba(239,68,68,0.05)' } }, { yAxis: 25 }],
-              [{ yAxis: 75, itemStyle: { color: 'rgba(55,224,166,0.06)' } }, { yAxis: 100 }]
-            ]
+          color: '#5B8CFF',
+          width: 2,
+          smooth: true,
+          extra: {
+            yAxisIndex: 0,
+            markArea: {
+              silent: true,
+              data: [
+                [{ yAxis: 0, itemStyle: { color: 'rgba(239,68,68,0.05)' } }, { yAxis: 25 }],
+                [{ yAxis: 75, itemStyle: { color: 'rgba(55,224,166,0.06)' } }, { yAxis: 100 }]
+              ]
+            }
           }
-        },
-        { name: 'Positive %', type: 'line', yAxisIndex: 0, showSymbol: false, smooth: true, itemStyle: { color: '#37e0a6' }, lineStyle: { width: 1.6, color: '#37e0a6' }, data: history.map((p) => [ts2(p.date), p.positive_pct]) },
-        { name: 'BTC', type: 'line', yAxisIndex: 1, showSymbol: false, itemStyle: { color: '#6B7280' }, lineStyle: { width: 1, color: '#6B7280', opacity: 0.6 }, data: history.filter((p) => p.btc_price != null).map((p) => [ts2(p.date), p.btc_price]) }
+        }),
+        lineSeries({ name: 'Positive %', data: history.map((p) => [ts2(p.date), p.positive_pct]), color: '#37e0a6', width: 1.6, smooth: true, extra: { yAxisIndex: 0 } }),
+        lineSeries({
+          name: 'BTC',
+          data: history.filter((p) => p.btc_price != null).map((p) => [ts2(p.date), p.btc_price]),
+          color: '#6B7280',
+          extra: { yAxisIndex: 1, lineStyle: { width: 1, color: '#6B7280', opacity: 0.6 } }
+        })
       ]
     };
   });

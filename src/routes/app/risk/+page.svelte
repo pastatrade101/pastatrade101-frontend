@@ -9,6 +9,7 @@
   import AiInterpret from '$lib/components/AiInterpret.svelte';
   import AiLabel from '$lib/components/AiLabel.svelte';
   import { fmtPct, fmtUsd } from '$lib/format';
+  import { grid, timeAxis, valueAxis, logAxis, axisTooltip, lineSeries, categorical } from '$lib/charts/presets';
   import { membership, hasFeature } from '$lib/stores/membership';
 
   // Social Metrics is a Mid+ feature, so the social card is gated here too.
@@ -484,6 +485,7 @@
       { yAxis: lo, itemStyle: { color }, label: { show: true, position: 'insideLeft' as const, color: '#6B7280', fontSize: 9, formatter: name } },
       { yAxis: hi }
     ];
+    const compositeHue = $categorical[3];
     const compositeSeries = {
       name: 'On-chain risk',
       type: 'line',
@@ -491,8 +493,8 @@
       showSymbol: false,
       smooth: true,
       z: 5,
-      itemStyle: { color: '#EF4444' },
-      lineStyle: { width: 2.6, color: '#EF4444', opacity: lines.composite ? 1 : 0 },
+      itemStyle: { color: compositeHue },
+      lineStyle: { width: 2.6, color: compositeHue, opacity: lines.composite ? 1 : 0 },
       tooltip: { show: lines.composite },
       data: lines.composite ? onchainHist.filter((p) => p.onchain_risk != null).map((p) => [ts(p.date), p.onchain_risk as number]) : [],
       markArea: {
@@ -507,8 +509,7 @@
       }
     };
     return {
-      tooltip: {
-        trigger: 'axis',
+      tooltip: axisTooltip({
         formatter: (params: { axisValueLabel?: string; axisValue?: number; seriesName: string; value: [number, number]; marker: string }[]) => {
           if (!params?.length) return '';
           const d = new Date(params[0].axisValue ?? params[0].value[0]).toISOString().slice(0, 10);
@@ -526,21 +527,21 @@
           if (band) html += `<br/><span style="color:#9CA3AF">${band.meaning}</span>`;
           return `${html}</div>`;
         }
-      },
-      legend: { type: 'scroll', top: 0, textStyle: { color: '#9CA3AF' }, data: ['BTC price', 'On-chain risk', 'MVRV-Z', 'Puell', 'NUPL', 'Reserve Risk'] },
-      grid: { left: 8, right: 8, top: 32, bottom: 8, containLabel: true },
-      xAxis: { type: 'time', axisLabel: { color: '#9CA3AF' } },
+      }),
+      legend: { type: 'scroll', top: 0, data: ['BTC price', 'On-chain risk', 'MVRV-Z', 'Puell', 'NUPL', 'Reserve Risk'] },
+      grid: grid({ top: 32 }),
+      xAxis: timeAxis(),
       yAxis: [
-        { type: 'value', name: 'Risk 0–1', min: 0, max: 1, position: 'left', nameTextStyle: { color: '#9CA3AF' }, axisLabel: { color: '#9CA3AF' }, splitLine: { lineStyle: { color: '#1F2937' } } },
-        { type: 'log', name: 'BTC', position: 'right', nameTextStyle: { color: '#9CA3AF' }, axisLabel: { color: '#9CA3AF' }, splitLine: { show: false } }
+        valueAxis({ name: 'Risk 0–1', min: 0, max: 1, position: 'left' }),
+        logAxis({ name: 'BTC', position: 'right', splitLine: { show: false } })
       ],
       series: [
         line('BTC price', '#37e0a6', 'btc_price', lines.btc, 1.4, 1),
         compositeSeries,
-        line('MVRV-Z', '#3B82F6', 'mvrv_zscore', lines.mvrv, 1, 0),
+        line('MVRV-Z', $categorical[1], 'mvrv_zscore', lines.mvrv, 1, 0),
         line('Puell', '#A855F7', 'puell_multiple', lines.puell, 1, 0),
-        line('NUPL', '#F59E0B', 'nupl', lines.nupl, 1, 0),
-        line('Reserve Risk', '#22C55E', 'reserve_risk', lines.reserve, 1, 0)
+        line('NUPL', $categorical[0], 'nupl', lines.nupl, 1, 0),
+        line('Reserve Risk', $categorical[2], 'reserve_risk', lines.reserve, 1, 0)
       ]
     };
   });
@@ -620,17 +621,9 @@
     // Negatives (spread) need an auto-scaled metric axis; the clean 0–100 look
     // is kept whenever spread/ratio aren't shown.
     const metricNeedsNeg = sLines.spread;
-    const metricAxis = supplyMetricLog
-      ? { type: 'log' as const, scale: true }
-      : metricNeedsNeg
-        ? { type: 'value' as const, scale: true }
-        : { type: 'value' as const, min: 0, max: 100 };
+    const metricAxis = supplyMetricLog ? logAxis({ scale: true }) : metricNeedsNeg ? valueAxis({ scale: true }) : valueAxis({ min: 0, max: 100 });
     return {
-      tooltip: {
-        trigger: 'axis',
-        backgroundColor: '#0E1117',
-        borderColor: '#1F2937',
-        textStyle: { color: '#F9FAFB' },
+      tooltip: axisTooltip({
         formatter: (params: { axisValue?: number; value: [number, number]; seriesName: string }[]) => {
           if (!params?.length) return '';
           const d = new Date(params[0].axisValue ?? params[0].value[0]).toISOString().slice(0, 10);
@@ -650,26 +643,22 @@
           if (cross) html += `<br/><span style="color:${cross.type === 'profit_above_loss' ? '#22C55E' : '#EF4444'}">⟂ ${cross.type === 'profit_above_loss' ? 'Profit crossed above loss' : 'Loss crossed above profit'}</span>`;
           return `${html}</div>`;
         }
-      },
-      legend: { type: 'scroll', bottom: 0, textStyle: { color: '#9CA3AF' } },
-      grid: { left: 8, right: 8, top: 16, bottom: 30, containLabel: true },
-      xAxis: { type: 'time', axisLabel: { color: '#9CA3AF' }, axisLine: { lineStyle: { color: '#1F2937' } } },
+      }),
+      legend: { type: 'scroll', bottom: 0 },
+      grid: grid({ bottom: 30 }),
+      xAxis: timeAxis(),
       yAxis: [
-        {
-          ...(supplyPriceLog ? { type: 'log' as const } : { type: 'value' as const }),
+        (supplyPriceLog ? logAxis : valueAxis)({
           name: 'Price ($)',
           scale: true,
           position: 'left',
-          nameTextStyle: { color: '#9CA3AF' },
-          axisLabel: { color: '#9CA3AF', formatter: (v: number) => '$' + new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(v) },
-          splitLine: { lineStyle: { color: '#1F2937' } }
-        },
+          axisLabel: { formatter: (v: number) => '$' + new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(v) }
+        }),
         {
           ...metricAxis,
           name: '% Of Total Supply',
           position: 'right',
-          nameTextStyle: { color: '#9CA3AF' },
-          axisLabel: { color: '#9CA3AF', formatter: '{value}%' },
+          axisLabel: { formatter: '{value}%' },
           splitLine: { show: false }
         }
       ],
@@ -710,18 +699,18 @@
     const compact = (v: number) => '$' + new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(v);
     return {
       backgroundColor: 'transparent',
-      grid: { left: 56, right: 48, top: 24, bottom: 30 },
-      legend: { data: ['BTC price', 'Trends (Bitcoin)', 'Social risk'], textStyle: { color: '#9CA3AF' }, top: 0 },
-      tooltip: { trigger: 'axis', backgroundColor: '#0E1117', borderColor: '#1F2937', textStyle: { color: '#F9FAFB', fontSize: 11 } },
-      xAxis: { type: 'time', axisLabel: { color: '#9CA3AF' }, axisLine: { lineStyle: { color: '#1F2937' } }, splitLine: { show: false } },
+      grid: grid({ left: 56, right: 48, top: 24, bottom: 30, containLabel: false }),
+      legend: { data: ['BTC price', 'Trends (Bitcoin)', 'Social risk'], top: 0 },
+      tooltip: axisTooltip({ textStyle: { fontSize: 11 } }),
+      xAxis: timeAxis({ splitLine: { show: false } }),
       yAxis: [
-        { type: 'log', name: 'BTC', position: 'left', scale: true, nameTextStyle: { color: '#9CA3AF' }, axisLabel: { color: '#9CA3AF', formatter: compact }, splitLine: { lineStyle: { color: '#1F2937' } } },
-        { type: 'value', name: '0–1', min: 0, max: 1, position: 'right', nameTextStyle: { color: '#9CA3AF' }, axisLabel: { color: '#9CA3AF' }, splitLine: { show: false } }
+        logAxis({ name: 'BTC', position: 'left', scale: true, axisLabel: { formatter: compact } }),
+        valueAxis({ name: '0–1', min: 0, max: 1, position: 'right', splitLine: { show: false } })
       ],
       series: [
-        { name: 'BTC price', type: 'line', yAxisIndex: 0, showSymbol: false, itemStyle: { color: '#37e0a6' }, lineStyle: { width: 1.2, color: '#37e0a6' }, data: socialHist.filter((p) => p.btc_price != null).map((p) => [ts(p.date), p.btc_price]) },
-        { name: 'Trends (Bitcoin)', type: 'line', yAxisIndex: 1, showSymbol: false, itemStyle: { color: '#3B82F6' }, lineStyle: { width: 1.2, color: '#3B82F6' }, data: socialHist.filter((p) => p.trends_bitcoin != null).map((p) => [ts(p.date), Number(((p.trends_bitcoin as number) / 100).toFixed(3))]) },
-        { name: 'Social risk', type: 'line', yAxisIndex: 1, showSymbol: false, smooth: true, itemStyle: { color: '#F59E0B' }, lineStyle: { width: 2, color: '#F59E0B' }, data: socialHist.filter((p) => p.social_risk_score != null).map((p) => [ts(p.date), p.social_risk_score]) }
+        lineSeries({ name: 'BTC price', color: '#37e0a6', width: 1.2, data: socialHist.filter((p) => p.btc_price != null).map((p) => [ts(p.date), p.btc_price]), extra: { yAxisIndex: 0 } }),
+        lineSeries({ name: 'Trends (Bitcoin)', color: $categorical[1], width: 1.2, data: socialHist.filter((p) => p.trends_bitcoin != null).map((p) => [ts(p.date), Number(((p.trends_bitcoin as number) / 100).toFixed(3))]), extra: { yAxisIndex: 1 } }),
+        lineSeries({ name: 'Social risk', color: $categorical[0], width: 2, smooth: true, data: socialHist.filter((p) => p.social_risk_score != null).map((p) => [ts(p.date), p.social_risk_score]), extra: { yAxisIndex: 1 } })
       ]
     };
   });
@@ -770,27 +759,31 @@
     }
 
     if (showPrice) {
-      series.push({
-        name: 'BTC price',
-        type: 'line',
-        yAxisIndex: 0,
-        showSymbol: false,
-        itemStyle: { color: '#37e0a6' },
-        lineStyle: { width: 1.5, color: '#37e0a6' },
-        data: hist.map((p) => [ts(p.date), p.btc_price]),
-        markLine: showEvents
-          ? {
-              silent: true,
-              symbol: 'none',
-              label: { color: '#9CA3AF', fontSize: 9, formatter: (p: { name: string }) => p.name },
-              lineStyle: { color: 'rgba(59,130,246,0.5)', type: 'dotted' },
-              data: EVENTS.map((e) => ({ name: e.label, xAxis: ts(e.date) }))
-            }
-          : undefined
-      });
+      series.push(
+        lineSeries({
+          name: 'BTC price',
+          color: '#37e0a6',
+          width: 1.5,
+          data: hist.map((p) => [ts(p.date), p.btc_price]),
+          extra: {
+            yAxisIndex: 0,
+            markLine: showEvents
+              ? {
+                  silent: true,
+                  symbol: 'none',
+                  label: { color: '#9CA3AF', fontSize: 9, formatter: (p: { name: string }) => p.name },
+                  lineStyle: { color: 'rgba(59,130,246,0.5)', type: 'dotted' },
+                  data: EVENTS.map((e) => ({ name: e.label, xAxis: ts(e.date) }))
+                }
+              : undefined
+          }
+        })
+      );
     }
 
     if (showRisk) {
+      // The "Now" marker must stay the same hue as the risk line itself.
+      const riskHue = $categorical[0];
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const riskMark: any[] = [
         { yAxis: 0.2, lineStyle: { color: 'rgba(47,191,113,0.35)', type: 'dashed' } },
@@ -801,31 +794,27 @@
       if (showCurrent)
         riskMark.push({
           xAxis: lastTs,
-          lineStyle: { color: '#F59E0B', width: 1.5 },
-          label: { formatter: `Now ${curRisk.toFixed(2)}`, color: '#F59E0B', fontSize: 10, position: 'insideEndTop' }
+          lineStyle: { color: riskHue, width: 1.5 },
+          label: { formatter: `Now ${curRisk.toFixed(2)}`, color: riskHue, fontSize: 10, position: 'insideEndTop' }
         });
-      series.push({
-        name: 'Risk',
-        type: 'line',
-        yAxisIndex: 1,
-        showSymbol: false,
-        smooth: true,
-        itemStyle: { color: '#F59E0B' },
-        lineStyle: { width: 2, color: '#F59E0B' },
-        data: hist.map((p, i) => [ts(p.date), Number(riskSmoothed[i].toFixed(3))]),
-        markLine: { silent: true, symbol: 'none', data: riskMark }
-      });
+      series.push(
+        lineSeries({
+          name: 'Risk',
+          color: riskHue,
+          width: 2,
+          smooth: true,
+          data: hist.map((p, i) => [ts(p.date), Number(riskSmoothed[i].toFixed(3))]),
+          extra: { yAxisIndex: 1, markLine: { silent: true, symbol: 'none', data: riskMark } }
+        })
+      );
     }
 
     return {
       backgroundColor: 'transparent',
-      grid: { left: 60, right: 70, top: 28, bottom: 32 },
-      legend: { data: ['BTC price', 'Risk'], textStyle: { color: '#9CA3AF' }, top: 0 },
-      tooltip: {
-        trigger: 'axis',
-        backgroundColor: '#0E1117',
-        borderColor: '#1F2937',
-        textStyle: { color: '#F9FAFB', fontSize: 11 },
+      grid: grid({ left: 60, right: 70, top: 28, bottom: 32, containLabel: false }),
+      legend: { data: ['BTC price', 'Risk'], top: 0 },
+      tooltip: axisTooltip({
+        textStyle: { fontSize: 11 },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         formatter: (params: any[]) => {
           const date = new Date(params[0].axisValue).toISOString().slice(0, 10);
@@ -839,11 +828,11 @@
           }
           return html;
         }
-      },
-      xAxis: { type: 'time', axisLabel: { color: '#9CA3AF' }, axisLine: { lineStyle: { color: '#1F2937' } }, splitLine: { show: false } },
+      }),
+      xAxis: timeAxis({ splitLine: { show: false } }),
       yAxis: [
-        { type: histLog ? 'log' : 'value', name: 'BTC', position: 'left', scale: true, nameTextStyle: { color: '#9CA3AF' }, axisLabel: { color: '#9CA3AF', formatter: compact }, splitLine: { lineStyle: { color: '#1F2937' } } },
-        { type: 'value', name: 'Risk', min: 0, max: 1, position: 'right', nameTextStyle: { color: '#9CA3AF' }, axisLabel: { color: '#9CA3AF' }, splitLine: { show: false } }
+        (histLog ? logAxis : valueAxis)({ name: 'BTC', position: 'left', scale: true, axisLabel: { formatter: compact } }),
+        valueAxis({ name: 'Risk', min: 0, max: 1, position: 'right', splitLine: { show: false } })
       ],
       series
     };

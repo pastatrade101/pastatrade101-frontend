@@ -5,6 +5,7 @@
   import Gauge from '$lib/components/Gauge.svelte';
   import LockedFeature from '$lib/components/LockedFeature.svelte';
   import EChart from '$lib/components/EChart.svelte';
+  import { grid, valueAxis, axisTooltip, categorical } from '$lib/charts/presets';
   import AiInterpret from '$lib/components/AiInterpret.svelte';
   import AiLabel from '$lib/components/AiLabel.svelte';
 
@@ -41,11 +42,13 @@
     if (hist.length < 2) return null;
     const dates = hist.map((p) => p.date);
     const lev = hist.map((p) => p.leverage_percent);
+    const hue = $categorical[0];
+    const alert = $categorical[3];
     return {
-      grid: { left: 38, right: 16, top: 16, bottom: 28 },
-      tooltip: { trigger: 'axis', valueFormatter: (v: number) => `${Math.round(v)}/100` },
-      xAxis: { type: 'category', data: dates, axisLabel: { color: '#7d8590', fontSize: 10 }, axisLine: { lineStyle: { color: '#30363d' } } },
-      yAxis: { type: 'value', min: 0, max: 100, axisLabel: { color: '#7d8590', fontSize: 10 }, splitLine: { lineStyle: { color: 'rgba(48,54,61,0.5)' } } },
+      grid: grid({ left: 38, right: 16, top: 16, bottom: 28, containLabel: false }),
+      tooltip: axisTooltip({ valueFormatter: (v: number) => `${Math.round(v)}/100` }),
+      xAxis: { type: 'category', data: dates, axisLabel: { fontSize: 10 } },
+      yAxis: valueAxis({ min: 0, max: 100, axisLabel: { fontSize: 10 } }),
       series: [
         {
           name: 'Leverage Risk',
@@ -53,9 +56,9 @@
           data: lev,
           smooth: true,
           symbol: 'none',
-          lineStyle: { color: '#F59E0B', width: 2 },
-          areaStyle: { color: 'rgba(245,158,11,0.12)' },
-          markLine: { silent: true, symbol: 'none', lineStyle: { color: '#EF4444', type: 'dashed', opacity: 0.5 }, data: [{ yAxis: 75 }], label: { formatter: 'Overheated', color: '#EF4444', fontSize: 9 } }
+          lineStyle: { color: hue, width: 2 },
+          areaStyle: { color: hue, opacity: 0.08 },
+          markLine: { silent: true, symbol: 'none', lineStyle: { color: alert, type: 'dashed', opacity: 0.5 }, data: [{ yAxis: 75 }], label: { formatter: 'Overheated', color: alert, fontSize: 9 } }
         }
       ]
     };

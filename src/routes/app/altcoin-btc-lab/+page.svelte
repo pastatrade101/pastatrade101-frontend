@@ -10,6 +10,7 @@
   import AiLabel from '$lib/components/AiLabel.svelte';
   import { membership, membershipReady, hasFeature } from '$lib/stores/membership';
   import { changeColor, fmtPct, signalColor } from '$lib/format';
+  import { grid, timeAxis, valueAxis, logAxis, axisTooltip, lineSeries, categorical } from '$lib/charts/presets';
 
   interface Pt {
     date: string;
@@ -288,13 +289,8 @@
   const mainOption = $derived.by(() => {
     if (!data || !display.length) return {};
     const sym = data.coin.symbol;
-    const line = (name: string, color: string, width: number, vals: (number | null)[]) => ({
-      name,
-      type: 'line',
-      showSymbol: false,
-      lineStyle: { width, color },
-      data: display.map((p, i) => [ts(p.date), vals[i]])
-    });
+    const line = (name: string, color: string, width: number, vals: (number | null)[]) =>
+      lineSeries({ name, color, width, data: display.map((p, i) => [ts(p.date), vals[i]]) });
 
     let series: any[];
     let yAxis: any;
@@ -302,33 +298,25 @@
     if (mode === 'normalized') {
       const base = display[0];
       series = [
-        line(`${sym} (norm)`, '#F59E0B', 2.5, display.map((p) => (p.alt_usd / base.alt_usd) * 100)),
-        line('BTC (norm)', '#3B82F6', 2, display.map((p) => (p.btc_usd / base.btc_usd) * 100))
+        line(`${sym} (norm)`, $categorical[0], 2.5, display.map((p) => (p.alt_usd / base.alt_usd) * 100)),
+        line('BTC (norm)', $categorical[1], 2, display.map((p) => (p.btc_usd / base.btc_usd) * 100))
       ];
-      yAxis = { type: 'value', name: 'Indexed to 100' };
+      yAxis = valueAxis({ name: 'Indexed to 100', scale: true });
     } else {
-      series = [line(`${sym}/BTC`, '#F59E0B', 2.5, display.map((p) => p.ratio))];
+      series = [line(`${sym}/BTC`, $categorical[0], 2.5, display.map((p) => p.ratio))];
       if (showMa) {
-        series.push(line('MA50', '#3B82F6', 1, display.map((p) => p.ma50)));
-        series.push(line('MA200', '#EF4444', 1, display.map((p) => p.ma200)));
+        series.push(line('MA50', $categorical[1], 1, display.map((p) => p.ma50)));
+        series.push(line('MA200', $categorical[3], 1, display.map((p) => p.ma200)));
       }
-      yAxis = { type: logScale ? 'log' : 'value', name: `${sym}/BTC ratio` };
+      yAxis = logScale ? logAxis({ name: `${sym}/BTC ratio`, scale: true }) : valueAxis({ name: `${sym}/BTC ratio`, scale: true });
     }
 
     return {
-      backgroundColor: 'transparent',
-      grid: { left: 64, right: 16, top: 28, bottom: 32 },
-      legend: { textStyle: { color: '#9CA3AF' }, top: 0 },
-      tooltip: { trigger: 'axis', backgroundColor: '#0E1117', borderColor: '#1F2937', textStyle: { color: '#F9FAFB', fontSize: 11 } },
-      xAxis: { type: 'time', axisLabel: { color: '#9CA3AF' }, axisLine: { lineStyle: { color: '#1F2937' } }, splitLine: { show: false } },
-      yAxis: {
-        ...yAxis,
-        nameTextStyle: { color: '#9CA3AF' },
-        axisLabel: { color: '#9CA3AF' },
-        axisLine: { lineStyle: { color: '#1F2937' } },
-        splitLine: { lineStyle: { color: '#1F2937' } },
-        scale: true
-      },
+      grid: grid({ left: 64, right: 16, top: 28, bottom: 32, containLabel: false }),
+      legend: { top: 0 },
+      tooltip: axisTooltip({ textStyle: { fontSize: 11 } }),
+      xAxis: timeAxis({ splitLine: { show: false } }),
+      yAxis,
       series
     };
   });
@@ -347,32 +335,25 @@
     });
 
     return {
-      backgroundColor: 'transparent',
-      grid: { left: 48, right: 16, top: 12, bottom: 28 },
-      tooltip: {
-        trigger: 'axis',
-        backgroundColor: '#0E1117',
-        borderColor: '#1F2937',
-        textStyle: { color: '#F9FAFB', fontSize: 11 },
+      grid: grid({ left: 48, right: 16, top: 12, bottom: 28, containLabel: false }),
+      tooltip: axisTooltip({
+        textStyle: { fontSize: 11 },
         valueFormatter: (v: number) => (typeof v === 'number' ? `${v.toFixed(1)}%` : v)
-      },
-      xAxis: { type: 'time', axisLabel: { color: '#9CA3AF' }, axisLine: { lineStyle: { color: '#1F2937' } }, splitLine: { show: false } },
-      yAxis: {
-        type: 'value',
+      }),
+      xAxis: timeAxis({ splitLine: { show: false } }),
+      yAxis: valueAxis({
         min,
         max,
         name: yName,
-        nameTextStyle: { color: '#9CA3AF' },
-        axisLabel: { color: '#9CA3AF', formatter: (v: number) => `${v}%` },
-        axisLine: { lineStyle: { color: '#1F2937' } },
+        axisLabel: { formatter: (v: number) => `${v}%` },
         splitLine: { show: false }
-      },
+      }),
       series: [
         {
           type: 'line',
           showSymbol: false,
           z: 5,
-          lineStyle: { width: 2, color: '#F59E0B' },
+          lineStyle: { width: 2, color: $categorical[0] },
           data: points.map((p) => [ts(p.date), Number(p.value.toFixed(2))]),
           markArea: {
             silent: true,

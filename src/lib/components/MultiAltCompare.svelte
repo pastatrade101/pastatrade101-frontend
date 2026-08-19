@@ -4,6 +4,7 @@
   import { api } from '$lib/api';
   import EChart from '$lib/components/EChart.svelte';
   import { changeColor, fmtPct, signalColor } from '$lib/format';
+  import { axisTooltip, categorical, grid, lineSeries, timeAxis, valueAxis } from '$lib/charts/presets';
 
   interface CoinOpt {
     coingecko_id: string;
@@ -39,7 +40,6 @@
   let { coins }: { coins: CoinOpt[] } = $props();
 
   const TF: Record<string, number> = { '30D': 30, '90D': 90, '180D': 180, '1Y': 365 };
-  const PALETTE = ['#F59E0B', '#3B82F6', '#22C55E', '#EF4444', '#c084fc', '#22d3ee', '#f472b6', '#34d399'];
 
   const DEFAULT = ['ethereum', 'solana', 'sui', 'injective-protocol', 'chainlink', 'jupiter-exchange-solana'];
 
@@ -57,7 +57,7 @@
 
   const colorMap = $derived.by(() => {
     const m: Record<string, string> = {};
-    data.forEach((c, i) => (m[c.coingecko_id] = PALETTE[i % PALETTE.length]));
+    data.forEach((c, i) => (m[c.coingecko_id] = $categorical[i % $categorical.length]));
     return m;
   });
 
@@ -108,29 +108,21 @@
     const visible = data.filter((c) => !hidden.has(c.coingecko_id));
     return {
       backgroundColor: 'transparent',
-      grid: { left: 52, right: 16, top: 28, bottom: 32 },
+      // containLabel off: the 52px gutter was tuned to hold the axis labels itself.
+      grid: grid({ left: 52, right: 16, top: 28, bottom: 32, containLabel: false }),
       legend: { show: false },
-      tooltip: { trigger: 'axis', backgroundColor: '#0E1117', borderColor: '#1F2937', textStyle: { color: '#F9FAFB', fontSize: 11 } },
-      xAxis: { type: 'time', axisLabel: { color: '#9CA3AF' }, axisLine: { lineStyle: { color: '#1F2937' } }, splitLine: { show: false } },
-      yAxis: {
-        type: 'value',
-        name: 'Alt/BTC indexed to 100',
-        nameTextStyle: { color: '#9CA3AF' },
-        axisLabel: { color: '#9CA3AF' },
-        axisLine: { lineStyle: { color: '#1F2937' } },
-        splitLine: { lineStyle: { color: '#1F2937' } },
-        scale: true
-      },
+      tooltip: axisTooltip({ textStyle: { fontSize: 11 } }),
+      xAxis: timeAxis({ splitLine: { show: false } }),
+      yAxis: valueAxis({ name: 'Alt/BTC indexed to 100', scale: true }),
       series: visible.map((c) => {
         const pts = c.points.slice(-TF[timeframe]);
         const base = pts[0]?.ratio || 1;
-        return {
+        return lineSeries({
           name: c.symbol,
-          type: 'line',
-          showSymbol: false,
-          lineStyle: { width: 2, color: colorMap[c.coingecko_id] },
+          color: colorMap[c.coingecko_id],
+          width: 2,
           data: pts.map((p) => [ts(p.date), Number(((p.ratio / base) * 100).toFixed(2))])
-        };
+        });
       })
     };
   });
