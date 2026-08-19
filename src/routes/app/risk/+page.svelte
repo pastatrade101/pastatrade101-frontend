@@ -9,7 +9,24 @@
   import AiInterpret from '$lib/components/AiInterpret.svelte';
   import AiLabel from '$lib/components/AiLabel.svelte';
   import { fmtPct, fmtUsd } from '$lib/format';
-  import { grid, timeAxis, valueAxis, logAxis, axisTooltip, lineSeries, categorical, zoomInside } from '$lib/charts/presets';
+  import {
+    adaptHue,
+    axisTooltip,
+    barSeries,
+    categorical,
+    categoryAxis,
+    grid,
+    itemTooltip,
+    lineSeries,
+    logAxis,
+    radarOption,
+    rankedBars,
+    timeAxis,
+    tipBody,
+    tipRow,
+    valueAxis,
+    zoomInside
+  } from '$lib/charts/presets';
   import { membership, hasFeature } from '$lib/stores/membership';
 
   // Social Metrics is a Mid+ feature, so the social card is gated here too.
@@ -228,6 +245,72 @@
     price: summary?.categories.price != null,
     onchain: summary?.categories.onchain != null || latestOnchainRisk != null,
     social: summary?.categories.social != null || social?.social_risk_score != null
+  });
+
+  // ── Category row + radar ────────────────────────────────────────────────
+  // The three category tiles were built inline in the markup; hoisted here so
+  // the radar ABOVE the row and the gauges INSIDE it read the same array and
+  // can never drift apart. `shown` is what the gauge renders — a locked
+  // category stays null rather than being drawn as a confident zero.
+  const categoryRow = $derived(
+    [
+      { key: 'price', label: 'Price Metrics', short: 'Price', val: summary?.categories.price ?? null, locked: false },
+      { key: 'onchain', label: 'On-Chain Metrics', short: 'On-Chain', val: summary?.categories.onchain ?? latestOnchainRisk, locked: !canOnchain },
+      { key: 'social', label: 'Social Metrics', short: 'Social', val: summary?.categories.social ?? social?.social_risk_score ?? null, locked: !canSocial }
+    ].map((c) => ({ ...c, shown: c.locked ? null : c.val }))
+  );
+
+  // Three separate gauges make you compare them one at a time, which hides the
+  // question that actually drives the decision: WHICH category is stretched.
+  // They already share one 0→1 scale, so a single polygon answers it at a
+  // glance — the gauges below stay as the exact-number layer.
+  //
+  // Only categories that are both entitled AND scored are plotted: a locked or
+  // missing one drawn at 0 would read as "no risk at all" rather than "not
+  // measurable". With only three categories in the model that means the radar
+  // appears when all three are live, and is skipped otherwise (a 2-axis radar
+  // is a line — the gauges are clearer).
+  const radarCats = $derived(categoryRow.filter((c) => !c.locked && c.val != null));
+  const radarPeak = $derived(radarCats.length ? radarCats.reduce((a, b) => ((b.val ?? 0) > (a.val ?? 0) ? b : a)) : null);
+
+  const categoryRadarOption = $derived.by(() => {
+    if (radarCats.length < 3 || displayRisk == null) return {};
+    const muted = $adaptHue('#8b97a8');
+    const base = radarOption({
+      indicators: radarCats.map((c) => ({ name: c.short })),
+      values: radarCats.map((c) => c.val),
+      // The fill takes the headline verdict's own zone colour, so the shape and
+      // the big gauge read as one object rather than two unrelated graphics.
+      color: $adaptHue(riskColor(displayRisk)),
+      muted,
+      name: 'Category risk'
+    });
+    return {
+      backgroundColor: 'transparent',
+      tooltip: itemTooltip({
+        textStyle: { fontSize: 11 },
+        // Dots reuse riskColor(), so a corner's colour matches its own gauge band.
+        formatter: () => tipBody(radarCats.map((c) => tipRow($adaptHue(riskColor(c.val)), c.short, (c.val ?? 0).toFixed(2))))
+      }),
+      radar: { ...base.radar, radius: '62%', center: ['50%', '54%'] },
+      series: [
+        // 0.60 is where zoneFor() leaves Neutral for Caution, so the dashed ring
+        // turns "is this category hot?" into a purely visual check: is the
+        // corner outside the ring.
+        {
+          type: 'radar',
+          name: 'Caution (0.60)',
+          silent: true,
+          symbol: 'none',
+          z: 1,
+          tooltip: { show: false },
+          data: [{ value: radarCats.map(() => 0.6) }],
+          lineStyle: { color: muted, width: 1, type: 'dashed' as const },
+          itemStyle: { color: 'transparent' }
+        },
+        ...base.series
+      ]
+    };
   });
 
   // ── On-chain intelligence ───────────────────────────────────────────────
@@ -840,6 +923,58 @@
     };
   });
 
+  // ── "Why the score is here" — every contributing metric on one 0–1 scale ──
+  // The list below is the exact-number layer, but reading ten numbers one at a
+  // time hides the only question it is really being asked: which metric is
+  // carrying the score? Sorted bars answer that in one look. Same rows, same
+  // riskColor() thresholds as the numeric pills, so bar and pill can never
+  // disagree — and the premium on-chain rows stay behind canOnchain exactly as
+  // the list does.
+  const whyRows = $derived(
+    [...(metrics?.price ?? []), ...(canOnchain ? (metrics?.onchain ?? []) : []), ...(metrics?.social ?? [])].filter(
+      (m): m is MetricRow & { risk: number } => m.risk != null
+    )
+  );
+  // Ascending, because a category yAxis draws its first item at the BOTTOM — so
+  // the biggest contributor lands at the top of the chart.
+  const whyRanked = $derived([...whyRows].sort((a, b) => a.risk - b.risk));
+  // ~27px a row keeps the labels legible without an inner scroll on a phone.
+  const whyHeight = $derived(Math.max(190, Math.min(340, whyRanked.length * 27 + 26)));
+
+  const whyOption = $derived.by(() => {
+    const rows = whyRanked;
+    if (!rows.length) return {};
+    return {
+      backgroundColor: 'transparent',
+      // Right gutter holds the value label parked at the end of the longest bar.
+      grid: grid({ left: 4, right: 40, top: 6, bottom: 4 }),
+      tooltip: itemTooltip({
+        textStyle: { fontSize: 11 },
+        // The list's plain-language "meaning" stays reachable from the chart —
+        // the bar shows how much risk, this says what that actually means.
+        formatter: (p: { dataIndex: number; color: string; value: number }) => {
+          const m = rows[p.dataIndex];
+          return `<b>${m.label}</b><br/>${tipBody([tipRow(p.color, 'Risk', m.risk.toFixed(3))])}<div style="max-width:210px;white-space:normal;opacity:.75;margin-top:4px">${meaningFor(m.key, m.risk)}</div>`;
+        }
+      }),
+      // 0 / 0.5 / 1 only — three ticks is all a 340px-wide phone chart can hold.
+      xAxis: valueAxis({ min: 0, max: 1, interval: 0.5 }),
+      yAxis: categoryAxis(
+        rows.map((m) => m.label),
+        { axisTick: { show: false }, axisLabel: { fontSize: 10, width: 96, overflow: 'truncate' } }
+      ),
+      series: [
+        rankedBars({
+          name: 'Risk',
+          data: rows.map((m) => m.risk),
+          colorFor: (v: number) => $adaptHue(riskColor(v)),
+          // `color: 'inherit'` keeps each number the same green→red as its bar.
+          extra: { label: { show: true, position: 'right', fontSize: 10, color: 'inherit', formatter: (p: { value: number }) => p.value.toFixed(2) } }
+        })
+      ]
+    };
+  });
+
   const zoneSections = $derived(
     zones
       ? [
@@ -849,6 +984,92 @@
         ]
       : []
   );
+
+  // ── DCA Zone History — did the zone actually pay off? ───────────────────
+  // The tables below list every period, but the question they are really being
+  // asked is "was buying that zone followed by gains?" — and answering it means
+  // scanning two columns of signed percentages across three separate tables.
+  // One diverging bar per period answers it at a glance: direction carries the
+  // sign, so colour is free to carry the ZONE (the page's own ZONES hues), and
+  // the green/red split across the zero line is the whole story.
+  const ZONE_BAND = {
+    aggressive: { label: 'Aggressive DCA', color: ZONES[0].color },
+    good: { label: 'Good DCA', color: ZONES[1].color },
+    distribution: { label: 'Distribution', color: ZONES[4].color }
+  } as const;
+  type ZoneBandKey = keyof typeof ZONE_BAND;
+  const ZONE_BAND_KEYS = Object.keys(ZONE_BAND) as ZoneBandKey[];
+  /** At most this many periods per band, so a phone never gets a 30-row chart. */
+  const ZONE_ROWS_PER_BAND = 4;
+
+  const zoneReturnRows = $derived.by(() => {
+    // Bound to a local so the null-narrowing survives into the closures below.
+    const z = zones;
+    if (!z) return [];
+    // Periods still inside their 12-month window have no forward return yet —
+    // they stay in the table but cannot be plotted.
+    const picked = ZONE_BAND_KEYS.flatMap((band) =>
+      (z[band] ?? [])
+        .filter((p): p is ZonePeriod & { fwd_12m: number } => p.fwd_12m != null)
+        .slice(-ZONE_ROWS_PER_BAND)
+        .map((p) => ({ ...p, band }))
+    );
+    // Chronological, so the newest period sits at the TOP of the category axis.
+    return picked.sort((a, b) => (a.start < b.start ? -1 : 1));
+  });
+  const zoneReturnHidden = $derived.by(() => {
+    const z = zones;
+    if (!z) return 0;
+    return ZONE_BAND_KEYS.reduce((n, b) => n + (z[b] ?? []).filter((p) => p.fwd_12m != null).length, 0) - zoneReturnRows.length;
+  });
+  const zoneReturnHeight = $derived(Math.max(200, Math.min(340, zoneReturnRows.length * 28 + 30)));
+
+  const zoneReturnOption = $derived.by(() => {
+    const rows = zoneReturnRows;
+    if (!rows.length) return {};
+    // Store hues resolved eagerly, never inside an ECharts paint callback.
+    const hue = Object.fromEntries(ZONE_BAND_KEYS.map((b) => [b, $adaptHue(ZONE_BAND[b].color)])) as Record<ZoneBandKey, string>;
+    const baseline = $adaptHue('#8b97a8');
+    return {
+      backgroundColor: 'transparent',
+      grid: grid({ left: 4, right: 12, top: 8, bottom: 4 }),
+      tooltip: itemTooltip({
+        textStyle: { fontSize: 11 },
+        formatter: (p: { dataIndex: number; color: string }) => {
+          const r = rows[p.dataIndex];
+          return `<b>${r.start} → ${r.end}</b><br/>${tipBody([
+            tipRow(p.color, ZONE_BAND[r.band].label, `risk ${r.risk_min.toFixed(2)}–${r.risk_max.toFixed(2)}`),
+            `Avg price: <b>${fmtUsd(r.avg_price, { compact: true })}</b>`,
+            `BTC +6m: <b>${r.fwd_6m == null ? '—' : fmtPct(r.fwd_6m)}</b>`,
+            `BTC +12m: <b>${fmtPct(r.fwd_12m)}</b>`
+          ])}`;
+        }
+      }),
+      xAxis: valueAxis({ axisLabel: { fontSize: 10, formatter: (v: number) => `${v}%` } }),
+      yAxis: categoryAxis(
+        rows.map((r) => r.start),
+        { axisTick: { show: false }, axisLabel: { fontSize: 10 } }
+      ),
+      series: [
+        barSeries({
+          name: 'BTC +12m',
+          width: '58%',
+          // Per-datum colour, because the hue encodes the period's ZONE rather
+          // than its value — barSeries' single colour/value callback can't see
+          // which band a row came from.
+          data: rows.map((r) => ({ value: Number(r.fwd_12m.toFixed(1)), itemStyle: { color: hue[r.band] } })),
+          extra: {
+            markLine: {
+              silent: true,
+              symbol: 'none',
+              label: { show: false },
+              data: [{ xAxis: 0, lineStyle: { color: baseline, width: 1 } }]
+            }
+          }
+        })
+      ]
+    };
+  });
 
   const tables = $derived(
     metrics ? [{ title: 'BTC Price Metrics', rows: metrics.price }, { title: 'BTC On-Chain Metrics', rows: metrics.onchain }, { title: 'Social Metrics', rows: metrics.social }] : []
@@ -965,11 +1186,35 @@
     </div>
   {/if}
 
+  <!-- Where the risk is concentrated — the SHAPE above the exact numbers.
+       Only rendered when all three categories are live; a locked or unscored
+       category is never drawn as 0. -->
+  {#if radarCats.length >= 3}
+    <div class="card mb-4">
+      <div class="flex items-center gap-2">
+        <Activity class="h-4 w-4 text-accent" />
+        <p class="stat-label">Where the risk is concentrated</p>
+      </div>
+      {#if radarPeak}
+        <p class="mt-1 text-sm leading-relaxed text-soft">
+          <span class="font-semibold text-strong">{radarPeak.label}</span> is the most stretched category right now, at
+          <span class="font-semibold text-strong">{(radarPeak.val ?? 0).toFixed(2)}</span>. The further a corner reaches the rim, the closer that
+          category sits to its historical top-of-cycle range.
+        </p>
+      {/if}
+      <EChart option={categoryRadarOption} height={250} minWidth={0} />
+      <p class="mt-1 text-[11px] leading-relaxed text-muted">
+        Every axis runs 0 → 1 on the same scale as the gauges below. The dashed ring marks 0.60 — where the model leaves the neutral zone for
+        caution. A round shape means risk is spread evenly; a spike means one category is carrying the score.
+      </p>
+    </div>
+  {/if}
+
   <!-- Category gauges + explanations -->
   <div class="mb-4 grid gap-4 sm:grid-cols-3">
-    {#each [{ key: 'price', label: 'Price Metrics', val: summary.categories.price }, { key: 'onchain', label: 'On-Chain Metrics', val: summary.categories.onchain ?? latestOnchainRisk }, { key: 'social', label: 'Social Metrics', val: summary.categories.social ?? social?.social_risk_score ?? null }] as c}
+    {#each categoryRow as c}
       <div class="card">
-        <Gauge value={(c.key === 'social' && !canSocial) || (c.key === 'onchain' && !canOnchain) ? null : c.val} title={c.label} />
+        <Gauge value={c.shown} title={c.label} />
         <p class="mt-2 text-xs leading-relaxed text-muted">{CATEGORY_EXPLAIN[c.key]}</p>
         {#if c.key === 'onchain' && !canOnchain}
           <p class="mt-2 flex items-center justify-between gap-2 rounded-lg border border-accent/30 bg-accent/5 px-2 py-1.5 text-xs text-soft">
@@ -999,15 +1244,23 @@
   <div class="card mb-4">
     <h2 class="text-sm font-semibold text-strong">Why the score is here</h2>
     <p class="mb-3 text-xs text-muted">Each metric contributes a 0–1 risk. Lower = more accumulation-friendly.</p>
+
+    <!-- Which metric is carrying the score, at a glance. Proof for the rows
+         below, not a replacement: every score and meaning is still listed. -->
+    {#if whyRanked.length}
+      <div class="mb-3 border-b border-edge/60 pb-3">
+        <p class="mb-1 text-xs text-muted">Highest contributor first. Same scores and same colours as the pills below — tap a bar for what it means.</p>
+        <EChart option={whyOption} height={whyHeight} minWidth={0} />
+      </div>
+    {/if}
+
     <div class="divide-y divide-edge/60">
-      {#each [...(metrics?.price ?? []), ...(canOnchain ? (metrics?.onchain ?? []) : []), ...(metrics?.social ?? [])] as m}
-        {#if m.risk != null}
-          <div class="grid gap-1 py-2.5 sm:grid-cols-[200px_70px_1fr] sm:items-center">
-            <span class="text-sm font-medium text-strong">{m.label}</span>
-            <span class="rounded px-2 py-0.5 text-center font-mono text-xs font-semibold" style="background: {riskColor(m.risk)}22; color: {riskColor(m.risk)}">{m.risk.toFixed(3)}</span>
-            <span class="text-xs text-muted">{meaningFor(m.key, m.risk)}</span>
-          </div>
-        {/if}
+      {#each whyRows as m}
+        <div class="grid gap-1 py-2.5 sm:grid-cols-[200px_70px_1fr] sm:items-center">
+          <span class="text-sm font-medium text-strong">{m.label}</span>
+          <span class="rounded px-2 py-0.5 text-center font-mono text-xs font-semibold" style="background: {riskColor(m.risk)}22; color: {riskColor(m.risk)}">{m.risk.toFixed(3)}</span>
+          <span class="text-xs text-muted">{meaningFor(m.key, m.risk)}</span>
+        </div>
       {/each}
     </div>
   </div>
@@ -1401,6 +1654,27 @@
     <div class="card mb-4">
       <h2 class="text-sm font-semibold text-strong">DCA Zone History</h2>
       <p class="mb-3 text-xs text-muted">Past periods in each risk band, with BTC performance 6 and 12 months later.</p>
+
+      <!-- Did the zone pay off? Direction carries the sign, colour carries the
+           zone — so the green/red split across the zero line IS the answer.
+           The tables below keep every period and every exact number. -->
+      {#if zoneReturnRows.length >= 3}
+        <div class="mb-4 border-b border-edge/60 pb-4">
+          <p class="mb-1.5 text-xs text-muted">
+            What BTC did in the <span class="font-medium text-soft">12 months after</span> each period. Bars right of zero = BTC was higher a year later.
+            {#if zoneReturnHidden > 0}Showing the {ZONE_ROWS_PER_BAND} most recent periods per zone; {zoneReturnHidden} older {zoneReturnHidden === 1 ? 'period is' : 'periods are'} in the tables below.{/if}
+          </p>
+          <!-- Colour key — the same ZONES hues used by the badge, gauge and chart bands -->
+          <div class="mb-1 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted">
+            {#each ZONE_BAND_KEYS as b}
+              <span class="flex items-center gap-1.5"><span class="inline-block h-2 w-2 rounded-sm" style="background: {ZONE_BAND[b].color}"></span>{ZONE_BAND[b].label}</span>
+            {/each}
+          </div>
+          <EChart option={zoneReturnOption} height={zoneReturnHeight} minWidth={0} />
+          <p class="mt-1 text-[11px] leading-relaxed text-muted">Past behaviour of these zones — not a forecast. Periods still inside their 12-month window aren’t plotted.</p>
+        </div>
+      {/if}
+
       <div class="space-y-4">
         {#each zoneSections as sec}
           {#if sec.list.length}

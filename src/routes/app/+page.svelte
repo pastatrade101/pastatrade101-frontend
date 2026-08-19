@@ -8,6 +8,8 @@
   import Disclaimer from '$lib/components/Disclaimer.svelte';
   import AiLottie from '$lib/components/AiLottie.svelte';
   import AiLabel from '$lib/components/AiLabel.svelte';
+  import EChart from '$lib/components/EChart.svelte';
+  import { adaptHue, categoryAxis, grid, itemTooltip, rankedBars, tipBody, tipRow, valueAxis } from '$lib/charts/presets';
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let data = $state<any>(null);
@@ -194,7 +196,150 @@
       : t === 'warn' ? 'Altcoins are improving, but full altseason is not confirmed.'
       : 'Altcoins are still weak against Bitcoin — be very selective.';
   });
+
+  /* ── Signal balance chart ─────────────────────────────────────────────────
+     Eight signal cards each answer their own question, but nothing on the page
+     answers "is the market leaning with me or against me right now?" without
+     reading all eight. This puts every signal on ONE shared axis so the lean
+     reads in a single glance; the cards below keep the label, reading and link.
+
+     The bar encodes TONE, not a made-up composite score. That is deliberate:
+     the signals' raw numbers live on incompatible scales (a 0→1 risk, a % of
+     alts beating BTC, a dollar stablecoin cap) and point in opposite
+     directions (high BTC risk is bad, high macro regime is good). The backend
+     has already normalised all of that into one four-step verdict per signal —
+     tone — so tone IS the shared scale. Plotting it costs no new maths and can
+     never disagree with the pill on the card. The signal's own reading stays
+     honest and reachable in the tooltip. */
+
+  /** The tone ladder, as an ordinal: supportive (right) ↔ risk (left). */
+  const TONE_SCORE: Record<string, number> = { good: 2, neutral: 1, warn: -1, danger: -2 };
+  const toneScore = (t: string): number => TONE_SCORE[t] ?? 0;
+  /** Same four hues the tone pills/borders use, so chart and chips can't drift. */
+  const TONE_HEX: Record<string, string> = {
+    good: '#37e0a6', // --c-mint
+    neutral: '#5b8cff', // --c-accent
+    warn: '#ffb547', // --c-warn
+    danger: '#ff5d6c' // --c-danger
+  };
+
+  interface SignalRow {
+    key: string;
+    name: string;
+    label: string;
+    value: string | null;
+    meaning: string;
+    tone: string;
+    link: string;
+  }
+  /** The only fields this page reads off an ECharts formatter params object. */
+  interface ChartParam {
+    dataIndex: number;
+    color: string;
+  }
+
+  // 'na' signals (no sync yet, or not on this plan) are dropped rather than
+  // drawn at zero — a zero bar would read as "neutral", which is a claim we
+  // cannot make. They stay visible in the cards and are counted in the caption.
+  const balanceRows = $derived(
+    (signalList as SignalRow[])
+      .filter((s) => s.tone in TONE_SCORE)
+      // A category yAxis draws its first item at the BOTTOM, so sorting ascending
+      // lands the most supportive signal at the top of the ladder.
+      .sort((a, b) => toneScore(a.tone) - toneScore(b.tone) || b.name.localeCompare(a.name))
+  );
+  const balanceMissing = $derived(signalList.length - balanceRows.length);
+  const balanceMix = $derived.by(() => {
+    let good = 0;
+    let neutral = 0;
+    let risk = 0;
+    for (const s of balanceRows) {
+      if (s.tone === 'good') good += 1;
+      else if (s.tone === 'neutral') neutral += 1;
+      else risk += 1;
+    }
+    return { good, neutral, risk };
+  });
+  const balanceCaption = $derived(
+    'Each signal on one shared scale — bar direction and colour are the same verdict shown on its card. Tap a bar for the reading.' +
+      (balanceMissing > 0 ? ` ${balanceMissing} signal${balanceMissing === 1 ? '' : 's'} without a reading ${balanceMissing === 1 ? 'is' : 'are'} listed below.` : '')
+  );
+  // ~30px a row keeps eight signal names legible without an inner scroll on a phone.
+  const balanceHeight = $derived(Math.min(320, Math.max(200, balanceRows.length * 30 + 28)));
+
+  const balanceOption = $derived.by(() => {
+    const rows = balanceRows;
+    if (!rows.length) return {};
+    // Store hues resolved eagerly — never inside an ECharts paint callback.
+    const hex: Record<string, string> = {
+      good: $adaptHue(TONE_HEX.good),
+      neutral: $adaptHue(TONE_HEX.neutral),
+      warn: $adaptHue(TONE_HEX.warn),
+      danger: $adaptHue(TONE_HEX.danger)
+    };
+    return {
+      backgroundColor: 'transparent',
+      grid: grid({ left: 4, right: 10, top: 6, bottom: 4 }),
+      tooltip: itemTooltip({
+        textStyle: { fontSize: 11 },
+        // The card's plain-language read stays reachable from the chart: the bar
+        // shows the lean, this says what it means and on what reading.
+        formatter: (p: ChartParam) => {
+          const s = rows[p.dataIndex];
+          if (!s) return '';
+          return `<b>${s.name}</b><br/>${tipBody([
+            tipRow(p.color, 'Read', humanFor(s.key, s.tone, s.label)),
+            ...(s.value ? [`Reading: <b>${s.value}</b>`] : [])
+          ])}<div style="max-width:210px;white-space:normal;opacity:.75;margin-top:4px">${s.meaning}</div>`;
+        }
+      }),
+      // Fixed ±2.5 domain with worded ends: the scale is a four-step verdict
+      // ladder, so numeric ticks would fake a precision it does not have.
+      xAxis: valueAxis({
+        min: -2.5,
+        max: 2.5,
+        interval: 2.5,
+        axisLabel: { fontSize: 10, formatter: (v: number) => (v < 0 ? 'Risk' : v > 0 ? 'Supportive' : '') }
+      }),
+      yAxis: categoryAxis(
+        rows.map((s) => s.name),
+        {
+          // onZero would park the category axis (and its labels) on the value
+          // axis' zero — i.e. down the middle of a diverging chart.
+          axisLine: { onZero: false },
+          axisTick: { show: false },
+          axisLabel: { fontSize: 10, width: 92, overflow: 'truncate' }
+        }
+      ),
+      series: [
+        rankedBars({
+          name: 'Signal balance',
+          // Per-row colour: tone is the datum here, so a value→colour map would
+          // just be the same lookup twice.
+          data: rows.map((s) => ({ value: toneScore(s.tone), itemStyle: { color: hex[s.tone] } })),
+          colorFor: () => hex.neutral
+        })
+      ]
+    };
+  });
 </script>
+
+<!-- Rendered above the mobile "Quick read" strip and above the desktop signal
+     grid — the same eight signals, so one option object serves both. -->
+{#snippet signalBalance()}
+  {#if balanceRows.length}
+    <div class="card mb-3">
+      <div class="flex flex-wrap items-baseline justify-between gap-x-2">
+        <p class="stat-label">Signal balance</p>
+        <p class="text-[11px] text-muted">
+          {#if balanceMix.good}<span class="font-semibold text-mint">{balanceMix.good} supportive</span>{/if}{#if balanceMix.good && (balanceMix.neutral || balanceMix.risk)} · {/if}{#if balanceMix.neutral}<span class="font-semibold text-accent">{balanceMix.neutral} neutral</span>{/if}{#if balanceMix.neutral && balanceMix.risk} · {/if}{#if balanceMix.risk}<span class="font-semibold text-warn">{balanceMix.risk} flagging risk</span>{/if}
+        </p>
+      </div>
+      <EChart option={balanceOption} height={balanceHeight} minWidth={0} />
+      <p class="mt-1 text-[11px] leading-snug text-muted">{balanceCaption}</p>
+    </div>
+  {/if}
+{/snippet}
 
 <header class="mb-4 hidden flex-wrap items-end justify-between gap-3 lg:flex">
   <div>
@@ -292,6 +437,7 @@
     <!-- 6 · Quick read — horizontal human-labelled signal cards -->
     {#if signalList.length}
       <div>
+        {@render signalBalance()}
         <p class="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted">Quick read</p>
         <div class="-mx-4 flex gap-2.5 overflow-x-auto px-4 pb-1">
           {#each signalList as s}
@@ -359,6 +505,7 @@
 
   <!-- ── Signal row ── -->
   {#if data.signals}
+    {@render signalBalance()}
     <div class="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
       {#each Object.values(data.signals) as sig}
         {@const s = sig as { key: string; name: string; label: string; value: string | null; meaning: string; tone: string; link: string }}
