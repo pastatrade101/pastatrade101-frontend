@@ -5,6 +5,8 @@
   import LockedFeature from '$lib/components/LockedFeature.svelte';
   import AiInterpret from '$lib/components/AiInterpret.svelte';
   import AiLabel from '$lib/components/AiLabel.svelte';
+  import EChart from '$lib/components/EChart.svelte';
+  import { adaptHue, categoryAxis, grid, itemTooltip, rankedBars, tipBody, tipRow, valueAxis } from '$lib/charts/presets';
 
   const canRadar = $derived(hasFeature($membership, 'access_early_opportunity_radar'));
 
@@ -184,6 +186,60 @@
   // Uses the exact CoinGecko slug so links are always valid.
   const narrativeUrl = (n: any): string | null => (n.category_id ? `https://www.coingecko.com/en/categories/${n.category_id}` : null);
 
+  // ── Narrative radar chart ──
+  // The narratives used to be an 8-card text grid: to see which theme was leading
+  // the reader had to compare eight signed numbers card by card. One diverging bar
+  // per narrative encodes the sign twice — direction AND colour — so the day's
+  // leaders and laggards land in a single glance on a phone.
+  //
+  // The rows are reversed only for rendering: ECharts stacks a category axis from
+  // the bottom up, so reversing puts the first (strongest) narrative at the TOP.
+  // The data, its order and its values are untouched.
+  const narrativeRows = $derived([...(data?.narratives ?? [])].reverse());
+  // ~34px a row keeps the labels legible without a scroll on a phone.
+  const narrativeChartHeight = $derived(Math.max(160, narrativeRows.length * 34 + 30));
+
+  const narrativeOption = $derived.by(() => {
+    const rows = narrativeRows;
+    if (!rows.length) return {};
+    const up = $adaptHue('#2fbf71');
+    const down = $adaptHue('#ff5d6c');
+    return {
+      backgroundColor: 'transparent',
+      // Right gutter holds the value label at the end of the longest bar.
+      grid: grid({ left: 4, right: 46, top: 8, bottom: 4 }),
+      tooltip: itemTooltip({
+        textStyle: { fontSize: 11 },
+        formatter: (p: any) => {
+          const n = rows[p.dataIndex];
+          const coins = relatedAssets(n);
+          return `<b>${n.narrative}</b><br/>${tipBody([
+            tipRow(p.color, '24h market cap', pct(n.market_cap_change_24h)),
+            `Market cap: <b>${compact(n.market_cap)}</b>`,
+            coins.length ? `Top coins: <b>${coins.join(', ')}</b>` : 'Top coins: <b>n/a</b>'
+          ])}`;
+        }
+      }),
+      xAxis: valueAxis({ axisLabel: { formatter: (v: number) => `${v}%` } }),
+      yAxis: categoryAxis(
+        rows.map((n: any) => n.narrative),
+        { axisTick: { show: false }, axisLabel: { fontSize: 11 } }
+      ),
+      series: [
+        rankedBars({
+          name: '24h market cap change',
+          data: rows.map((n: any) => n.market_cap_change_24h ?? null),
+          colorFor: (v: number) => (v >= 0 ? up : down),
+          // `position: 'right'` is the outer end of a positive bar and the zero
+          // side of a negative one — either way the number never lands on top of
+          // the narrative name in the axis gutter. `color: 'inherit'` keeps the
+          // label the same green/red as its bar.
+          extra: { label: { show: true, position: 'right', fontSize: 10, color: 'inherit', formatter: (p: any) => pct(p.value) } }
+        })
+      ]
+    };
+  });
+
   // expandable "why this score" per card
   let openWhy = $state<Record<string, boolean>>({});
   const toggleWhy = (id: string) => (openWhy = { ...openWhy, [id]: !openWhy[id] });
@@ -308,26 +364,22 @@
 
     {#if tab === 'narratives'}
       <!-- Narrative radar -->
-      <div class="grid gap-2 sm:grid-cols-2">
-        {#each data.narratives as n}
-          {#if narrativeUrl(n)}
-            <a href={narrativeUrl(n)} target="_blank" rel="noopener noreferrer" class="card group flex items-center justify-between p-3 transition hover:border-mint/40 hover:bg-panel-2/50">
-              <div class="min-w-0">
-                <p class="flex items-center gap-1 truncate font-medium text-soft">{n.narrative}<ExternalLink class="h-3 w-3 shrink-0 text-muted transition group-hover:text-mint" /></p>
-                <p class="truncate text-xs text-muted">{relatedAssets(n).length ? `Related: ${relatedAssets(n).join(', ')}` : 'View this category on CoinGecko'}</p>
-              </div>
-              <span class="shrink-0 text-sm font-semibold {pctTone(n.market_cap_change_24h)}">{pct(n.market_cap_change_24h)}</span>
-            </a>
-          {:else}
-            <div class="card flex items-center justify-between p-3">
-              <div class="min-w-0">
-                <p class="truncate font-medium text-soft">{n.narrative}</p>
-                <p class="truncate text-xs text-muted">{relatedAssets(n).length ? `Related: ${relatedAssets(n).join(', ')}` : 'Category momentum from CoinGecko'}</p>
-              </div>
-              <span class="shrink-0 text-sm font-semibold {pctTone(n.market_cap_change_24h)}">{pct(n.market_cap_change_24h)}</span>
-            </div>
-          {/if}
-        {/each}
+      <div class="card">
+        <p class="stat-label mb-2 flex items-center gap-1.5"><Layers class="h-3.5 w-3.5" />Hot narratives today</p>
+        {#if data.narratives.length}
+          <EChart option={narrativeOption} height={narrativeChartHeight} minWidth={0} />
+          <p class="mt-1 text-[11px] text-muted">24h market cap change per narrative — green is growing, red is shrinking. Hover a bar for its market cap and top coins.</p>
+          <p class="mt-2 text-[11px] text-muted">View a category on CoinGecko:</p>
+          <div class="mt-1 flex flex-wrap gap-1.5">
+            {#each data.narratives as n}
+              {#if narrativeUrl(n)}
+                <a href={narrativeUrl(n)} target="_blank" rel="noopener noreferrer" class="group inline-flex items-center gap-1 rounded-lg bg-panel-2 px-2 py-1 text-[11px] text-muted transition hover:text-mint">{n.narrative}<ExternalLink class="h-2.5 w-2.5 shrink-0 transition group-hover:text-mint" /></a>
+              {/if}
+            {/each}
+          </div>
+        {:else}
+          <p class="text-sm text-muted">No narrative data yet.</p>
+        {/if}
       </div>
     {:else}
       <!-- Filters -->
@@ -429,7 +481,9 @@
     {/if}
 
     <!-- Leaderboards -->
-    <div class="mt-4 grid gap-3 lg:grid-cols-2">
+    <!-- "Hot narratives today" used to be repeated here; it now lives once, as the
+         diverging bar chart in the Narrative Radar tab. -->
+    <div class="mt-4">
       <div class="card">
         <p class="stat-label mb-2 flex items-center gap-1.5"><Network class="h-3.5 w-3.5" />Hot networks today</p>
         {#each data.networks.slice(0, 6) as n}
@@ -439,24 +493,6 @@
           </div>
         {:else}
           <p class="text-sm text-muted">No network data yet.</p>
-        {/each}
-      </div>
-      <div class="card">
-        <p class="stat-label mb-2 flex items-center gap-1.5"><Layers class="h-3.5 w-3.5" />Hot narratives today</p>
-        {#each data.narratives.slice(0, 6) as n}
-          {#if narrativeUrl(n)}
-            <a href={narrativeUrl(n)} target="_blank" rel="noopener noreferrer" class="group flex items-center justify-between border-b border-edge/50 py-1.5 text-sm last:border-0">
-              <span class="flex items-center gap-1 truncate text-soft transition group-hover:text-mint">{n.narrative}<ExternalLink class="h-2.5 w-2.5 shrink-0 text-muted transition group-hover:text-mint" /></span>
-              <span class="shrink-0 text-sm font-medium {pctTone(n.market_cap_change_24h)}">{pct(n.market_cap_change_24h)}</span>
-            </a>
-          {:else}
-            <div class="flex items-center justify-between border-b border-edge/50 py-1.5 text-sm last:border-0">
-              <span class="truncate text-soft">{n.narrative}</span>
-              <span class="shrink-0 text-sm font-medium {pctTone(n.market_cap_change_24h)}">{pct(n.market_cap_change_24h)}</span>
-            </div>
-          {/if}
-        {:else}
-          <p class="text-sm text-muted">No narrative data yet.</p>
         {/each}
       </div>
     </div>

@@ -116,15 +116,19 @@ export const applyChartTheme = (option: Obj, t: ChartTokens): Obj => {
     splitLine: { lineStyle: { color: rgba(t.edge, 0.55) } },
     nameTextStyle: { color: rgba(t.muted) }
   };
-  const chrome: Obj = {
-    tooltip: {
+  // Only ever RESTYLE a component the caller actually declared — never introduce
+  // one. Merging in a `legend` key unconditionally makes ECharts render a legend
+  // on charts that never asked for one, which lands on top of the plot.
+  const chrome: Obj = {};
+  if (option.tooltip) {
+    chrome.tooltip = {
       backgroundColor: rgba(t.panel, 0.96),
       borderColor: rgba(t.edge),
       textStyle: { color: rgba(t.body), fontFamily: FONT },
       extraCssText: 'backdrop-filter: blur(8px); border-radius: 10px;'
-    },
-    legend: { textStyle: { color: rgba(t.muted), fontFamily: FONT } }
-  };
+    };
+  }
+  if (option.legend) chrome.legend = { textStyle: { color: rgba(t.muted), fontFamily: FONT } };
 
   const merged = merge(merge(defaults, option), chrome);
   // Axes are patched separately so array-form axes are handled element-wise.

@@ -7,7 +7,7 @@
   import AiInterpret from '$lib/components/AiInterpret.svelte';
   import { membership, membershipReady, hasFeature } from '$lib/stores/membership';
   import { fmtPct, fmtUsd } from '$lib/format';
-  import { grid, valueAxis, logAxis, axisTooltip, lineSeries, adaptHue, zoomInside } from '$lib/charts/presets';
+  import { grid, valueAxis, logAxis, categoryAxis, axisTooltip, lineSeries, rankedBars, adaptHue, zoomInside } from '$lib/charts/presets';
 
   interface RoiPoint {
     days_since_event: number;
@@ -204,15 +204,89 @@
 
     const peers = data.series.filter((s) => s.key !== currentKey && !hidden.has(s.key));
     const vals: number[] = [];
+    // Same-day-of-cycle value per cycle, kept with its identity so the bar panel
+    // can label and colour each row. The stats below still read only `vals`, so
+    // the median/mean/stance are computed from exactly the peers they always were.
+    // The current cycle leads the list because the sentence is about it — it is
+    // shown even if its own chip is toggled off.
+    const rows: { key: string; label: string; value: number }[] = [
+      { key: cur.key, label: cur.label, value: curVal }
+    ];
     for (const s of peers) {
       const p = [...s.points].reverse().find((pt) => pt.days_since_event <= lastDay);
-      if (p) vals.push(p.roi_multiple);
+      if (p) {
+        vals.push(p.roi_multiple);
+        rows.push({ key: s.key, label: s.label, value: p.roi_multiple });
+      }
     }
     if (!vals.length) return null;
     const med = median(vals);
     const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
     const stance = curVal > med * 1.1 ? 'ahead of' : curVal < med * 0.9 ? 'behind' : 'in line with';
-    return { lastDay, curVal, med, mean, stance, peers: vals.length };
+    return { lastDay, curVal, med, mean, stance, peers: vals.length, rows };
+  });
+
+  // ── Same-cycle-age ranking (horizontal bars) ──
+  // The sentence above states the verdict; these bars show the field it is
+  // measured against. One row per cycle at the SAME day of the cycle, sorted, so
+  // "ahead or behind?" is a length comparison rather than a stroke to trace on
+  // the overlay. Bars start at zero, so twice as far along looks twice as long.
+  const positioningOption = $derived.by(() => {
+    if (!positioning) return {};
+    // ECharts places category 0 at the BOTTOM of a horizontal bar chart, so
+    // ascending order puts the strongest cycle on the top row.
+    const rows = [...positioning.rows].sort((a, b) => a.value - b.value);
+    const neutral = $adaptHue('#9CA3AF');
+
+    return {
+      backgroundColor: 'transparent',
+      grid: grid({ left: 4, right: 56, top: 24, bottom: 4 }),
+      tooltip: axisTooltip({
+        axisPointer: { type: 'shadow' },
+        textStyle: { fontSize: 11 },
+        formatter: (params: any[]) => {
+          const lines = params.map((p) => `${p.marker} ${p.name}: <b>${Number(p.value).toFixed(2)}×</b>`).join('<br/>');
+          return `Day ${positioning.lastDay}<br/>${lines}`;
+        }
+      }),
+      xAxis: valueAxis({ axisLabel: { formatter: (v: number) => `${v}×` } }),
+      yAxis: categoryAxis(rows.map((r) => r.label), { axisTick: { show: false } }),
+      series: [
+        rankedBars({
+          name: `ROI at day ${positioning.lastDay}`,
+          // Hue belongs to the CYCLE, not the number, so each row carries its own
+          // itemStyle (item beats series in ECharts) and matches its chip and its
+          // line on the overlay below. `colorFor` is only the never-hit fallback
+          // rankedBars requires.
+          data: rows.map((r) => {
+            const isCurrent = r.key === currentKey;
+            return {
+              value: r.value,
+              itemStyle: { color: isCurrent ? CURRENT_HUE : colorMap[r.key], opacity: isCurrent ? 1 : 0.8 }
+            };
+          }),
+          colorFor: () => neutral,
+          extra: {
+            // Two or three rows would otherwise render as slabs at 58% of the band.
+            barMaxWidth: 26,
+            label: {
+              show: true,
+              position: 'right',
+              color: 'inherit',
+              fontSize: 10,
+              formatter: (p: any) => `${Number(p.value).toFixed(2)}×`
+            },
+            markLine: {
+              silent: true,
+              symbol: 'none',
+              lineStyle: { color: neutral, type: 'dashed', width: 1 },
+              label: { color: neutral, fontSize: 9, formatter: `median ${positioning.med.toFixed(2)}×` },
+              data: [{ xAxis: positioning.med }]
+            }
+          }
+        })
+      ]
+    };
   });
 
   // Signals for the AI interpretation — built from values the page already computes.
@@ -332,6 +406,9 @@
         <span class="font-semibold text-strong">{positioning.med.toFixed(2)}× median</span>
         <span class="text-muted">(mean {positioning.mean.toFixed(2)}×, {positioning.peers} {noun}s)</span> at the same day.
       </p>
+      <div class="mt-2">
+        <EChart option={positioningOption} height={Math.max(132, positioning.rows.length * 30 + 46)} minWidth={0} />
+      </div>
     </div>
   {/if}
 

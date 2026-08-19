@@ -10,7 +10,7 @@
   import AiLabel from '$lib/components/AiLabel.svelte';
   import { membership, membershipReady, hasFeature } from '$lib/stores/membership';
   import { changeColor, fmtPct, signalColor } from '$lib/format';
-  import { grid, timeAxis, valueAxis, logAxis, axisTooltip, lineSeries, categorical } from '$lib/charts/presets';
+  import { grid, timeAxis, valueAxis, logAxis, axisTooltip, lineSeries, divergingBars, categorical, adaptHue } from '$lib/charts/presets';
 
   interface Pt {
     date: string;
@@ -321,17 +321,38 @@
     };
   });
 
+  // The five strength zones. This list is BOTH the legend under each oscillator and
+  // the colour source for the bars, so the legend reads as a literal key to the chart.
+  const ZONE_LEGEND = [
+    { label: 'Very strong >+20%', color: '#22C55E' },
+    { label: 'Strong +5–20%', color: '#86efac' },
+    { label: 'Neutral ±5%', color: '#9CA3AF' },
+    { label: 'Weak −5 to −20%', color: '#fca5a5' },
+    { label: 'Very weak <−20%', color: '#EF4444' }
+  ];
+
   // Shared zoned-oscillator option so the coin and market charts look identical.
+  //
+  // Diverging bars rather than a line: a bar states the sign twice — which side of
+  // zero it sits on, and the zone colour — so "gaining on BTC" or "bleeding against
+  // BTC" lands at a glance on a phone, and streaks read as solid blocks. The bar
+  // colours carry the zones, so the old translucent zone bands are gone; the ±5/±20
+  // markLines stay as the numeric guides.
   function buildOscOption(points: { date: string; value: number }[], yName: string) {
     if (!points.length) return {};
     const vals = points.map((p) => p.value);
     const max = Math.max(25, Math.ceil(Math.max(...vals) / 5) * 5 + 5);
     const min = Math.min(-25, Math.floor(Math.min(...vals) / 5) * 5 - 5);
-    const band = (lo: number, hi: number, color: string) => [{ yAxis: lo, itemStyle: { color } }, { yAxis: hi }];
+    // Resolved here (inside the derived) so the per-bar callback closes over plain
+    // hexes instead of reading a store while ECharts paints.
+    const hue = ZONE_LEGEND.map((z) => $adaptHue(z.color));
+    const zoneColor = (v: number) => (v > 20 ? hue[0] : v > 5 ? hue[1] : v < -20 ? hue[4] : v < -5 ? hue[3] : hue[2]);
     const guide = (y: number, label: string, color: string, bold = false) => ({
       yAxis: y,
       lineStyle: { color, type: bold ? 'solid' : 'dashed', width: bold ? 1.5 : 1 },
-      label: { formatter: label, color: bold ? '#E5E7EB' : '#9CA3AF', position: 'insideEndTop', fontSize: 9 }
+      // adaptHue darkens by luminance, so these light neutrals stay as-is in dark
+      // mode and become readable greys on a white card.
+      label: { formatter: label, color: $adaptHue(bold ? '#E5E7EB' : '#9CA3AF'), position: 'insideEndTop', fontSize: 9 }
     });
 
     return {
@@ -349,34 +370,28 @@
         splitLine: { show: false }
       }),
       series: [
-        {
-          type: 'line',
-          showSymbol: false,
-          z: 5,
-          lineStyle: { width: 2, color: $categorical[0] },
+        divergingBars({
+          name: yName,
           data: points.map((p) => [ts(p.date), Number(p.value.toFixed(2))]),
-          markArea: {
-            silent: true,
-            data: [
-              band(20, max, 'rgba(34,197,94,0.16)'),
-              band(5, 20, 'rgba(34,197,94,0.07)'),
-              band(-5, 5, 'rgba(148,163,184,0.05)'),
-              band(-20, -5, 'rgba(239,68,68,0.07)'),
-              band(min, -20, 'rgba(239,68,68,0.16)')
-            ]
-          },
-          markLine: {
-            silent: true,
-            symbol: 'none',
-            data: [
-              guide(20, '+20%', 'rgba(34,197,94,0.5)'),
-              guide(5, '+5%', 'rgba(34,197,94,0.35)'),
-              guide(0, '0', '#E5E7EB', true),
-              guide(-5, '-5%', 'rgba(239,68,68,0.35)'),
-              guide(-20, '-20%', 'rgba(239,68,68,0.5)')
-            ]
+          colorFor: zoneColor,
+          extra: {
+            z: 5,
+            // Short windows plot only a handful of points; without a cap each one
+            // becomes a slab wide enough to read as a block, not a bar.
+            barMaxWidth: 20,
+            markLine: {
+              silent: true,
+              symbol: 'none',
+              data: [
+                guide(20, '+20%', 'rgba(34,197,94,0.5)'),
+                guide(5, '+5%', 'rgba(34,197,94,0.35)'),
+                guide(0, '0', $adaptHue('#E5E7EB'), true),
+                guide(-5, '-5%', 'rgba(239,68,68,0.35)'),
+                guide(-20, '-20%', 'rgba(239,68,68,0.5)')
+              ]
+            }
           }
-        }
+        })
       ]
     };
   }
@@ -472,14 +487,6 @@
     else nuance = `${sym} is moving broadly in line with BTC over this window.`;
     return `${sym}/BTC is currently ${v >= 0 ? '+' : ''}${v.toFixed(1)}% on the ${oscPeriod}d oscillator, meaning ${sym} has ${perf} BTC over the last ${oscPeriod} days. ${nuance}`;
   });
-
-  const ZONE_LEGEND = [
-    { label: 'Very strong >+20%', color: '#22C55E' },
-    { label: 'Strong +5–20%', color: '#86efac' },
-    { label: 'Neutral ±5%', color: '#9CA3AF' },
-    { label: 'Weak −5 to −20%', color: '#fca5a5' },
-    { label: 'Very weak <−20%', color: '#EF4444' }
-  ];
 </script>
 
 <header class="mb-5">
@@ -680,7 +687,7 @@
     <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1">
       {#each ZONE_LEGEND as z}
         <span class="flex items-center gap-1.5 text-xs text-muted">
-          <span class="inline-block h-2 w-2 rounded-sm" style="background: {z.color}"></span>{z.label}
+          <span class="inline-block h-2 w-2 rounded-sm" style="background: {$adaptHue(z.color)}"></span>{z.label}
         </span>
       {/each}
     </div>
@@ -725,7 +732,7 @@
       <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1">
         {#each ZONE_LEGEND as z}
           <span class="flex items-center gap-1.5 text-xs text-muted">
-            <span class="inline-block h-2 w-2 rounded-sm" style="background: {z.color}"></span>{z.label}
+            <span class="inline-block h-2 w-2 rounded-sm" style="background: {$adaptHue(z.color)}"></span>{z.label}
           </span>
         {/each}
       </div>

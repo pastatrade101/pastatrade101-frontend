@@ -9,7 +9,7 @@
 // chart silently renders blank. That single line is the whole cost of the diet.
 
 import * as echarts from 'echarts/core';
-import { LineChart, GaugeChart } from 'echarts/charts';
+import { LineChart, GaugeChart, BarChart } from 'echarts/charts';
 import {
   GridComponent,
   TooltipComponent,
@@ -27,6 +27,7 @@ echarts.use([
   // charts
   LineChart, // every time-series chart in the app
   GaugeChart, // the speedometer risk gauges (Gauge.svelte)
+  BarChart, // diverging zero-crossing bars + ranked horizontal bars
   // components, per the call-site inventory
   GridComponent, // cartesian grid + xAxis/yAxis (incl. time & log axes)
   TooltipComponent,

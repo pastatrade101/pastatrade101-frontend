@@ -104,6 +104,48 @@ export const axisTooltip = (extra: Obj = {}): Obj => ({ trigger: 'axis', ...extr
 /** Item (hover-a-point) tooltip. */
 export const itemTooltip = (extra: Obj = {}): Obj => ({ trigger: 'item', ...extra });
 
+export const categoryAxis = (data: unknown[], extra: Obj = {}): Obj => ({ type: 'category', data, ...extra });
+
+/* ── Bars ───────────────────────────────────────────────────────────────── */
+
+export interface DivergingOpts {
+  name: string;
+  /** [x, value] pairs, or plain values when paired with a categoryAxis. */
+  data: unknown[];
+  /** Maps a value to its bar colour — usually a zone/threshold lookup. */
+  colorFor: (value: number) => string;
+  /** Bar width; omit to let ECharts fit them. */
+  barWidth?: number | string;
+  extra?: Obj;
+}
+
+/**
+ * Zero-crossing bars.
+ *
+ * A line forces the reader to trace a stroke and work out which side of an
+ * invisible origin it sits on. Bars from a shared baseline encode the sign
+ * TWICE — direction and colour — so "green up = winning, red down = losing"
+ * lands without reading an axis, and streaks show up as solid blocks.
+ */
+export const divergingBars = ({ name, data, colorFor, barWidth, extra = {} }: DivergingOpts): Obj => ({
+  name,
+  type: 'bar',
+  data,
+  ...(barWidth != null ? { barWidth } : {}),
+  itemStyle: {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    color: (p: any) => {
+      const raw = Array.isArray(p.value) ? p.value[p.value.length - 1] : p.value;
+      return colorFor(Number(raw));
+    }
+  },
+  ...extra
+});
+
+/** A ranked horizontal bar row set — pair with categoryAxis on the yAxis. */
+export const rankedBars = ({ name, data, colorFor, barWidth = '58%', extra = {} }: DivergingOpts): Obj =>
+  divergingBars({ name, data, colorFor, barWidth, extra: { ...extra } });
+
 /* ── Zoom ───────────────────────────────────────────────────────────────── */
 
 /**
