@@ -192,10 +192,13 @@
   // per narrative encodes the sign twice — direction AND colour — so the day's
   // leaders and laggards land in a single glance on a phone.
   //
-  // The rows are reversed only for rendering: ECharts stacks a category axis from
-  // the bottom up, so reversing puts the first (strongest) narrative at the TOP.
-  // The data, its order and its values are untouched.
-  const narrativeRows = $derived([...(data?.narratives ?? [])].reverse());
+  // The rows are ordered only for rendering: ECharts stacks a category axis from
+  // the bottom up, so sorting ASCENDING puts the strongest narrative at the TOP.
+  // The API already returns them ranked, but sorting here keeps the chart honest
+  // if that ever changes. Values are untouched — this is display order only.
+  const narrativeRows = $derived(
+    [...(data?.narratives ?? [])].sort((a: any, b: any) => (a.market_cap_change_24h ?? 0) - (b.market_cap_change_24h ?? 0))
+  );
   // ~34px a row keeps the labels legible without a scroll on a phone.
   const narrativeChartHeight = $derived(Math.max(160, narrativeRows.length * 34 + 30));
 
@@ -223,7 +226,13 @@
       xAxis: valueAxis({ axisLabel: { formatter: (v: number) => `${v}%` } }),
       yAxis: categoryAxis(
         rows.map((n: any) => n.narrative),
-        { axisTick: { show: false }, axisLabel: { fontSize: 11 } }
+        {
+          axisTick: { show: false },
+          // Category names run long ("Artificial Intelligence (AI)"). Capping the
+          // gutter stops one label from eating the bars on a 375px screen — the
+          // full name is still in the tooltip and in the CoinGecko links below.
+          axisLabel: { fontSize: 11, width: 104, overflow: 'truncate' }
+        }
       ),
       series: [
         rankedBars({

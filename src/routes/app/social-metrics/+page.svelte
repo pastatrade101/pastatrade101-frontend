@@ -7,7 +7,21 @@
   import AiInterpret from '$lib/components/AiInterpret.svelte';
   import AiLabel from '$lib/components/AiLabel.svelte';
   import { membership, membershipReady, hasFeature } from '$lib/stores/membership';
-  import { axisTooltip, categorical, grid, lineSeries, logAxis, timeAxis, valueAxis } from '$lib/charts/presets';
+  import {
+    adaptHue,
+    axisTooltip,
+    categorical,
+    categoryAxis,
+    grid,
+    itemTooltip,
+    lineSeries,
+    logAxis,
+    rankedBars,
+    timeAxis,
+    tipBody,
+    tipRow,
+    valueAxis
+  } from '$lib/charts/presets';
 
   interface MetricRow {
     key: string;
@@ -17,6 +31,12 @@
     status: string;
     meaning: string;
     source: string;
+  }
+  /** The only fields this page reads off an ECharts formatter params object. */
+  interface ChartParam {
+    dataIndex: number;
+    color: string;
+    value: number;
   }
   interface SocialData {
     as_of: string;
@@ -180,6 +200,67 @@
       ]
     };
   });
+
+  /* ── Per-source risk, ranked ──────────────────────────────────────────────
+     The breakdown below is an 11-row table of 0–1 pills: to find the hot source
+     you have to read every cell and compare numbers. Sorted bars answer "which
+     source is running hot?" in one look. Same scores, same riskColor
+     thresholds as the pills, so the bar and the pill can never disagree. */
+
+  // Ascending, because a category yAxis draws its first item at the BOTTOM —
+  // so the hottest source lands at the top of the chart.
+  const riskRows = $derived(
+    (data?.metrics ?? [])
+      .filter((m): m is MetricRow & { risk: number } => m.risk != null)
+      .sort((a, b) => a.risk - b.risk)
+  );
+  // Sources with no reading yet are skipped here but still listed in full below,
+  // so the chart never quietly loses a row the table shows.
+  const riskMissing = $derived((data?.metrics.length ?? 0) - riskRows.length);
+  const rankedCaption = $derived(
+    'Per-source risk, hottest first (0 = quiet, 1 = crowded). Tap a bar for what it means.' +
+      (riskMissing > 0 ? ` ${riskMissing} source${riskMissing === 1 ? '' : 's'} without a reading ${riskMissing === 1 ? 'is' : 'are'} listed below.` : '')
+  );
+  // ~26px a row keeps 11 labels legible without an inner scroll on a phone.
+  const rankedHeight = $derived(Math.max(170, riskRows.length * 26 + 24));
+
+  const sourceRiskOption = $derived.by(() => {
+    const rows = riskRows;
+    if (!rows.length) return {};
+    return {
+      backgroundColor: 'transparent',
+      // Right gutter holds the value label parked at the end of the longest bar.
+      grid: grid({ left: 4, right: 38, top: 6, bottom: 4 }),
+      tooltip: itemTooltip({
+        textStyle: { fontSize: 11 },
+        // The table's plain-language "meaning" stays reachable from the chart —
+        // the bar shows how hot, this says what that actually means.
+        formatter: (p: ChartParam) => {
+          const m = rows[p.dataIndex];
+          return `<b>${m.label}</b><br/>${tipBody([
+            tipRow(p.color, 'Risk', m.risk.toFixed(2)),
+            `Reading: <b>${m.value ?? '—'}</b>`,
+            `Status: <b>${m.status}</b>`
+          ])}<div style="max-width:210px;white-space:normal;opacity:.75;margin-top:4px">${m.meaning}</div>`;
+        }
+      }),
+      // 0 / 0.5 / 1 only — three ticks is all a 340px-wide phone chart can hold.
+      xAxis: valueAxis({ min: 0, max: 1, interval: 0.5 }),
+      yAxis: categoryAxis(
+        rows.map((m) => m.label),
+        { axisTick: { show: false }, axisLabel: { fontSize: 10, width: 92, overflow: 'truncate' } }
+      ),
+      series: [
+        rankedBars({
+          name: 'Risk',
+          data: rows.map((m) => m.risk),
+          colorFor: (v: number) => $adaptHue(riskColor(v)),
+          // `color: 'inherit'` keeps each number the same green→red as its bar.
+          extra: { label: { show: true, position: 'right', fontSize: 10, color: 'inherit', formatter: (p: ChartParam) => p.value.toFixed(2) } }
+        })
+      ]
+    };
+  });
 </script>
 
 <svelte:window bind:innerWidth />
@@ -233,6 +314,15 @@
   {#if canFull}
   <div class="card mb-4 p-0">
     <div class="border-b border-edge px-4 py-3"><h2 class="text-sm font-semibold text-strong">Social metrics</h2></div>
+
+    <!-- Which source is hot, at a glance. Proof for the rows below, not a
+         replacement for them: every value, status and meaning is still listed. -->
+    {#if riskRows.length}
+      <div class="border-b border-edge px-4 py-3">
+        <p class="mb-1 text-xs text-muted">{rankedCaption}</p>
+        <EChart option={sourceRiskOption} height={rankedHeight} minWidth={0} />
+      </div>
+    {/if}
 
     <!-- Mobile -->
     <div class="divide-y divide-edge/60 sm:hidden">

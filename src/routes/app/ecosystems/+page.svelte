@@ -6,6 +6,8 @@
   import AiInterpret from '$lib/components/AiInterpret.svelte';
   import AiLabel from '$lib/components/AiLabel.svelte';
   import AiLottie from '$lib/components/AiLottie.svelte';
+  import EChart from '$lib/components/EChart.svelte';
+  import { adaptHue, categoryAxis, grid, itemTooltip, rankedBars, tipBody, tipRow, valueAxis } from '$lib/charts/presets';
   import { Lock, ExternalLink, ChevronRight } from '@lucide/svelte';
   import { slide } from 'svelte/transition';
   import { membership, hasFeature } from '$lib/stores/membership';
@@ -18,7 +20,8 @@
     tonePill,
     confidenceTone,
     type EcoItem,
-    type EnrichedEco
+    type EnrichedEco,
+    type Tone
   } from '$lib/ecosystem-insight';
 
   let raw = $state<EcoItem[]>([]);
@@ -148,6 +151,96 @@
   // Link an ecosystem to its DefiLlama chain page — the source of these TVL/DEX/fee
   // metrics — using the exact slug we already store, so the link is always valid.
   const ecoUrl = (e: { defillama_slug: string | null }): string | null => (e.defillama_slug ? `https://defillama.com/chain/${e.defillama_slug}` : null);
+
+  // ── Strength ladder chart ──
+  // The Strongest/Weakest cards above name six chains and show a signal pill, but
+  // no magnitude — you cannot tell whether the leader is streets ahead or a nose
+  // in front, and every ecosystem between #4 and the bottom three is invisible.
+  // One ranked bar per ecosystem, on a fixed 0→100 score axis, puts the whole
+  // rotation ladder on screen at once: the gap between the leader and the pack IS
+  // the story, and a flat ladder says "no real leadership" faster than any list.
+
+  // Bars reuse the SAME tone that drives the signal pills, so a green bar here and
+  // a green pill in the list/table are one fact in one colour language, not two.
+  const TONE_HEX: Record<Tone, string> = {
+    pos: '#37e0a6', // --c-mint
+    accent: '#5b8cff', // --c-accent
+    neutral: '#ffb547', // --c-warn
+    warn: '#ffb547',
+    neg: '#ff5d6c', // --c-danger
+    muted: '#8b97a8' // --c-muted
+  };
+
+  // Every tracked ecosystem that actually has a score — this ladder is deliberately
+  // the FULL board (the premium filters below govern the table, not this overview).
+  // Reversed only for rendering: ECharts stacks a category axis bottom-up, so the
+  // reverse puts rank #1 at the top. Order and values are otherwise untouched.
+  const ladderRows = $derived([...all].filter((e) => e.metrics?.strength_score != null).reverse());
+  // ~26px a row keeps the chain names legible without cramping on a phone.
+  const ladderHeight = $derived(Math.max(200, ladderRows.length * 26 + 40));
+
+  const ladderOption = $derived.by(() => {
+    const rows = ladderRows;
+    if (!rows.length) return {};
+    const scores = rows.map((e) => e.metrics?.strength_score ?? 0);
+    const avg = Math.round(scores.reduce((s, v) => s + v, 0) / scores.length);
+    const line = $adaptHue(TONE_HEX.muted);
+    return {
+      backgroundColor: 'transparent',
+      // Right gutter holds the score printed at the end of the longest bar; the
+      // extra top room is for the average marker's label.
+      grid: grid({ left: 4, right: 34, top: 20, bottom: 4 }),
+      tooltip: itemTooltip({
+        textStyle: { fontSize: 11 },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        formatter: (p: any) => {
+          const e = rows[p.dataIndex];
+          if (!e) return '';
+          const m = e.metrics;
+          return `<b>#${e.rank} ${e.name}</b><br/>${tipBody([
+            tipRow(p.color, 'Strength score', String(m?.strength_score ?? '—')),
+            `Signal: <b>${e.signal}</b>`,
+            `TVL 30d: <b>${fmtPct(m?.tvl_change_30d)}</b>`,
+            `DEX vol 7d: <b>${fmtPct(m?.dex_volume_change_7d)}</b>`,
+            `Native 30d: <b>${fmtPct(m?.native_token_30d)}</b>`,
+            `Confidence: <b>${e.confidence.level}</b>`
+          ])}`;
+        }
+      }),
+      // Pinned 0→100 rather than fitted to the data: a fitted axis would stretch a
+      // 3-point spread across the full width and fake a runaway leader.
+      xAxis: valueAxis({ min: 0, max: 100, splitNumber: 4, axisLabel: { fontSize: 10 } }),
+      yAxis: categoryAxis(
+        rows.map((e) => e.name),
+        { axisTick: { show: false }, axisLabel: { fontSize: 11 } }
+      ),
+      series: [
+        rankedBars({
+          name: 'Strength score',
+          // Each row carries its own colour: the tone comes from the signal, which
+          // is not derivable from the score (two chains can share a score and sit
+          // on opposite sides of the ledger), so a value→colour map would be wrong.
+          data: rows.map((e) => ({ value: e.metrics?.strength_score ?? 0, itemStyle: { color: $adaptHue(TONE_HEX[e.tone]) } })),
+          colorFor: () => $adaptHue(TONE_HEX.muted),
+          extra: {
+            // 'right' is the outer end of the bar, so the number never lands on the
+            // chain name in the axis gutter. 'inherit' keeps it the bar's colour.
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            label: { show: true, position: 'right', fontSize: 10, color: 'inherit', formatter: (p: any) => String(p.value) },
+            // The pack average — the fastest way to see who is genuinely leading
+            // versus who is merely mid-table on a board where nobody is strong.
+            markLine: {
+              silent: true,
+              symbol: 'none',
+              lineStyle: { color: line, type: 'dashed', width: 1 },
+              label: { show: true, position: 'end', fontSize: 9, color: line, formatter: `avg ${avg}` },
+              data: [{ xAxis: avg }]
+            }
+          }
+        })
+      ]
+    };
+  });
 </script>
 
 <header class="mb-4">
@@ -255,6 +348,25 @@
       </ol>
     </div>
   </div>
+
+  <!-- 2b · Strength ladder — the six named above, plus everyone in between -->
+  {#if ladderRows.length}
+    <div class="card mb-4">
+      <header class="mb-1 flex items-center gap-2.5">
+        <span class="icon-badge bg-accent/12 text-accent">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5">
+            <line x1="4" y1="6" x2="20" y2="6" /><line x1="4" y1="12" x2="14" y2="12" /><line x1="4" y1="18" x2="9" y2="18" />
+          </svg>
+        </span>
+        <h2 class="text-sm font-semibold text-strong">Strength ladder — every tracked ecosystem</h2>
+      </header>
+      <p class="mb-2 text-xs text-muted">How far ahead the leaders actually are, and where the rest sit. Bar colour is the same signal as the pills above.</p>
+      <EChart option={ladderOption} height={ladderHeight} minWidth={0} />
+      <p class="mt-1 text-[11px] leading-relaxed text-muted">
+        Strength score out of 100, ranked. Bars bunched near the dashed average mean no chain is genuinely leading — a spread-out ladder means real rotation. Tap a bar for its TVL, DEX volume and token momentum.
+      </p>
+    </div>
+  {/if}
 
   <!-- 8 · Breadth + What this means -->
   <div class="mb-4 grid gap-3 lg:grid-cols-[1fr_1.2fr]">

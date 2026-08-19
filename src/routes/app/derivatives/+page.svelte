@@ -5,7 +5,9 @@
   import Gauge from '$lib/components/Gauge.svelte';
   import LockedFeature from '$lib/components/LockedFeature.svelte';
   import EChart from '$lib/components/EChart.svelte';
-  import { grid, valueAxis, axisTooltip, categorical } from '$lib/charts/presets';
+  import { grid, valueAxis, axisTooltip, categorical, categoryAxis, itemTooltip, rankedBars, tipBody, tipRow } from '$lib/charts/presets';
+  import { readChartTokens } from '$lib/charts/theme';
+  import { theme } from '$lib/stores/theme';
   import AiInterpret from '$lib/components/AiInterpret.svelte';
   import AiLabel from '$lib/components/AiLabel.svelte';
 
@@ -63,6 +65,84 @@
       ]
     };
   });
+  // Funding extremes, as one picture instead of two columns of strings.
+  //
+  // The lists below already print every number; what they cannot show is the
+  // BALANCE — whether the crowded-long side dwarfs the fearful side or the two
+  // are evenly matched. Both lists share a single signed metric (funding per
+  // 8h) that crosses zero, so plotting them on one shared baseline turns
+  // "0.087% vs -0.004%" into a shape you read without arithmetic.
+  interface FundingRow {
+    symbol: string;
+    funding: number;
+  }
+  const fundingRows = $derived.by<FundingRow[]>(() => {
+    const top: FundingRow[] = r?.top_funding ?? [];
+    const bottom: FundingRow[] = r?.bottom_funding ?? [];
+    // The API sends top highest-first and bottom most-negative-first; reversing
+    // bottom makes the joined list monotonically descending, so the chart reads
+    // top-to-bottom as most crowded → most fearful.
+    return [...top, ...[...bottom].reverse()];
+  });
+
+  // ~26px a row keeps the coin tickers legible without scrolling on a phone.
+  const fundingChartHeight = $derived(Math.max(170, Math.min(330, fundingRows.length * 26 + 30)));
+
+  const fundingOption = $derived.by(() => {
+    const rows = fundingRows;
+    if (!rows.length) return null;
+    void $theme; // re-read tokens when the theme (or admin branding) changes
+    const t = readChartTokens();
+    const rgb = (triplet: string, a = 1) => {
+      const [x, y, z] = triplet.split(/[\s,]+/);
+      return `rgba(${x}, ${y}, ${z}, ${a})`;
+    };
+    // Exactly the two tokens the section headings and list values already use —
+    // warn = "Most crowded longs", accent = "Most fearful" — so the chart and
+    // the text underneath it are visibly the same colour language.
+    const hot = rgb(t.warn);
+    const cold = rgb(t.accent);
+    const vals = rows.map((c) => c.funding * 100);
+    // Symmetric domain: both sides measured with the same ruler, so a
+    // crowded-long market LOOKS lopsided. The 1.45 padding keeps the longest
+    // bar clear of the edge, leaving room for its value label inside the plot.
+    const span = Math.max(...vals.map((v) => Math.abs(v)), 0.001) * 1.45;
+    return {
+      grid: grid({ left: 4, right: 6, top: 6, bottom: 4 }),
+      tooltip: itemTooltip({
+        textStyle: { fontSize: 11 },
+        formatter: (p: { dataIndex: number }) => {
+          const c = rows[p.dataIndex];
+          return `<b>${c.symbol}</b><br/>${tipBody([
+            tipRow(c.funding >= 0 ? hot : cold, 'Funding (8h)', `${(c.funding * 100).toFixed(3)}%`),
+            c.funding >= 0 ? 'Longs are paying shorts to stay long' : 'Shorts are paying longs'
+          ])}`;
+        }
+      }),
+      xAxis: valueAxis({ min: -span, max: span, splitNumber: 4, axisLabel: { fontSize: 9, formatter: (v: number) => `${Number(v.toFixed(3))}%` } }),
+      yAxis: categoryAxis(
+        rows.map((c) => c.symbol),
+        // `inverse` puts row 0 at the TOP, matching the descending order above.
+        { inverse: true, axisTick: { show: false }, axisLabel: { fontSize: 11 } }
+      ),
+      series: [
+        rankedBars({
+          name: 'Funding (8h)',
+          // Per-item label position: the outer end of the bar on either side, so
+          // a negative bar's number never lands on top of the zero line.
+          data: rows.map((c) => ({ value: Number((c.funding * 100).toFixed(4)), label: { position: c.funding >= 0 ? 'right' : 'left' } })),
+          colorFor: (v: number) => (v >= 0 ? hot : cold),
+          extra: {
+            label: { show: true, fontSize: 10, color: 'inherit', formatter: (p: { value: number }) => `${Number(p.value).toFixed(3)}%` },
+            // The zero line is the whole story here, so it gets its own stroke
+            // rather than blending into the split lines.
+            markLine: { silent: true, symbol: 'none', data: [{ xAxis: 0 }], lineStyle: { color: rgb(t.muted, 0.5), width: 1 }, label: { show: false } }
+          }
+        })
+      ]
+    };
+  });
+
   $effect(() => {
     if (!$membershipReady || started) return;
     started = true;
@@ -188,6 +268,19 @@
 
     <!-- Funding extremes -->
     {#if r.top_funding?.length || r.bottom_funding?.length}
+      {#if fundingOption}
+        <div class="card mb-3">
+          <div class="mb-1 flex items-center justify-between">
+            <p class="stat-label">Funding extremes · who is paying whom</p>
+            <span class="text-[11px] text-muted">per 8h</span>
+          </div>
+          <p class="mb-1 text-xs leading-relaxed text-muted">
+            Bars to the <span class="font-medium text-warn">right</span> = longs paying to stay long (crowded). Bars to the <span class="font-medium text-accent">left</span> = shorts
+            paying longs (fear). Both sides use the same scale, so the longer side is where the crowd is.
+          </p>
+          <EChart option={fundingOption} height={fundingChartHeight} minWidth={0} />
+        </div>
+      {/if}
       <div class="mb-3 grid gap-3 sm:grid-cols-2">
         <div class="card p-3">
           <p class="stat-label text-warn">Most crowded longs <span class="font-normal text-muted">· highest funding</span></p>

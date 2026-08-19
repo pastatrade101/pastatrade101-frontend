@@ -5,6 +5,10 @@
   import { api } from '$lib/api';
   import AiLottie from '$lib/components/AiLottie.svelte';
   import AiInterpret from '$lib/components/AiInterpret.svelte';
+  import EChart from '$lib/components/EChart.svelte';
+  import { axisTooltip, barSeries, categorical, categoryAxis, grid, itemTooltip, radarOption, tipBody, tipRow, valueAxis } from '$lib/charts/presets';
+  import { readChartTokens } from '$lib/charts/theme';
+  import { theme } from '$lib/stores/theme';
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   type Any = any;
@@ -128,6 +132,12 @@
   const fmtPrice = (n: number | null) => (n == null ? '—' : n < 0.01 ? `$${n.toPrecision(2)}` : `$${n.toLocaleString(undefined, { maximumFractionDigits: 6 })}`);
   const short = (a: string) => (a.length > 14 ? `${a.slice(0, 8)}…${a.slice(-6)}` : a);
   const cap = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
+  /** "55 224 166" → "rgba(55, 224, 166, a)". Series colours must be real colours,
+   *  so the charts read the same live --c-* tokens the pills and meters use. */
+  const rgbToken = (triplet: string, a = 1) => {
+    const [r, g, b] = triplet.split(/[\s,]+/);
+    return `rgba(${r}, ${g}, ${b}, ${a})`;
+  };
 
   const ratingTheme = (r: string) =>
     r === 'Strong Opportunity' ? { pill: 'bg-mint/15 text-mint border-mint/40', dot: 'bg-mint', tone: 'good' }
@@ -184,6 +194,58 @@
         ]
       : []
   );
+
+  // ── Score shape radar ──
+  // The seven meters below answer "what is each score?" one row at a time, which
+  // means holding six numbers in your head to see the pattern. The radar answers
+  // the question people actually ask first — "what SHAPE is this token?" — because
+  // a dented axis is visible before a single number is read. The meters stay:
+  // the radar is the shape, they are the readout.
+  //
+  // Risk is the one inverted dimension (a high risk score is bad), so it is
+  // plotted as 100 − risk and named "Low Risk". Every axis then points the same
+  // way — further from the centre is healthier — and the tooltip still reports
+  // the raw score with the same wording as the meter row.
+  const SHORT_AXIS: Record<string, string> = {
+    Risk: 'Low Risk',
+    Momentum: 'Momentum',
+    Liquidity: 'Liquidity',
+    'Holder Health': 'Holders',
+    'Contract Safety': 'Contract',
+    Timing: 'Timing',
+    'Listing Strength': 'Listings'
+  };
+  // A three-spoke radar is just a triangle of noise — only draw the shape once
+  // enough dimensions actually resolved.
+  const radarReady = $derived(SUB_SCORES.filter((r) => r.v != null).length >= 4);
+
+  const scoreRadarOption = $derived.by(() => {
+    if (!radarReady) return {};
+    void $theme; // re-read the tokens when the theme flips
+    const rows = SUB_SCORES;
+    const t = readChartTokens();
+    // Exactly the good/mid/bad map the donut, driver chips and meters already use.
+    const toneHex = (s: string) => (s === 'good' ? rgbToken(t.mint) : s === 'mid' ? rgbToken(t.warn) : s === 'bad' ? rgbToken(t.danger) : rgbToken(t.muted));
+    return {
+      ...radarOption({
+        indicators: rows.map((r) => ({ name: SHORT_AXIS[r.label] ?? r.label, max: 100 })),
+        values: rows.map((r) => (r.v == null ? null : r.invert ? 100 - r.v : r.v)),
+        // One hue for the whole polygon, taken from the headline verdict — the
+        // shape says which axis is weak, the colour says how the token reads overall.
+        color: toneHex(state3(report.scores.opportunity)),
+        muted: rgbToken(t.muted),
+        name: 'Score',
+        extra: { radar: { radius: '62%', center: ['50%', '54%'] } }
+      }),
+      tooltip: itemTooltip({
+        textStyle: { fontSize: 11 },
+        formatter: () =>
+          tipBody(
+            rows.map((r) => tipRow(toneHex(state3(r.v, r.invert)), r.label, r.v == null ? 'n/a' : `${r.v}/100 · ${interp(r.label, r.v, r.invert)}`))
+          )
+      })
+    };
+  });
 
   // Market snapshot mini-cards (real data + honest status dots)
   const METRICS = $derived.by(() => {
@@ -281,6 +343,108 @@
     if (rs.status === 'outperforming_btc') return 'The token is beating BTC over 30 days — genuine relative strength, not just a market-wide move.';
     return 'The token is moving roughly in line with BTC — no independent strength or weakness yet.';
   };
+
+  // ── Multi-chain share split ──
+  // The tiles above print "scanned liq" and "global DEX liq" side by side and
+  // leave the reader to divide one by the other. A 100% stacked bar does the
+  // division for them: the scanned chain's slice IS the fraction of the token
+  // you are actually looking at, so "you are only seeing 3% of this coin" stops
+  // being arithmetic and becomes a picture.
+  //
+  // No new maths — the denominator is the same globalMetrics total the tile
+  // shows, and the parts are the per-chain figures already listed further down.
+  const chainSplit = $derived.by(() => {
+    const mc = report?.multi_chain;
+    if (!mc) return null;
+    const liqTotal = mc.globalMetrics.totalDexLiquidityUsd ?? 0;
+    const volTotal = mc.globalMetrics.totalDexVolume24hUsd ?? 0;
+    if (liqTotal <= 0) return null;
+
+    const scanned = { name: cap(mc.scannedChain), liq: mc.scannedChainMetrics.liquidityUsd ?? 0, vol: mc.scannedChainMetrics.volume24hUsd ?? 0, scanned: true };
+    // Chains present but with no DEX market (liq/vol null) contribute nothing to
+    // the totals, so they cannot be segments — they stay in the list below.
+    const others = (mc.otherChains ?? [])
+      .filter((c: Any) => (c.liquidityUsd ?? 0) > 0 || (c.volume24hUsd ?? 0) > 0)
+      .map((c: Any) => ({ name: c.chain, liq: c.liquidityUsd ?? 0, vol: c.volume24hUsd ?? 0, scanned: false }));
+    if (!others.length) return null; // nothing to split against — the pill already says so
+
+    // Four named chains is the most a 375px bar can label; the tail (plus anything
+    // the API truncated out of otherChains) folds into one segment so the bar
+    // still adds up to the global total in the tile above.
+    const head = others.slice(0, 4);
+    const tail = others.slice(4);
+    const restLiq = Math.max(0, liqTotal - scanned.liq - head.reduce((s: number, c: Any) => s + c.liq, 0));
+    const restVol = Math.max(0, volTotal - scanned.vol - head.reduce((s: number, c: Any) => s + c.vol, 0));
+    const segs = [scanned, ...head];
+    if (restLiq > 0 || restVol > 0) segs.push({ name: tail.length ? `Other (${tail.length})` : 'Other', liq: restLiq, vol: restVol, scanned: false });
+
+    return { segs, liqTotal, volTotal, scannedName: scanned.name, scannedShare: (scanned.liq / liqTotal) * 100 };
+  });
+
+  const chainSplitOption = $derived.by(() => {
+    const cs = chainSplit;
+    if (!cs) return {};
+    void $theme;
+    const pal = $categorical;
+    const t = readChartTokens();
+    const mc = report.multi_chain;
+    // The scanned slice carries the same tone as this card's bias pill: mint when
+    // the single-chain read is representative, warn/danger when it is not.
+    const scannedColor = mc.biasDetected ? (mc.warning?.severity === 'high' ? rgbToken(t.danger) : rgbToken(t.warn)) : rgbToken(t.mint);
+    // Other chains take neutral hues only — amber/green/red (0/2/3) are the
+    // good/mid/bad tones, and reusing them here would imply a verdict per chain.
+    const OTHER_HUES = [1, 4, 5, 6, 7];
+    // A category axis renders index 0 at the bottom, so volume is listed first to
+    // put liquidity — the headline split — on top.
+    const rows = cs.volTotal > 0 ? ['24h DEX vol', 'DEX liquidity'] : ['DEX liquidity'];
+    const shareOf = (part: number, total: number) => (total > 0 ? Number(((part / total) * 100).toFixed(1)) : 0);
+
+    return {
+      // Bottom gutter fits a two-row legend — six chain names wrap at 375px.
+      grid: grid({ left: 2, right: 2, top: 6, bottom: 44 }),
+      legend: { bottom: 0, icon: 'roundRect', itemWidth: 9, itemHeight: 9, itemGap: 10, textStyle: { fontSize: 10 } },
+      tooltip: axisTooltip({
+        textStyle: { fontSize: 11 },
+        formatter: (ps: Any) => {
+          const arr: Any[] = Array.isArray(ps) ? ps : [ps];
+          const row = arr[0]?.axisValue ?? '';
+          const isLiq = row === 'DEX liquidity';
+          const total = isLiq ? cs.liqTotal : cs.volTotal;
+          return `<b>${row}</b> · ${fmtUsd(total)} total<br/>${tipBody(
+            arr
+              .filter((p: Any) => Number(p.value) > 0)
+              .map((p: Any) => tipRow(p.color, p.seriesName, `${fmtUsd(isLiq ? cs.segs[p.seriesIndex].liq : cs.segs[p.seriesIndex].vol)} · ${Number(p.value).toFixed(1)}%`))
+          )}`;
+        }
+      }),
+      xAxis: valueAxis({ max: 100, splitLine: { show: false }, axisLabel: { formatter: '{value}%', fontSize: 10 } }),
+      yAxis: categoryAxis(rows, { axisTick: { show: false }, axisLine: { show: false }, axisLabel: { fontSize: 10 } }),
+      series: cs.segs.map((s: Any, i: number) =>
+        barSeries({
+          name: s.name,
+          data: rows.map((r) => (r === 'DEX liquidity' ? shareOf(s.liq, cs.liqTotal) : shareOf(s.vol, cs.volTotal))),
+          color: s.scanned ? scannedColor : pal[OTHER_HUES[(i - 1) % OTHER_HUES.length] % pal.length],
+          radius: 2,
+          width: 22,
+          extra: {
+            stack: 'share',
+            // White with a dark outline stays legible on every hue in the stack,
+            // in both themes. Slivers under 9% get no label — the tooltip has them.
+            label: {
+              show: true,
+              position: 'inside',
+              fontSize: 10,
+              fontWeight: s.scanned ? 700 : 400,
+              color: '#fff',
+              textBorderColor: 'rgba(2,6,23,0.6)',
+              textBorderWidth: 2,
+              formatter: (p: Any) => (Number(p.value) >= 9 ? `${Number(p.value).toFixed(0)}%` : '')
+            }
+          }
+        })
+      )
+    };
+  });
 
   // Donut geometry for the main opportunity score
   const R = 52;
@@ -570,6 +734,13 @@
             <p class="mt-1 text-[11px] leading-relaxed text-muted">Blends liquidity, momentum, holder health, contract safety and market timing.</p>
           </div>
         </div>
+        <!-- Score shape: the seven meters below as one silhouette. -->
+        {#if radarReady}
+          <div class="mt-3 border-t border-edge pt-2">
+            <EChart option={scoreRadarOption} height={280} minWidth={0} />
+            <p class="-mt-2 text-center text-[11px] leading-relaxed text-muted">Further from the centre is healthier on every axis — <span class="text-soft">Risk is plotted as low risk</span>, so a dent is the weak spot and a full shape is a clean setup.</p>
+          </div>
+        {/if}
         <div class="mt-4 space-y-2.5 border-t border-edge pt-4">
           {#each SUB_SCORES as row, i}
             {@const st = state3(row.v, row.invert)}
@@ -788,6 +959,19 @@
           <div class="rounded-lg bg-panel-2 px-2 py-1.5"><div class="truncate text-sm font-bold text-strong">{fmtUsd(mc.globalMetrics.totalGlobalVolume24hUsd)}</div><div class="text-[10px] text-muted">Global vol 24h</div></div>
           <div class="rounded-lg bg-panel-2 px-2 py-1.5"><div class="text-sm font-bold text-strong">{mc.otherChains.length + 1}<span class="text-muted text-[11px]"> · {mc.globalMetrics.totalCexMarkets} CEX</span></div><div class="text-[10px] text-muted">chains traded</div></div>
         </div>
+
+        <!-- Scanned chain vs the rest of the token, as one 100% bar. -->
+        {#if chainSplit}
+          <div class="mb-3 rounded-xl border border-edge bg-panel-2/40 px-3 py-2.5">
+            <p class="stat-label mb-0.5">Where this token actually trades</p>
+            <p class="text-[11px] leading-relaxed text-muted">
+              You scanned <span class="font-semibold text-soft">{chainSplit.scannedName}</span>, which holds
+              <span class="font-semibold {mc.biasDetected ? (sev === 'high' ? 'text-danger' : 'text-warn') : 'text-mint'}">{chainSplit.scannedShare < 10 ? chainSplit.scannedShare.toFixed(1) : chainSplit.scannedShare.toFixed(0)}%</span>
+              of the {fmtUsd(chainSplit.liqTotal)} this token has pooled across every chain.
+            </p>
+            <EChart option={chainSplitOption} height={chainSplit.volTotal > 0 ? 210 : 170} minWidth={0} />
+          </div>
+        {/if}
 
         <div class="mb-3 grid grid-cols-2 gap-3">
           <div>

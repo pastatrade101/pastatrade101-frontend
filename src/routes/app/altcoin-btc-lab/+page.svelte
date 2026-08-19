@@ -10,7 +10,7 @@
   import AiLabel from '$lib/components/AiLabel.svelte';
   import { membership, membershipReady, hasFeature } from '$lib/stores/membership';
   import { changeColor, fmtPct, signalColor } from '$lib/format';
-  import { grid, timeAxis, valueAxis, logAxis, axisTooltip, lineSeries, divergingBars, categorical, adaptHue } from '$lib/charts/presets';
+  import { grid, timeAxis, valueAxis, logAxis, categoryAxis, axisTooltip, lineSeries, divergingBars, rankedBars, categorical, adaptHue } from '$lib/charts/presets';
 
   interface Pt {
     date: string;
@@ -331,6 +331,63 @@
     { label: 'Very weak <−20%', color: '#EF4444' }
   ];
 
+  // Zone hue for any signed "% vs BTC" reading — the two oscillators AND the
+  // strength/leaderboard bars all run through this, so one legend keys every
+  // zoned chart on the page. `hue` is passed in already resolved (see below)
+  // rather than read from the store, because these run inside ECharts callbacks.
+  const zoneOf = (v: number, hue: string[]) => (v > 20 ? hue[0] : v > 5 ? hue[1] : v < -20 ? hue[4] : v < -5 ? hue[3] : hue[2]);
+
+  // Resolved here (inside a derived) so the per-bar callbacks close over plain
+  // hexes instead of reading a store while ECharts paints.
+  const zoneHues = $derived(ZONE_LEGEND.map((z) => $adaptHue(z.color)));
+
+  // ── Strength vs BTC, three horizons ──
+  // The 7d/30d/90d figures are listed as text beside this; the bars add the one
+  // thing a list of signed numbers cannot show — all three on a shared zero
+  // baseline, so "improving or decaying?" is a shape, not three comparisons.
+  const strengthRows = $derived(
+    // Bottom-up: ECharts puts category 0 on the bottom row, so 7d lands on top
+    // and the order matches the text above it.
+    [
+      { label: '90d', value: data?.strength_90d },
+      { label: '30d', value: data?.strength_30d },
+      { label: '7d', value: data?.strength_7d }
+    ].filter((r): r is { label: string; value: number } => r.value != null && Number.isFinite(r.value))
+  );
+
+  const strengthOption = $derived.by(() => {
+    if (!strengthRows.length) return {};
+    const hue = zoneHues;
+    return {
+      grid: grid({ left: 4, right: 14, top: 6, bottom: 2 }),
+      tooltip: axisTooltip({
+        axisPointer: { type: 'shadow' },
+        textStyle: { fontSize: 11 },
+        valueFormatter: (v: number) => fmtPct(v, 1)
+      }),
+      xAxis: valueAxis({ axisLabel: { formatter: (v: number) => `${v}%` }, splitLine: { show: false } }),
+      yAxis: categoryAxis(strengthRows.map((r) => r.label), { axisTick: { show: false } }),
+      series: [
+        rankedBars({
+          name: 'Strength vs BTC',
+          data: strengthRows.map((r) => Number(r.value.toFixed(2))),
+          colorFor: (v) => zoneOf(v, hue),
+          extra: {
+            // Three rows would otherwise render as slabs at 58% of the band.
+            barMaxWidth: 16,
+            markLine: {
+              silent: true,
+              symbol: 'none',
+              label: { show: false },
+              lineStyle: { color: $adaptHue('#E5E7EB'), width: 1 },
+              data: [{ xAxis: 0 }]
+            }
+          }
+        })
+      ]
+    };
+  });
+
   // Shared zoned-oscillator option so the coin and market charts look identical.
   //
   // Diverging bars rather than a line: a bar states the sign twice — which side of
@@ -343,10 +400,8 @@
     const vals = points.map((p) => p.value);
     const max = Math.max(25, Math.ceil(Math.max(...vals) / 5) * 5 + 5);
     const min = Math.min(-25, Math.floor(Math.min(...vals) / 5) * 5 - 5);
-    // Resolved here (inside the derived) so the per-bar callback closes over plain
-    // hexes instead of reading a store while ECharts paints.
-    const hue = ZONE_LEGEND.map((z) => $adaptHue(z.color));
-    const zoneColor = (v: number) => (v > 20 ? hue[0] : v > 5 ? hue[1] : v < -20 ? hue[4] : v < -5 ? hue[3] : hue[2]);
+    const hue = zoneHues;
+    const zoneColor = (v: number) => zoneOf(v, hue);
     const guide = (y: number, label: string, color: string, bold = false) => ({
       yAxis: y,
       lineStyle: { color, type: bold ? 'solid' : 'dashed', width: bold ? 1.5 : 1 },
@@ -467,6 +522,106 @@
         : '#9CA3AF';
 
   const oscColor = (v: number | null | undefined) => (v == null ? '#9CA3AF' : v > 5 ? '#22C55E' : v < -5 ? '#EF4444' : '#9CA3AF');
+
+  // ── Today's strongest / weakest, as one diverging leaderboard ──
+  // Side by side the two lists read as two unrelated tables. On a shared zero
+  // axis they become one picture: how far the leaders are ahead of BTC versus
+  // how far the bleeders are behind, and whether the field is lopsided.
+  const top3Rows = $derived.by(() => {
+    const t = signalsResp?.top3;
+    if (!t) return [];
+    return [...t.strongest, ...t.weakest]
+      .filter((x): x is Top3Item & { strength_90d: number } => x.strength_90d != null && Number.isFinite(x.strength_90d))
+      // Ascending, because category 0 sits on the bottom row — strongest ends on top.
+      .sort((a, b) => a.strength_90d - b.strength_90d);
+  });
+
+  const top3Option = $derived.by(() => {
+    if (!top3Rows.length) return {};
+    const hue = zoneHues;
+    return {
+      grid: grid({ left: 4, right: 14, top: 8, bottom: 2 }),
+      tooltip: axisTooltip({
+        axisPointer: { type: 'shadow' },
+        textStyle: { fontSize: 11 },
+        valueFormatter: (v: number) => fmtPct(v, 1)
+      }),
+      xAxis: valueAxis({ axisLabel: { formatter: (v: number) => `${v}%` }, splitLine: { show: false } }),
+      yAxis: categoryAxis(top3Rows.map((r) => r.symbol), { axisTick: { show: false } }),
+      series: [
+        rankedBars({
+          name: '90d vs BTC',
+          data: top3Rows.map((r) => Number(r.strength_90d.toFixed(2))),
+          colorFor: (v) => zoneOf(v, hue),
+          extra: {
+            barMaxWidth: 18,
+            markLine: {
+              silent: true,
+              symbol: 'none',
+              label: { show: false },
+              lineStyle: { color: $adaptHue('#E5E7EB'), width: 1 },
+              data: [{ xAxis: 0 }]
+            }
+          }
+        })
+      ]
+    };
+  });
+
+  // ── Market breadth as shares of the universe ──
+  // The counts above are four different denominators dressed as one grid. Put
+  // every measure on a 0–100% axis with the halfway guide and the "broad vs
+  // selective" call the sentence makes becomes a length you can see.
+  const breadthRows = $derived.by(() => {
+    const b = signalsResp?.breadth;
+    if (!b || !b.count) return [];
+    const share = (n: number) => Math.round((n / b.count) * 1000) / 10;
+    // Bottom-up again: 7d ends up on the top row.
+    return [
+      { label: 'Above 200D MA', value: b.pct_above_200 },
+      { label: 'Above 50D MA', value: b.pct_above_50 },
+      { label: 'Beating BTC 90d', value: share(b.outperform_90d) },
+      { label: 'Beating BTC 30d', value: share(b.outperform_30d) },
+      { label: 'Beating BTC 7d', value: share(b.outperform_7d) }
+    ];
+  });
+
+  const breadthOption = $derived.by(() => {
+    if (!breadthRows.length) return {};
+    // The same cutoffs the regime read uses: ≥60% is broad, ≤25% is BTC season.
+    const good = $adaptHue('#22C55E');
+    const bad = $adaptHue('#EF4444');
+    const mid = $adaptHue('#9CA3AF');
+    return {
+      grid: grid({ left: 4, right: 42, top: 8, bottom: 2 }),
+      tooltip: axisTooltip({
+        axisPointer: { type: 'shadow' },
+        textStyle: { fontSize: 11 },
+        valueFormatter: (v: number) => `${v}%`
+      }),
+      xAxis: valueAxis({ max: 100, axisLabel: { formatter: (v: number) => `${v}%` }, splitLine: { show: false } }),
+      yAxis: categoryAxis(breadthRows.map((r) => r.label), { axisTick: { show: false } }),
+      series: [
+        rankedBars({
+          name: 'Share of universe',
+          data: breadthRows.map((r) => r.value),
+          colorFor: (v) => (v >= 60 ? good : v <= 25 ? bad : mid),
+          extra: {
+            barMaxWidth: 16,
+            // Every value is positive here, so end labels never collide with the axis.
+            label: { show: true, position: 'right', color: 'inherit', fontSize: 10, formatter: (p: { value: number }) => `${p.value}%` },
+            markLine: {
+              silent: true,
+              symbol: 'none',
+              lineStyle: { color: mid, type: 'dashed', width: 1 },
+              label: { color: mid, fontSize: 9, formatter: 'half' },
+              data: [{ xAxis: 50 }]
+            }
+          }
+        })
+      ]
+    };
+  });
 
   // Interpretation that tempers a single positive reading against the longer-term
   // trend (ratio vs its 200-day MA), to avoid false confidence.
@@ -618,6 +773,13 @@
         <p>30d <span class={changeColor(data.strength_30d)}>{fmtPct(data.strength_30d)}</span></p>
         <p>90d <span class={changeColor(data.strength_90d)}>{fmtPct(data.strength_90d)}</span></p>
       </div>
+      <!-- Proof under the numbers: the three horizons off one zero baseline,
+           coloured by the same zones as the oscillator legend below. -->
+      {#if strengthRows.length}
+        <div class="mt-1">
+          <EChart option={strengthOption} height={Math.max(96, strengthRows.length * 28 + 26)} minWidth={0} />
+        </div>
+      {/if}
     </div>
     <div>
       <p class="stat-label mb-1">Reaction score</p>
@@ -750,23 +912,33 @@
   {#if signalsResp}
     <!-- Today's Top 3 -->
     {#if signalsResp.top3}
-      <div class="card mt-4 grid gap-4 md:grid-cols-2">
-        {#each [{ title: "Today's strongest vs BTC", list: signalsResp.top3.strongest, pos: true }, { title: 'Weakest vs BTC', list: signalsResp.top3.weakest, pos: false }] as col}
-          <div>
-            <h3 class="mb-2 text-xs font-semibold uppercase tracking-wider text-muted">{col.title}</h3>
-            <ol class="space-y-1 text-sm">
-              {#each col.list as t, i}
-                <li class="flex items-center justify-between">
-                  <span class="text-strong"><span class="text-muted">{i + 1}.</span> {t.symbol} — {t.signal_label}</span>
-                  <span class="flex items-center gap-2">
-                    <span class={col.pos ? 'text-mint' : 'text-danger'}>{fmtPct(t.strength_90d)}</span>
-                    <span class="pill {confidenceColor(t.confidence)} text-[10px]">{t.confidence.replace(' confidence', '')}</span>
-                  </span>
-                </li>
-              {/each}
-            </ol>
+      <div class="card mt-4">
+        <div class="grid gap-4 md:grid-cols-2">
+          {#each [{ title: "Today's strongest vs BTC", list: signalsResp.top3.strongest, pos: true }, { title: 'Weakest vs BTC', list: signalsResp.top3.weakest, pos: false }] as col}
+            <div>
+              <h3 class="mb-2 text-xs font-semibold uppercase tracking-wider text-muted">{col.title}</h3>
+              <ol class="space-y-1 text-sm">
+                {#each col.list as t, i}
+                  <li class="flex items-center justify-between">
+                    <span class="text-strong"><span class="text-muted">{i + 1}.</span> {t.symbol} — {t.signal_label}</span>
+                    <span class="flex items-center gap-2">
+                      <span class={col.pos ? 'text-mint' : 'text-danger'}>{fmtPct(t.strength_90d)}</span>
+                      <span class="pill {confidenceColor(t.confidence)} text-[10px]">{t.confidence.replace(' confidence', '')}</span>
+                    </span>
+                  </li>
+                {/each}
+              </ol>
+            </div>
+          {/each}
+        </div>
+
+        <!-- Both lists on one zero axis — leaders right, bleeders left. -->
+        {#if top3Rows.length}
+          <div class="mt-3 border-t border-edge/60 pt-3">
+            <p class="stat-label mb-1">90d vs BTC — leaders right of zero, bleeders left</p>
+            <EChart option={top3Option} height={Math.max(120, top3Rows.length * 28 + 32)} minWidth={0} />
           </div>
-        {/each}
+        {/if}
       </div>
     {/if}
 
@@ -784,6 +956,15 @@
           <div><p class="stat-label">Confirmed leaders</p><p class="text-mint">{b.leaders}</p></div>
           <div><p class="stat-label">Bleeding pairs</p><p class="text-danger">{b.weak}</p></div>
         </div>
+
+        <!-- The same counts as shares of the universe, against the halfway line —
+             which is the exact test the sentence underneath applies. -->
+        {#if breadthRows.length}
+          <div class="mt-3">
+            <EChart option={breadthOption} height={Math.max(140, breadthRows.length * 28 + 32)} minWidth={0} />
+          </div>
+        {/if}
+
         <p class="mt-2 text-xs text-muted">
           {b.pct_outperform_30d}% of the {b.count}-coin premium universe are outperforming BTC over 30d —
           {b.pct_above_200 >= 50 ? 'broad altcoin strength.' : 'selective strength, not full altcoin season.'}

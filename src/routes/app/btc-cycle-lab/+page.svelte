@@ -250,21 +250,26 @@
         }
       }),
       xAxis: valueAxis({ axisLabel: { formatter: (v: number) => `${v}×` } }),
-      yAxis: categoryAxis(rows.map((r) => r.label), { axisTick: { show: false } }),
+      // Per-item `textStyle` (which beats axisLabel for that tick) puts the current
+      // cycle's own amber on its row label, so on a 375px screen the row the
+      // sentence is about is findable without decoding the colour ring first.
+      yAxis: categoryAxis(
+        rows.map((r) =>
+          r.key === currentKey ? { value: r.label, textStyle: { color: CURRENT_HUE, fontWeight: 600 } } : r.label
+        ),
+        { axisTick: { show: false } }
+      ),
       series: [
         rankedBars({
           name: `ROI at day ${positioning.lastDay}`,
           // Hue belongs to the CYCLE, not the number, so each row carries its own
           // itemStyle (item beats series in ECharts) and matches its chip and its
-          // line on the overlay below. `colorFor` is only the never-hit fallback
-          // rankedBars requires.
-          data: rows.map((r) => {
-            const isCurrent = r.key === currentKey;
-            return {
-              value: r.value,
-              itemStyle: { color: isCurrent ? CURRENT_HUE : colorMap[r.key], opacity: isCurrent ? 1 : 0.8 }
-            };
-          }),
+          // line on the overlay below — colorMap already pins the current cycle to
+          // amber. `colorFor` is only the never-hit fallback rankedBars requires.
+          data: rows.map((r) => ({
+            value: r.value,
+            itemStyle: { color: colorMap[r.key], opacity: r.key === currentKey ? 1 : 0.8 }
+          })),
           colorFor: () => neutral,
           extra: {
             // Two or three rows would otherwise render as slabs at 58% of the band.

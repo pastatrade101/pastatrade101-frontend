@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Check, AlertTriangle, GitCompareArrows, Info, ArrowUpRight, ArrowDownRight, Lock, ChevronDown, Activity, Calculator } from '@lucide/svelte';
   import { api } from '$lib/api';
-  import { adaptHue, axisTooltip, grid, lineSeries, logAxis, timeAxis, valueAxis } from '$lib/charts/presets';
+  import { adaptHue, axisTooltip, grid, itemTooltip, lineSeries, logAxis, radarOption, timeAxis, tipBody, tipRow, valueAxis } from '$lib/charts/presets';
   import { membership, membershipReady, hasFeature } from '$lib/stores/membership';
   import Gauge from '$lib/components/Gauge.svelte';
   import EChart from '$lib/components/EChart.svelte';
@@ -114,6 +114,66 @@
       error = e instanceof Error ? e.message : 'Failed to load.';
     }
   };
+
+  // ── Category radar (the SHAPE of the risk, above the five number cards) ──
+  // Five isolated 0–1 pills force you to compare them one at a time, which hides
+  // the question that actually drives the decision: WHICH input is stretched.
+  // Every category is already on the same 0→1 scale, so one polygon answers it
+  // at a glance — and the cards below stay as the exact-number layer.
+  interface ExitCategory { key: string; label: string; score: number | null; available: boolean; active_weight: number | null; meaning: string }
+
+  /** Zone hues as literals for canvas — ECharts can't resolve the --c-* vars the Tailwind classes use. */
+  const zoneHex = (s: number) => (s < 0.5 ? '#37e0a6' : s < 0.75 ? '#ffb547' : '#ff5d6c'); // same cut-points as zonePill/zoneBar
+  const scoreHex = (s: number | null) => (s == null ? '#8b97a8' : s < 0.4 ? '#37e0a6' : s < 0.6 ? '#ffb547' : '#ff5d6c'); // same cut-points as scorePill
+  /** "Altcoin Breadth Risk" → "Altcoin\nBreadth": two short lines fit a 375px radar. */
+  const axisName = (label: string) => {
+    const s = label.replace(' Risk', '');
+    return s.length > 10 ? s.replace(' ', '\n') : s;
+  };
+
+  // Only categories with a live score are plotted — a null drawn as 0 would read
+  // as "no risk at all" rather than "not measurable".
+  const radarCats = $derived(((result?.categories ?? []) as ExitCategory[]).filter((c) => c.score != null));
+  const radarPeak = $derived(radarCats.length ? radarCats.reduce((a, b) => ((b.score ?? 0) > (a.score ?? 0) ? b : a)) : null);
+
+  const radarChartOption = $derived.by(() => {
+    // A radar only earns its ink at 3+ dimensions; below that the cards are clearer.
+    if (!result || radarCats.length < 3) return {};
+    const muted = $adaptHue('#8b97a8');
+    const base = radarOption({
+      indicators: radarCats.map((c) => ({ name: axisName(c.label) })),
+      values: radarCats.map((c) => c.score),
+      // The fill takes the headline score's own zone colour, so the shape and the
+      // hero gauge read as the same object rather than two unrelated graphics.
+      color: $adaptHue(zoneHex(result.exit_risk_score)),
+      muted,
+      name: 'Category risk'
+    });
+    return {
+      tooltip: itemTooltip({
+        textStyle: { fontSize: 11 },
+        // Dots reuse scorePill's thresholds, so a row's colour matches its card pill.
+        formatter: () => tipBody(radarCats.map((c) => tipRow($adaptHue(scoreHex(c.score)), c.label.replace(' Risk', ''), (c.score ?? 0).toFixed(2))))
+      }),
+      radar: { ...base.radar, radius: '62%', center: ['50%', '54%'] },
+      series: [
+        // 0.60 is where a category's own pill turns red, so the dashed ring turns
+        // "is this one hot?" into a purely visual check: is the corner outside it.
+        {
+          type: 'radar',
+          name: 'High (0.60)',
+          silent: true,
+          symbol: 'none',
+          z: 1,
+          tooltip: { show: false },
+          data: [{ value: radarCats.map(() => 0.6) }],
+          lineStyle: { color: muted, width: 1, type: 'dashed' as const },
+          itemStyle: { color: 'transparent' }
+        },
+        ...base.series
+      ]
+    };
+  });
 
   // ── History chart (toggleable series + 6 strategy zones + markers) ──
   // Each series is named in the legend buttons below, so its hue is semantic and
@@ -280,7 +340,28 @@
     <AiInterpret module="exit_strategy" title="Exit Strategy" signals={aiSignals} />
   </div>
 
-  <!-- Category breakdown -->
+  <!-- Category radar — the shape of the risk, read before the exact numbers -->
+  {#if radarCats.length >= 3}
+    <div class="card mb-3">
+      <div class="flex items-center gap-2">
+        <Activity class="h-4 w-4 text-accent" />
+        <p class="stat-label">Where the risk is concentrated</p>
+      </div>
+      {#if radarPeak}
+        <p class="mt-1 text-sm leading-relaxed text-soft">
+          <span class="font-semibold text-strong">{radarPeak.label.replace(' Risk', '')}</span> is the most stretched input right now, at
+          <span class="font-semibold text-strong">{(radarPeak.score ?? 0).toFixed(2)}</span>. The further a corner reaches the rim, the closer that input sits to its historical top-of-cycle range.
+        </p>
+      {/if}
+      <EChart option={radarChartOption} height={260} minWidth={0} />
+      <p class="mt-1 text-[11px] leading-relaxed text-muted">
+        Every axis runs 0 → 1 on the same scale. The dashed ring marks 0.60 — where a category counts as high and its pill below turns red. A round shape means risk is spread evenly; a spike means one input is carrying the score.
+        {#if radarCats.length < r.categories.length}Categories without a live score aren't plotted — they show as “n/a” below.{/if}
+      </p>
+    </div>
+  {/if}
+
+  <!-- Category breakdown — the exact numbers behind the shape above -->
   <div class="mb-3 grid grid-cols-2 gap-3 lg:grid-cols-5">
     {#each r.categories as c (c.key)}
       <div class="card {c.available ? '' : 'opacity-60'}">

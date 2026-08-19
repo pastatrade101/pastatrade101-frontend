@@ -173,6 +173,51 @@ export const divergingBars = ({ name, data, colorFor, barWidth, extra = {} }: Di
 export const rankedBars = ({ name, data, colorFor, barWidth = '58%', extra = {} }: DivergingOpts): Obj =>
   divergingBars({ name, data, colorFor, barWidth, extra: { ...extra } });
 
+/* ── Radar ──────────────────────────────────────────────────────────────── */
+
+export interface RadarOpts {
+  /** One axis per dimension. `max` defaults to 1 (risk scores are 0→1). */
+  indicators: { name: string; max?: number }[];
+  values: (number | null)[];
+  color: string;
+  /** Muted colour for the web + labels. */
+  muted: string;
+  name?: string;
+  extra?: Obj;
+}
+
+/**
+ * Multi-factor radar — the SHAPE of risk across dimensions.
+ *
+ * A row of separate numbers makes you compare them one at a time; a radar shows
+ * which dimension is stretched at a glance, which is the actual question ("what
+ * is driving this score?"). Only worth it for 3+ dimensions on a shared 0→1
+ * scale — below that a bar is clearer.
+ */
+export const radarOption = ({ indicators, values, color, muted, name = 'Score', extra = {} }: RadarOpts): Obj => ({
+  radar: {
+    indicator: indicators.map((i) => ({ name: i.name, max: i.max ?? 1 })),
+    shape: 'polygon',
+    splitNumber: 4,
+    axisName: { color: muted, fontSize: 10 },
+    splitLine: { lineStyle: { color: withAlpha(muted, 0.25) } },
+    splitArea: { show: false },
+    axisLine: { lineStyle: { color: withAlpha(muted, 0.25) } },
+    ...(extra.radar as Obj)
+  },
+  series: [
+    {
+      type: 'radar',
+      name,
+      symbolSize: 4,
+      data: [{ value: values.map((v) => (v == null ? 0 : v)), name }],
+      lineStyle: { color, width: 2 },
+      itemStyle: { color },
+      areaStyle: { color: withAlpha(color, 0.22) }
+    }
+  ]
+});
+
 /* ── Zoom ───────────────────────────────────────────────────────────────── */
 
 /**
