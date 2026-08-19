@@ -1,9 +1,17 @@
 <script lang="ts">
   import { onDestroy, onMount, tick } from 'svelte';
   import { Maximize2, X } from '@lucide/svelte';
+  import { theme } from '$lib/stores/theme';
+  import { applyChartTheme, readChartTokens } from '$lib/charts/theme';
 
-  // Thin ECharts wrapper. echarts is imported dynamically so it never runs during
-  // SSR; the chart re-renders whenever `option` changes.
+  // Thin ECharts wrapper. The tree-shaken barrel ($lib/charts/echarts) is imported
+  // dynamically so it never runs during SSR; the chart re-renders whenever
+  // `option` changes — or whenever the theme does.
+  //
+  // Theming: every option is passed through applyChartTheme(), which merges the
+  // app's live --c-* design tokens over the chart's chrome. That keeps charts in
+  // step with light/dark mode and with the admin Branding colors, without an
+  // init-time ECharts theme (which would force a dispose + re-init and flash).
   //
   // Mobile readability: on phones the chart is given a min-width (so it renders
   // wider than the screen and scrolls horizontally instead of cramming every
@@ -26,10 +34,13 @@
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let lsChart: any = null;
 
+  /** The caller's option with the current theme's chrome merged in. */
+  const themed = (o: unknown) => applyChartTheme(o as Record<string, unknown>, readChartTokens());
+
   onMount(async () => {
-    echartsLib = await import('echarts');
+    echartsLib = (await import('$lib/charts/echarts')).default;
     chart = echartsLib.init(el, null, { renderer: 'canvas' });
-    chart.setOption(option);
+    chart.setOption(themed(option));
     ro = new ResizeObserver(() => chart?.resize());
     ro.observe(el);
   });
@@ -39,10 +50,14 @@
   // reads, and on the first run `chart` is still null — so guarding the read
   // behind `if (chart)` would register no dependency and the effect would never
   // re-run when `option` changes (e.g. toggling a cycle chip).
+  // Reading `$theme` here also subscribes this effect to theme switches, so the
+  // chrome is recomputed from the fresh tokens and pushed straight back in.
   $effect(() => {
     const next = option;
-    if (chart) chart.setOption(next, true);
-    if (lsChart) lsChart.setOption(next, true);
+    void $theme;
+    const opt = themed(next);
+    if (chart) chart.setOption(opt, true);
+    if (lsChart) lsChart.setOption(opt, true);
   });
 
   const openLandscape = async () => {
@@ -50,7 +65,7 @@
     await tick();
     if (!echartsLib || !lsEl) return;
     lsChart = echartsLib.init(lsEl, null, { renderer: 'canvas' });
-    lsChart.setOption(option, true);
+    lsChart.setOption(themed(option), true);
     lsChart.resize();
   };
   const closeLandscape = () => {
