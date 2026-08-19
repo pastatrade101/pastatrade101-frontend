@@ -98,6 +98,33 @@ export const timeAxis = (extra: Obj = {}): Obj => ({ type: 'time', ...extra });
 export const valueAxis = (extra: Obj = {}): Obj => ({ type: 'value', ...extra });
 export const logAxis = (extra: Obj = {}): Obj => ({ type: 'log', ...extra });
 
+export interface BarOpts {
+  name: string;
+  data: unknown[];
+  /** Single colour, or a callback for per-bar colour (diverging red/green). */
+  color?: string | ((p: { value: number | number[] }) => string);
+  /** Rounded ends, in px. */
+  radius?: number;
+  width?: string | number;
+  extra?: Obj;
+}
+
+/**
+ * A bar series with this app's defaults.
+ *
+ * For a signed metric, pass a `color` callback so each bar is tinted by its
+ * sign — direction and colour then encode the same fact twice, which is what
+ * makes a diverging bar so much faster to read than a line crossing zero.
+ */
+export const barSeries = ({ name, data, color, radius = 3, width, extra = {} }: BarOpts): Obj => ({
+  name,
+  type: 'bar',
+  data,
+  ...(width != null ? { barWidth: width } : {}),
+  itemStyle: { borderRadius: radius, ...(color ? { color } : {}) },
+  ...extra
+});
+
 /** Crosshair tooltip shared by every time-series chart. Chrome comes from the theme. */
 export const axisTooltip = (extra: Obj = {}): Obj => ({ trigger: 'axis', ...extra });
 

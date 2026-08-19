@@ -1,5 +1,11 @@
 <script lang="ts">
-  // SVG bar chart that handles negative values (bars drop below a zero baseline).
+  // Bar chart that handles negative values (bars drop below a zero baseline).
+  // Was a hand-rolled SVG with no tooltip, no theming and no axis labels; now it
+  // runs through the shared ECharts layer so it inherits light/dark, Branding
+  // colours and hover readouts. Props are unchanged.
+  import EChart from './EChart.svelte';
+  import { adaptHue, barSeries, categoryAxis, grid, valueAxis, axisTooltip } from '$lib/charts/presets';
+
   interface Bar {
     label: string;
     value: number;
@@ -11,32 +17,39 @@
   }
   let { bars, unit = '', height = 240 }: Props = $props();
 
-  const barW = 46;
-  const gap = 14;
-  const width = $derived(Math.max(bars.length * (barW + gap) + gap, 200));
+  const fmt = (v: number) => `${v > 0 ? '+' : ''}${v.toFixed(1)}${unit}`;
 
-  const vmax = $derived(Math.max(0, ...bars.map((b) => b.value)));
-  const vmin = $derived(Math.min(0, ...bars.map((b) => b.value)));
-  const range = $derived(vmax - vmin || 1);
-
-  const plotTop = 24;
-  const plotBottom = $derived(height - 28);
-  const plotH = $derived(plotBottom - plotTop);
-  const yFor = (v: number) => plotBottom - ((v - vmin) / range) * plotH;
-  const zeroY = $derived(yFor(0));
+  const option = $derived.by(() => {
+    if (!bars?.length) return {};
+    const up = $adaptHue('#22C55E');
+    const down = $adaptHue('#EF4444');
+    return {
+      grid: grid({ left: 8, right: 12, top: 22, bottom: 4 }),
+      tooltip: axisTooltip({ valueFormatter: (v: number) => fmt(v) }),
+      xAxis: categoryAxis(
+        bars.map((b) => b.label),
+        { axisTick: { show: false }, axisLabel: { fontSize: 10, interval: 0, hideOverlap: true } }
+      ),
+      yAxis: valueAxis({ axisLabel: { fontSize: 10, formatter: (v: number) => `${v}${unit}` } }),
+      series: [
+        barSeries({
+          name: 'value',
+          data: bars.map((b) => b.value),
+          // Sign is encoded twice — bar direction AND colour.
+          color: (p) => ((p.value as number) >= 0 ? up : down),
+          width: '58%',
+          extra: {
+            label: {
+              show: true,
+              position: 'top',
+              fontSize: 10,
+              formatter: (p: { value: number }) => fmt(p.value)
+            }
+          }
+        })
+      ]
+    };
+  });
 </script>
 
-<svg viewBox={`0 0 ${width} ${height}`} class="w-full" role="img" aria-label="bar chart">
-  <!-- zero baseline -->
-  <line x1="0" y1={zeroY} x2={width} y2={zeroY} stroke="#222b39" stroke-width="1" />
-  {#each bars as b, i}
-    {@const x = gap + i * (barW + gap)}
-    {@const y = Math.min(zeroY, yFor(b.value))}
-    {@const h = Math.abs(yFor(b.value) - zeroY)}
-    <rect {x} {y} width={barW} height={Math.max(h, 1)} rx="3" fill={b.value >= 0 ? '#37e0a6' : '#ff5d6c'} opacity="0.85" />
-    <text x={x + barW / 2} y={b.value >= 0 ? y - 5 : y + h + 12} fill="#cbd5e1" font-size="10" text-anchor="middle">
-      {b.value.toFixed(2)}{unit}
-    </text>
-    <text x={x + barW / 2} y={height - 8} fill="#8b97a8" font-size="10" text-anchor="middle">{b.label}</text>
-  {/each}
-</svg>
+<EChart {option} {height} minWidth={0} />

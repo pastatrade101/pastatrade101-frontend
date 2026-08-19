@@ -1,5 +1,11 @@
 <script lang="ts">
   // Overlays several ROI series on shared axes (x = day-of-year, y = ROI %).
+  // Was a hand-rolled SVG with no tooltip and hardcoded greys; now it runs on
+  // the shared ECharts layer, so hovering finally tells you which year is which
+  // and what each one returned on that day. Props are unchanged.
+  import EChart from './EChart.svelte';
+  import { axisTooltip, grid, lineSeries, valueAxis } from '$lib/charts/presets';
+
   interface Series {
     year: number | string;
     points: { x: number; y: number }[];
@@ -15,45 +21,44 @@
   }
   let { series, unit = '%', height = 320 }: Props = $props();
 
-  const W = 760;
-  const padL = 46;
-  const padR = 12;
-  const padT = 12;
-  const padB = 22;
+  // Day-of-year → a readable month label, matching the old axis markers.
+  const MONTH_STARTS = [1, 32, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335];
+  const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const dayLabel = (d: number) => {
+    let i = 0;
+    while (i < 11 && MONTH_STARTS[i + 1] <= d) i += 1;
+    return `${MONTHS[i]} ${d - MONTH_STARTS[i] + 1}`;
+  };
 
-  const allY = $derived(series.flatMap((s) => s.points.map((p) => p.y)));
-  const yMin = $derived(allY.length ? Math.min(0, ...allY) : 0);
-  const yMax = $derived(allY.length ? Math.max(0, ...allY) : 1);
-  const yRange = $derived(yMax - yMin || 1);
-  const xMax = 366;
-
-  const xFor = (x: number) => padL + (x / xMax) * (W - padL - padR);
-  const yForBase = (v: number, h: number) => h - padB - ((v - yMin) / yRange) * (h - padT - padB);
-
-  const pathFor = (pts: { x: number; y: number }[]) =>
-    pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${xFor(p.x).toFixed(1)},${yForBase(p.y, height).toFixed(1)}`).join(' ');
-
-  // Month start day-of-year markers (label a subset to avoid clutter).
-  const months = [
-    { d: 1, label: 'Jan' },
-    { d: 91, label: 'Apr' },
-    { d: 182, label: 'Jul' },
-    { d: 274, label: 'Oct' }
-  ];
+  const option = $derived.by(() => {
+    if (!series?.length) return {};
+    return {
+      grid: grid({ left: 8, right: 14, top: 16, bottom: 4 }),
+      tooltip: axisTooltip({
+        axisPointer: { type: 'line' },
+        valueFormatter: (v: number) => (v == null ? '—' : `${v >= 0 ? '+' : ''}${v.toFixed(1)}${unit}`),
+        // Day-of-year is meaningless as a raw number; show the calendar day.
+        formatter: undefined
+      }),
+      xAxis: valueAxis({
+        min: 1,
+        max: 366,
+        axisLabel: { fontSize: 9, formatter: (d: number) => dayLabel(Math.round(d)).split(' ')[0] },
+        splitLine: { show: false }
+      }),
+      yAxis: valueAxis({ axisLabel: { fontSize: 9, formatter: (v: number) => `${Math.round(v)}${unit}` } }),
+      series: series.map((s) =>
+        lineSeries({
+          name: String(s.year),
+          data: s.points.map((p) => [p.x, p.y]),
+          color: s.color,
+          width: s.width ?? 1.8,
+          dashed: !!s.dash,
+          extra: { ...(s.opacity != null ? { lineStyle: { width: s.width ?? 1.8, color: s.color, opacity: s.opacity, ...(s.dash ? { type: 'dashed' } : {}) } } : {}) }
+        })
+      )
+    };
+  });
 </script>
 
-<svg viewBox={`0 0 ${W} ${height}`} class="w-full" role="img" aria-label="overlay chart">
-  <!-- zero line + y labels -->
-  {#each [yMax, (yMax + yMin) / 2, 0, yMin] as gy}
-    <line x1={padL} y1={yForBase(gy, height)} x2={W - padR} y2={yForBase(gy, height)} stroke="#222b39" stroke-width={gy === 0 ? 1.5 : 0.5} />
-    <text x={padL - 6} y={yForBase(gy, height) + 3} fill="#8b97a8" font-size="9" text-anchor="end">{Math.round(gy)}{unit}</text>
-  {/each}
-  <!-- x labels -->
-  {#each months as m}
-    <text x={xFor(m.d)} y={height - 6} fill="#8b97a8" font-size="9" text-anchor="middle">{m.label}</text>
-  {/each}
-  <!-- series -->
-  {#each series as s}
-    <path d={pathFor(s.points)} fill="none" stroke={s.color} stroke-width={s.width ?? 1.8} stroke-dasharray={s.dash ?? ''} opacity={s.opacity ?? 0.9} stroke-linecap="round" stroke-linejoin="round" />
-  {/each}
-</svg>
+<EChart {option} {height} minWidth={0} />

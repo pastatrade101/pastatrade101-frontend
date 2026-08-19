@@ -5,8 +5,9 @@
   import { fmtPct, fmtUsd } from '$lib/format';
   import BarChart from '$lib/components/BarChart.svelte';
   import MultiLineChart from '$lib/components/MultiLineChart.svelte';
-  import Sparkline from '$lib/components/Sparkline.svelte';
   import AltcoinSeason from '$lib/components/AltcoinSeason.svelte';
+  import EChart from '$lib/components/EChart.svelte';
+  import { adaptHue, axisTooltip, grid, lineSeries, timeAxis, valueAxis, zoomInside } from '$lib/charts/presets';
   import Disclaimer from '$lib/components/Disclaimer.svelte';
   import AiLabel from '$lib/components/AiLabel.svelte';
 
@@ -268,6 +269,48 @@
   };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // Cumulative-ROI chart. The API has always returned `dates` alongside `roi`;
+  // the old sparkline threw them away and drew an axis-less squiggle. Now it is
+  // a real time series: dated tooltip, a zero baseline to read gains/losses
+  // against, Ctrl/pinch zoom and lttb sampling for the multi-year ranges.
+  const roiOption = $derived.by(() => {
+    if (chart?.render !== 'line' || !chart.roi?.length) return {};
+    const dates: string[] = chart.dates ?? [];
+    const last = chart.roi.at(-1) ?? 0;
+    const hue = $adaptHue(last >= 0 ? '#22C55E' : '#EF4444');
+    const data = chart.roi.map((v: number, i: number) => [dates[i] ? Date.parse(`${dates[i]}T00:00:00Z`) : i, v]);
+    return {
+      grid: grid({ left: 8, right: 16, top: 18, bottom: 4 }),
+      tooltip: axisTooltip({
+        valueFormatter: (v: number) => `${v >= 0 ? '+' : ''}${v.toFixed(1)}%`
+      }),
+      xAxis: timeAxis(),
+      yAxis: valueAxis({
+        axisLabel: { fontSize: 10, formatter: (v: number) => `${Math.round(v)}%` }
+      }),
+      dataZoom: [zoomInside()],
+      series: [
+        lineSeries({
+          name: 'Cumulative ROI',
+          data,
+          color: hue,
+          width: 2,
+          area: 0.1,
+          // Break-even reference — everything above it is profit.
+          extra: {
+            markLine: {
+              silent: true,
+              symbol: 'none',
+              data: [{ yAxis: 0 }],
+              lineStyle: { color: hue, type: 'dashed', opacity: 0.5 },
+              label: { formatter: 'Break-even', fontSize: 9 }
+            }
+          }
+        })
+      ]
+    };
+  });
+
   const bestRow = $derived(chart?.render === 'dca' && chart.table?.length ? [...chart.table].sort((a: any, b: any) => b.roi - a.roi)[0] : null);
   const hasIntel = $derived(chart && chart.render !== 'index');
 
@@ -422,7 +465,7 @@
           {#if chart.note}<p class="mt-2 text-xs text-muted">{chart.note}</p>{/if}
         {:else if chart.render === 'line'}
           <p class="mb-2 text-sm text-muted">Cumulative ROI since {chart.from} · <span class="font-semibold {chart.roi.at(-1) >= 0 ? 'text-mint' : 'text-danger'}">{fmtPct(chart.roi.at(-1))}</span></p>
-          <Sparkline points={chart.roi} height={200} />
+          <EChart option={roiOption} height={260} />
         {:else if chart.render === 'heatmap'}
           <div class="overflow-x-auto">
             <table class="w-full min-w-[640px] text-center text-xs">

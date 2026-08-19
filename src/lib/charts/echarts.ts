@@ -27,6 +27,7 @@ echarts.use([
   // charts
   LineChart, // every time-series chart in the app
   GaugeChart, // the speedometer risk gauges (Gauge.svelte)
+  BarChart, // Charts module: DCA-by-weekday, seasonality, diverging bars
   BarChart, // diverging zero-crossing bars + ranked horizontal bars
   // components, per the call-site inventory
   GridComponent, // cartesian grid + xAxis/yAxis (incl. time & log axes)

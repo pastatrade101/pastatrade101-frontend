@@ -1,13 +1,17 @@
 <script lang="ts">
-  // Minimal dependency-free SVG line chart. Good enough for Phase 1; swap for
-  // TradingView Lightweight Charts / ECharts when candles + indicators are needed.
+  // Minimal dependency-free SVG line chart, used for the tiny inline sparklines
+  // in the watchlist and BTC rows. Deliberately NOT ECharts: at ~80px there are
+  // no axes, tooltip or zoom to gain, and a canvas instance per row would cost
+  // far more than the squiggle is worth. Full-size charts go through EChart.
   interface Props {
     points: number[];
     height?: number;
     stroke?: string;
     fill?: boolean;
   }
-  let { points, height = 80, stroke = '#37e0a6', fill = true }: Props = $props();
+  // Defaults to the mint token rather than a baked hex, so it follows light/dark
+  // and the admin Branding colours like every other chart now does.
+  let { points, height = 80, stroke = 'rgb(var(--c-mint))', fill = true }: Props = $props();
 
   const width = 600;
 
