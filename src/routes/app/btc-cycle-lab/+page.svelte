@@ -7,7 +7,7 @@
   import AiInterpret from '$lib/components/AiInterpret.svelte';
   import { membership, membershipReady, hasFeature } from '$lib/stores/membership';
   import { fmtPct, fmtUsd } from '$lib/format';
-  import { grid, valueAxis, logAxis, axisTooltip, lineSeries, adaptHue } from '$lib/charts/presets';
+  import { grid, valueAxis, logAxis, axisTooltip, lineSeries, adaptHue, zoomInside } from '$lib/charts/presets';
 
   interface RoiPoint {
     days_since_event: number;
@@ -159,6 +159,8 @@
     return {
       backgroundColor: 'transparent',
       grid: grid({ left: 56, right: 18, top: 16, bottom: 44, containLabel: false }),
+      // Multi-cycle overlays span years — zoom in on a stretch (Ctrl/⌘ + wheel, pinch).
+      dataZoom: [zoomInside()],
       tooltip: axisTooltip({
         textStyle: { fontSize: 11 },
         formatter: (params: any[]) => {

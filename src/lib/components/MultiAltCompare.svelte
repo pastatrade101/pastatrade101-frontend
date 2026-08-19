@@ -4,7 +4,7 @@
   import { api } from '$lib/api';
   import EChart from '$lib/components/EChart.svelte';
   import { changeColor, fmtPct, signalColor } from '$lib/format';
-  import { axisTooltip, categorical, grid, lineSeries, timeAxis, valueAxis } from '$lib/charts/presets';
+  import { axisTooltip, categorical, grid, lineSeries, timeAxis, valueAxis, zoomInside } from '$lib/charts/presets';
 
   interface CoinOpt {
     coingecko_id: string;
@@ -110,6 +110,7 @@
       backgroundColor: 'transparent',
       // containLabel off: the 52px gutter was tuned to hold the axis labels itself.
       grid: grid({ left: 52, right: 16, top: 28, bottom: 32, containLabel: false }),
+      dataZoom: [zoomInside()],
       legend: { show: false },
       tooltip: axisTooltip({ textStyle: { fontSize: 11 } }),
       xAxis: timeAxis({ splitLine: { show: false } }),

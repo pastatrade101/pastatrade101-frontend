@@ -104,6 +104,28 @@ export const axisTooltip = (extra: Obj = {}): Obj => ({ trigger: 'axis', ...extr
 /** Item (hover-a-point) tooltip. */
 export const itemTooltip = (extra: Obj = {}): Obj => ({ trigger: 'item', ...extra });
 
+/* ── Zoom ───────────────────────────────────────────────────────────────── */
+
+/**
+ * Drag-to-pan + zoom without stealing the page scroll.
+ *
+ * Two ECharts defaults would fight the page on a long dashboard:
+ *  - zoomOnMouseWheel:true hijacks the wheel over a chart, trapping desktop scroll.
+ *    Gating it behind Ctrl/⌘ keeps normal scrolling intact.
+ *  - moveOnMouseMove:true pans on a single-finger drag, which on a phone eats the
+ *    vertical swipe the user needs to scroll the page. Off — pinch still zooms.
+ */
+export const zoomInside = (extra: Obj = {}): Obj => ({
+  type: 'inside',
+  zoomOnMouseWheel: 'ctrl',
+  moveOnMouseWheel: false,
+  moveOnMouseMove: false,
+  ...extra
+});
+
+/** Visible range slider. Costs vertical space — pair with extra grid bottom. */
+export const zoomSlider = (extra: Obj = {}): Obj => ({ type: 'slider', height: 18, bottom: 6, brushSelect: false, ...extra });
+
 export interface LineOpts {
   name: string;
   data: unknown[];
@@ -114,15 +136,27 @@ export interface LineOpts {
   area?: boolean | number;
   endLabel?: string;
   smooth?: boolean;
+  /** Downsampling strategy. 'lttb' (default) preserves the visual shape. */
+  sampling?: 'lttb' | 'average' | 'max' | 'min' | 'sum' | 'none';
   extra?: Obj;
 }
 
-/** A line series with this app's defaults (no symbols, sane width). */
-export const lineSeries = ({ name, data, color, width = 1.6, dashed = false, z, area = false, endLabel, smooth = false, extra = {} }: LineOpts): Obj => ({
+/**
+ * A line series with this app's defaults (no symbols, sane width).
+ *
+ * `sampling: 'lttb'` — Largest-Triangle-Three-Buckets. When a series holds more
+ * points than the chart has pixels (years of daily history, several series at
+ * once), ECharts draws a reduced set chosen to preserve the curve's SHAPE —
+ * peaks and troughs survive, unlike naive every-Nth decimation. First and last
+ * points are always kept, so "latest value" markers stay correct. Below the
+ * pixel threshold it does nothing at all, so it is safe as a default.
+ */
+export const lineSeries = ({ name, data, color, width = 1.6, dashed = false, z, area = false, endLabel, smooth = false, sampling = 'lttb', extra = {} }: LineOpts): Obj => ({
   name,
   type: 'line',
   showSymbol: false,
   smooth,
+  ...(sampling !== 'none' ? { sampling } : {}),
   data,
   ...(z != null ? { z } : {}),
   lineStyle: { width, ...(color ? { color } : {}), ...(dashed ? { type: 'dashed' } : {}) },

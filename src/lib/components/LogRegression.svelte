@@ -8,7 +8,7 @@
   import AiInterpret from '$lib/components/AiInterpret.svelte';
   import AiLabel from '$lib/components/AiLabel.svelte';
   import { fmtUsd } from '$lib/format';
-  import { grid, timeAxis, valueAxis, logAxis, axisTooltip, lineSeries, tipRow, tipBody, riskRamp } from '$lib/charts/presets';
+  import { grid, timeAxis, valueAxis, logAxis, axisTooltip, lineSeries, tipRow, tipBody, riskRamp, zoomInside } from '$lib/charts/presets';
 
   let { asset = 'BTC' }: { asset?: 'BTC' | 'ETH' } = $props();
 
@@ -253,6 +253,8 @@
         }
       }),
       grid: grid({ right: viewMode === 'analyst' ? 64 : 48, top: 12 }),
+      // Years of daily history: let the user zoom in (Ctrl/⌘ + wheel, or pinch).
+      dataZoom: [zoomInside()],
       xAxis: timeAxis(),
       // On log scale, anchor the floor near the price range so the (meaningless)
       // sub-cent early-history fit doesn't squash everything into the top decade.

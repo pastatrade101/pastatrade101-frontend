@@ -39,13 +39,30 @@
 
   onMount(async () => {
     echartsLib = (await import('$lib/charts/echarts')).default;
-    chart = echartsLib.init(el, null, { renderer: 'canvas' });
+    // useDirtyRect only repaints the regions that actually changed — a big win
+    // on the long daily-history charts, which redraw on every hover/zoom.
+    chart = echartsLib.init(el, null, { renderer: 'canvas', useDirtyRect: true });
     chart.setOption(themed(option));
     ro = new ResizeObserver(() => chart?.resize());
     ro.observe(el);
   });
 
-  // Push new options on change (notMerge=true so removed series disappear).
+  // How to push an update. Blanket notMerge=true tears the chart down and
+  // rebuilds it on every change, which kills the transition and flickers.
+  // replaceMerge keeps the same semantics — components absent from the new
+  // option are still removed — while letting ECharts animate between states.
+  //
+  // The exception is an empty option: several charts return `{}` while their
+  // data loads, and a merge would leave the previous render on screen forever.
+  // That case still needs the hard reset.
+  const REPLACE = { replaceMerge: ['series', 'xAxis', 'yAxis', 'legend', 'dataZoom', 'grid'] };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const mergeMode = (o: any) => {
+    const s = o?.series;
+    const hasSeries = Array.isArray(s) ? s.length > 0 : !!s;
+    return hasSeries ? REPLACE : true;
+  };
+
   // Read `option` unconditionally first: an $effect only tracks what it actually
   // reads, and on the first run `chart` is still null — so guarding the read
   // behind `if (chart)` would register no dependency and the effect would never
@@ -56,8 +73,9 @@
     const next = option;
     void $theme;
     const opt = themed(next);
-    if (chart) chart.setOption(opt, true);
-    if (lsChart) lsChart.setOption(opt, true);
+    const mode = mergeMode(opt);
+    if (chart) chart.setOption(opt, mode);
+    if (lsChart) lsChart.setOption(opt, mode);
   });
 
   const openLandscape = async () => {

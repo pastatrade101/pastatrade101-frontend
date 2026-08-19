@@ -103,7 +103,9 @@ export const applyChartTheme = (option: Obj, t: ChartTokens): Obj => {
     color: palette(t),
     backgroundColor: 'transparent',
     textStyle: { fontFamily: FONT, color: rgba(t.body) },
-    animationDuration: 420
+    animationDuration: 420,
+    // Generates a screen-reader description of the chart from its series/axes.
+    aria: { enabled: true }
   };
 
   // Beat the caller: the theme owns the furniture, in every mode.

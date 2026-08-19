@@ -4,7 +4,7 @@
   import { api } from '$lib/api';
   import Disclaimer from './Disclaimer.svelte';
   import EChart from './EChart.svelte';
-  import { grid, timeAxis, valueAxis, logAxis, axisTooltip, lineSeries } from '$lib/charts/presets';
+  import { grid, timeAxis, valueAxis, logAxis, axisTooltip, lineSeries, zoomInside } from '$lib/charts/presets';
 
   interface CoinRow {
     symbol: string;
@@ -96,6 +96,7 @@
       }),
       legend: { data: ['Season Index', 'Positive %', 'BTC'], top: 0 },
       grid: grid({ top: 28 }),
+      dataZoom: [zoomInside()],
       xAxis: timeAxis(),
       yAxis: [
         valueAxis({ name: '%', min: 0, max: 100, position: 'left' }),

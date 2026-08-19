@@ -9,7 +9,7 @@
   import AiInterpret from '$lib/components/AiInterpret.svelte';
   import AiLabel from '$lib/components/AiLabel.svelte';
   import { fmtPct, fmtUsd } from '$lib/format';
-  import { grid, timeAxis, valueAxis, logAxis, axisTooltip, lineSeries, categorical } from '$lib/charts/presets';
+  import { grid, timeAxis, valueAxis, logAxis, axisTooltip, lineSeries, categorical, zoomInside } from '$lib/charts/presets';
   import { membership, hasFeature } from '$lib/stores/membership';
 
   // Social Metrics is a Mid+ feature, so the social card is gated here too.
@@ -812,6 +812,8 @@
     return {
       backgroundColor: 'transparent',
       grid: grid({ left: 60, right: 70, top: 28, bottom: 32, containLabel: false }),
+      // The full risk history is the longest series on the page — allow zooming.
+      dataZoom: [zoomInside()],
       legend: { data: ['BTC price', 'Risk'], top: 0 },
       tooltip: axisTooltip({
         textStyle: { fontSize: 11 },
