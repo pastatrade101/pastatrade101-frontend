@@ -19,7 +19,7 @@
 
   const load = async () => {
     try {
-      const pref = await api<{ number: string | null; enabled: boolean }>('/me/whatsapp');
+      const pref = await api<{ number: string | null; enabled: boolean }>('/me/whatsapp', { auth: true });
       enabled = pref.enabled;
       number = pref.number ? `+${pref.number}` : '';
     } catch {
@@ -34,8 +34,7 @@
     message = '';
     busy = true;
     try {
-      const res = await api<{ enabled: boolean; number?: string }>('/me/whatsapp', {
-        method: 'PUT',
+      const res = await api<{ enabled: boolean; number?: string }>('/me/whatsapp', { auth: true, method: 'PUT',
         body: { enabled: true, number }
       });
       enabled = res.enabled;
@@ -52,7 +51,7 @@
     busy = true;
     error = '';
     try {
-      await api('/me/whatsapp', { method: 'PUT', body: { enabled: false } });
+      await api('/me/whatsapp', { auth: true, method: 'PUT', body: { enabled: false } });
       enabled = false;
       message = 'WhatsApp alerts are off.';
     } catch (e) {

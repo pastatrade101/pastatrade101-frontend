@@ -23,7 +23,7 @@
     error = '';
     busy = true;
     try {
-      await api('/me/whatsapp', { method: 'PUT', body: { enabled: true, number } });
+      await api('/me/whatsapp', { auth: true, method: 'PUT', body: { enabled: true, number } });
       done = true;
       setTimeout(() => (show = false), 2200);
     } catch (e) {
@@ -41,7 +41,7 @@
   onMount(async () => {
     if (!browser || localStorage.getItem(DISMISSED)) return;
     try {
-      const pref = await api<{ enabled: boolean; number: string | null }>('/me/whatsapp');
+      const pref = await api<{ enabled: boolean; number: string | null }>('/me/whatsapp', { auth: true });
       // Never ask someone who already answered — including someone who opted out.
       show = !pref.enabled && !pref.number;
     } catch {

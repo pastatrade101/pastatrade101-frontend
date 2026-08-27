@@ -43,13 +43,14 @@
     loading = true;
     try {
       const status = await api<{ connected: boolean; opted_in_members: number; templates: Template[]; rules: Rule[] }>(
-        '/admin/notifications'
+        '/admin/notifications',
+        { auth: true }
       );
       connected = status.connected;
       optedIn = status.opted_in_members;
       templates = status.templates ?? [];
       rules = status.rules ?? [];
-      const history = await api<{ items: Batch[] }>('/admin/notifications/history');
+      const history = await api<{ items: Batch[] }>('/admin/notifications/history', { auth: true });
       batches = history.items ?? [];
     } catch (error) {
       message = error instanceof Error ? error.message : 'Could not load notifications.';
@@ -61,7 +62,7 @@
   const saveRule = async (rule: Rule, patch: Partial<Rule>) => {
     busy = rule.key;
     try {
-      const updated = await api<Rule>(`/admin/notifications/rules/${rule.key}`, { method: 'PUT', body: patch });
+      const updated = await api<Rule>(`/admin/notifications/rules/${rule.key}`, { auth: true, method: 'PUT', body: patch });
       rules = rules.map((r) => (r.key === rule.key ? { ...r, ...updated } : r));
       message = `${rule.label} updated.`;
     } catch (error) {
@@ -74,7 +75,7 @@
   const previewAudience = async (rule: Rule) => {
     busy = rule.key;
     try {
-      const res = await api<{ count: number }>(`/admin/notifications/rules/${rule.key}/audience`);
+      const res = await api<{ count: number }>(`/admin/notifications/rules/${rule.key}/audience`, { auth: true });
       message = `${rule.label}: ${res.count} member${res.count === 1 ? '' : 's'} would receive this right now.`;
     } catch (error) {
       message = error instanceof Error ? error.message : 'Could not resolve the audience.';
@@ -90,6 +91,7 @@
       const summary = await api<{ audience: number; sent: number; skipped: number; failed: number; reason?: string }>(
         '/admin/notifications/announce',
         {
+          auth: true,
           method: 'POST',
           body: {
             template_name: announceTemplate,
