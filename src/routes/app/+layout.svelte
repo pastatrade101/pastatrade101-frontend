@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import WhatsappPrompt from '$lib/components/WhatsappPrompt.svelte';
   import { fade, fly } from 'svelte/transition';
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
@@ -269,6 +270,7 @@
     </aside>
 
     <div class="min-w-0 px-4 pb-24 pt-6 lg:h-full lg:min-h-0 lg:overflow-y-auto lg:overscroll-none lg:px-8 lg:pb-6">
+      <WhatsappPrompt />
       {@render children()}
     </div>
   </div>

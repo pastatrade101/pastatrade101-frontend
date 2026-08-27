@@ -6,6 +6,7 @@
   import { offers, loadOffers, activeOffer } from '$lib/stores/offers';
   import { fmtMoney } from '$lib/format';
   import Countdown from '$lib/components/Countdown.svelte';
+  import WhatsappAlerts from '$lib/components/WhatsappAlerts.svelte';
   import { FEATURE_LABELS, FEATURE_ORDER, LIMIT_LABELS, fmtLimit } from '$lib/membership-labels';
 
   interface Plan {
@@ -240,6 +241,12 @@
 
 {#if message}<div class="card mb-4 border-mint/30 bg-mint/5 text-mint">{message}</div>{/if}
 {#if error}<div class="card mb-4 border-danger/30 bg-danger/5 text-danger">{error}</div>{/if}
+
+<!-- How this member wants to hear from us. Lives above billing because it is the
+     thing they can actually change today, and it needs their explicit consent. -->
+<div class="mb-4">
+  <WhatsappAlerts />
+</div>
 
 <!-- Unfinished upgrade prompt -->
 {#if pending}

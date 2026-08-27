@@ -10,7 +10,8 @@
     { href: '/admin/payments', label: 'Payments' },
     { href: '/admin/payment-attempts', label: 'Follow-ups' },
     { href: '/admin/plans', label: 'Plans' },
-    { href: '/admin/offers', label: 'Offers' }
+    { href: '/admin/offers', label: 'Offers' },
+    { href: '/admin/notifications', label: 'WhatsApp' }
   ];
 
   const path = $derived($page.url.pathname);
