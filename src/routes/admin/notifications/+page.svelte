@@ -16,7 +16,7 @@
     min_hours_between: number;
     max_per_day: number;
   }
-  interface Template { name: string; language: string; status: string; variableCount: number }
+  interface Template { name: string; language: string; status: string; variableCount: number; body: string | null }
   interface Batch {
     id: string; rule_key: string; subject_type: string; audience_count: number;
     sent_count: number; skipped_count: number; failed_count: number;
@@ -38,15 +38,44 @@
 
   // Announcement composer
   let announceTemplate = $state('');
-  let announceVars = $state('');
+  // One entry per {{n}} — a single pipe-separated string was asking someone to
+  // count placeholders in their head and get the order right blind.
+  let announceValues = $state<string[]>([]);
   let announceNote = $state('');
+  let announcePlans = $state<string[]>([]);
+  let announceCount = $state<number | null>(null);
 
   const approved = $derived(templates.filter((t) => t.status.toUpperCase() === 'APPROVED'));
   const chosen = $derived(approved.find((t) => t.name === announceTemplate) ?? null);
-  const given = $derived(announceVars.split('|').map((v) => v.trim()).filter(Boolean).length);
-  // Meta rejects a mismatch after the send is already recorded, so the button
-  // stays disabled until the count is right.
-  const varsOk = $derived(!chosen || chosen.variableCount === given);
+  const varsOk = $derived(
+    !chosen || (announceValues.length >= chosen.variableCount && announceValues.slice(0, chosen.variableCount).every((v) => v.trim()))
+  );
+
+  /** The approved text with the values dropped in — exactly what will arrive. */
+  const preview = $derived.by(() => {
+    if (!chosen?.body) return '';
+    return chosen.body.replace(/\{\{\s*(\d+)\s*\}\}/g, (_m, n) => {
+      const v = announceValues[Number(n) - 1];
+      return v?.trim() ? v : `\u2588\u2588\u2588`;
+    });
+  });
+
+  const pickTemplate = (name: string) => {
+    announceTemplate = name;
+    const t = approved.find((x) => x.name === name);
+    announceValues = Array.from({ length: t?.variableCount ?? 0 }, () => '');
+  };
+
+  /** How many people this announcement would reach, with the plans chosen here. */
+  const countAudience = async () => {
+    announceCount = null;
+    try {
+      const res = await api<{ count: number }>('/admin/notifications/rules/manual/audience', { auth: true });
+      announceCount = res.count;
+    } catch {
+      announceCount = null;
+    }
+  };
 
   const load = async () => {
     loading = true;
@@ -118,13 +147,14 @@
           method: 'POST',
           body: {
             template_name: announceTemplate,
-            variables: announceVars.split('|').map((v) => v.trim()).filter(Boolean),
+            variables: announceValues.map((v) => v.trim()),
             note: announceNote || undefined
           }
         }
       );
       message = summary.reason ?? `Sent to ${summary.sent} of ${summary.audience} — ${summary.skipped} skipped, ${summary.failed} failed.`;
       announceNote = '';
+      announceValues = announceValues.map(() => '');
       await load();
     } catch (error) {
       message = error instanceof Error ? error.message : 'Could not send the announcement.';
@@ -132,6 +162,10 @@
       busy = '';
     }
   };
+
+  $effect(() => {
+    if (connected) void countAudience();
+  });
 
   onMount(() => {
     if ($authReady && $user?.role !== 'admin') return;
@@ -186,6 +220,77 @@
     <p class="rounded-lg border border-edge bg-panel-2/60 px-4 py-2 text-sm text-body">{message}</p>
   {/if}
 
+
+  <!-- The announcement is the thing people come here to DO, so it reads top to
+       bottom as one task: what to say, what goes in it, who gets it, send. The
+       rules below are configuration and sit out of the way underneath. -->
+  <section class="card">
+    <h2 class="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted">
+      <Send class="size-4" /> Send an announcement
+    </h2>
+
+    <label class="mt-4 block">
+      <span class="mb-1 block text-xs text-muted">Message</span>
+      <select
+        value={announceTemplate}
+        onchange={(e) => pickTemplate((e.currentTarget as HTMLSelectElement).value)}
+        class="input"
+      >
+        <option value="">— choose an approved template —</option>
+        {#each approved as tpl (tpl.name + tpl.language)}
+          <option value={tpl.name}>{tpl.name} ({tpl.language})</option>
+        {/each}
+      </select>
+    </label>
+
+    {#if chosen}
+      {#if chosen.variableCount > 0}
+        <div class="mt-4 space-y-2">
+          <span class="block text-xs text-muted">
+            Fill in the blanks — {chosen.variableCount} value{chosen.variableCount === 1 ? '' : 's'}
+          </span>
+          {#each Array(chosen.variableCount) as _, i (i)}
+            <div class="flex items-center gap-2">
+              <span class="w-10 shrink-0 text-xs text-muted">{`{{${i + 1}}}`}</span>
+              <input bind:value={announceValues[i]} class="input" placeholder={`Value for {{${i + 1}}}`} />
+            </div>
+          {/each}
+        </div>
+      {/if}
+
+      <div class="mt-4">
+        <span class="mb-1 block text-xs text-muted">This is exactly what they receive</span>
+        <pre class="card whitespace-pre-wrap bg-panel-2 p-3 text-sm text-strong">{preview}</pre>
+      </div>
+    {/if}
+
+    <input bind:value={announceNote} placeholder="Internal note (why you sent this)" class="input mt-4" />
+
+    <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
+      <span class="text-sm text-muted">
+        {#if announceCount === null}
+          Goes to everyone who opted in.
+        {:else}
+          Goes to <span class="font-semibold text-strong">{announceCount}</span>
+          opted-in member{announceCount === 1 ? '' : 's'}.
+        {/if}
+      </span>
+      <button class="btn-primary" disabled={!connected || !chosen || !varsOk || busy === 'announce'} onclick={sendAnnouncement}>
+        <Send class="size-4" />
+        {busy === 'announce'
+          ? 'Sending…'
+          : announceCount === null
+            ? 'Send'
+            : `Send to ${announceCount} member${announceCount === 1 ? '' : 's'}`}
+      </button>
+    </div>
+
+    {#if chosen && !varsOk}
+      <p class="mt-2 text-xs text-danger">Every blank needs a value before this can send.</p>
+    {/if}
+  </section>
+
+  <!-- Configuration: which events send automatically, and to whom. -->
   <section class="space-y-3">
     <h2 class="text-sm font-semibold uppercase tracking-wide text-muted">Rules</h2>
     {#if loading}
@@ -268,55 +373,6 @@
       {/each}
     {/if}
   </section>
-
-  <section class="card">
-    <h2 class="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted">
-      <Send class="size-4" /> Send an announcement
-    </h2>
-    <div class="mt-3 grid gap-3 sm:grid-cols-2">
-      <label class="text-xs text-muted">
-        Approved template
-        <select
-          bind:value={announceTemplate}
-          class="input-sm mt-1 w-full"
-        >
-          <option value="">— choose —</option>
-          {#each approved as t (t.name)}
-            <option value={t.name}>{t.name}</option>
-          {/each}
-        </select>
-      </label>
-      <label class="text-xs text-muted">
-        Variables, separated by |
-        <input
-          bind:value={announceVars}
-          placeholder="Weekly | Risk-off | pastatrade.com/reports"
-          class="input-sm mt-1 w-full"
-        />
-      </label>
-    </div>
-    {#if chosen}
-      <p class="mt-2 text-xs {varsOk ? 'text-muted' : 'text-danger'}">
-        {chosen.name} needs {chosen.variableCount} value{chosen.variableCount === 1 ? '' : 's'} separated by |
-        — you have given {given}.
-      </p>
-    {/if}
-
-    <input
-      bind:value={announceNote}
-      placeholder="Internal note (why you sent this)"
-      class="input-sm mt-3 w-full"
-    />
-    <button
-      class="btn-primary mt-3 disabled:opacity-50"
-      disabled={!connected || !announceTemplate || !varsOk || busy === 'announce'}
-      onclick={sendAnnouncement}
-    >
-      <Send class="size-4" />
-      {busy === 'announce' ? 'Sending…' : 'Send to opted-in members'}
-    </button>
-  </section>
-
   <section class="space-y-2">
     <h2 class="text-sm font-semibold uppercase tracking-wide text-muted">Recent sends</h2>
     {#if batches.length === 0}
