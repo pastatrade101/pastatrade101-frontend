@@ -60,11 +60,44 @@
     });
   });
 
-  const pickTemplate = (name: string) => {
+  // Where the prefilled values came from, shown under the blanks. Typing a
+  // threshold or a ladder action by hand is how a message goes out saying
+  // something the dashboard does not, so the form offers the live numbers and
+  // the admin corrects them rather than the other way round.
+  let suggestSource = $state('');
+  let suggestLabels = $state<string[]>([]);
+  let suggesting = $state(false);
+
+  const pickTemplate = async (name: string) => {
     announceTemplate = name;
     const t = approved.find((x) => x.name === name);
     announceValues = Array.from({ length: t?.variableCount ?? 0 }, () => '');
+    suggestSource = '';
+    suggestLabels = [];
+    if (!name || !t?.variableCount) return;
+
+    suggesting = true;
+    try {
+      const s = await api<{ live: boolean; variables: string[]; labels: string[]; source: string }>(
+        `/admin/notifications/suggest?template=${encodeURIComponent(name)}`,
+        { auth: true }
+      );
+      suggestLabels = s.labels ?? [];
+      suggestSource = s.source ?? '';
+      if (s.live && s.variables?.length) {
+        // Only fill the blanks this template actually has, and never overwrite
+        // one with an empty value — a blank suggestion means "you decide".
+        announceValues = Array.from({ length: t.variableCount }, (_, i) => s.variables[i] ?? '');
+      }
+    } catch {
+      suggestSource = 'Could not read live data — fill these in by hand.';
+    } finally {
+      suggesting = false;
+    }
   };
+
+  /** Refill from live data, discarding edits. */
+  const refillFromLive = () => void pickTemplate(announceTemplate);
 
   /** How many people this announcement would reach, with the plans chosen here. */
   const countAudience = async () => {
@@ -246,15 +279,27 @@
     {#if chosen}
       {#if chosen.variableCount > 0}
         <div class="mt-4 space-y-2">
-          <span class="block text-xs text-muted">
-            Fill in the blanks — {chosen.variableCount} value{chosen.variableCount === 1 ? '' : 's'}
-          </span>
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <span class="text-xs text-muted">
+              {suggesting ? 'Reading live data…' : `Fill in the blanks — ${chosen.variableCount} value${chosen.variableCount === 1 ? '' : 's'}`}
+            </span>
+            {#if suggestSource}
+              <button type="button" class="text-xs font-medium text-accent hover:underline" onclick={refillFromLive}>
+                Refill from live data
+              </button>
+            {/if}
+          </div>
           {#each Array(chosen.variableCount) as _, i (i)}
             <div class="flex items-center gap-2">
-              <span class="w-10 shrink-0 text-xs text-muted">{`{{${i + 1}}}`}</span>
+              <span class="w-24 shrink-0 truncate text-xs text-muted" title={suggestLabels[i] ?? `{{${i + 1}}}`}>
+                {suggestLabels[i] ?? `{{${i + 1}}}`}
+              </span>
               <input bind:value={announceValues[i]} class="input" placeholder={`Value for {{${i + 1}}}`} />
             </div>
           {/each}
+          {#if suggestSource}
+            <p class="text-xs text-muted">{suggestSource} Edit anything that looks wrong before sending.</p>
+          {/if}
         </div>
       {/if}
 
