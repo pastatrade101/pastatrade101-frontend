@@ -99,19 +99,42 @@
     }
   };
 
-  const act = async (id: string, action: 'publish' | 'archive') => {
+  // Publishing asks who should hear about it. The choice is per-report, so a
+  // premium-only edition does not mean editing the notification rule and
+  // remembering to put it back afterwards.
+  type Audience = 'everyone' | 'premium' | 'quiet';
+  let publishing = $state<string | null>(null);
+  let audience = $state<Audience>('everyone');
+
+  const act = async (id: string, action: 'publish' | 'archive', plans?: string[], notify = true) => {
     busy = id + action;
     message = '';
     error = '';
     try {
-      await api(`/admin/reports/${id}/${action}`, { method: 'POST', auth: true });
-      message = `Report ${action}ed.`;
+      const res = await api<unknown>(`/admin/reports/${id}/${action}`, {
+        method: 'POST',
+        auth: true,
+        body: action === 'publish' ? { notify, plans } : undefined
+      });
+      message =
+        action === 'publish'
+          ? notify
+            ? `Published — WhatsApp going out to ${plans?.length ? plans.join(', ') + ' members' : 'every opted-in member'}.`
+            : 'Published quietly. Nobody was messaged.'
+          : 'Report archived.';
+      publishing = null;
       await load();
+      void res;
     } catch (e) {
       error = e instanceof Error ? e.message : `${action} failed.`;
     } finally {
       busy = '';
     }
+  };
+
+  const confirmPublish = (id: string) => {
+    if (audience === 'quiet') return act(id, 'publish', undefined, false);
+    return act(id, 'publish', audience === 'premium' ? ['premium'] : []);
   };
 </script>
 
@@ -203,7 +226,7 @@
             <td class="px-4 py-3">
               <div class="flex flex-wrap gap-1.5">
                 <a href="/admin/reports/{r.id}/edit" class="btn-ghost text-xs">Edit</a>
-                {#if r.status !== 'published'}<button class="btn-ghost text-xs" disabled={busy === r.id + 'publish'} onclick={() => act(r.id, 'publish')}>Publish</button>{/if}
+                {#if r.status !== 'published'}<button class="btn-ghost text-xs" disabled={busy === r.id + 'publish'} onclick={() => { publishing = r.id; audience = 'everyone'; }}>Publish</button>{/if}
                 {#if r.status !== 'archived'}<button class="btn-ghost text-xs" disabled={busy === r.id + 'archive'} onclick={() => act(r.id, 'archive')}>Archive</button>{/if}
               </div>
             </td>
@@ -211,5 +234,59 @@
         {/each}
       </tbody>
     </table>
+  </div>
+{/if}
+
+{#if publishing}
+  <!-- Deliberately a decision, not a confirmation: the default is stated, and the
+       consequence of each choice is spelled out in members rather than in jargon. -->
+  <div class="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4">
+    <div class="card w-full max-w-md">
+      <h3 class="text-base font-semibold text-strong">Publish and notify</h3>
+      <p class="mt-1 text-sm text-muted">
+        Members who turned on WhatsApp alerts get one message with the headline and a link to this report.
+      </p>
+
+      <div class="mt-4 space-y-2">
+        <label class="flex cursor-pointer items-start gap-3 rounded-lg border border-edge p-3">
+          <input type="radio" class="mt-1" value="everyone" bind:group={audience} />
+          <span>
+            <span class="block text-sm font-medium text-strong">Everyone who opted in</span>
+            <span class="block text-xs text-muted">Free and paid members alike.</span>
+          </span>
+        </label>
+
+        <label class="flex cursor-pointer items-start gap-3 rounded-lg border border-edge p-3">
+          <input type="radio" class="mt-1" value="premium" bind:group={audience} />
+          <span>
+            <span class="block text-sm font-medium text-strong">Premium members only</span>
+            <span class="block text-xs text-muted">For an edition free members cannot read.</span>
+          </span>
+        </label>
+
+        <label class="flex cursor-pointer items-start gap-3 rounded-lg border border-edge p-3">
+          <input type="radio" class="mt-1" value="quiet" bind:group={audience} />
+          <span>
+            <span class="block text-sm font-medium text-strong">Publish quietly</span>
+            <span class="block text-xs text-muted">Goes live on the site. Nobody is messaged.</span>
+          </span>
+        </label>
+      </div>
+
+      <p class="mt-3 text-xs text-muted">
+        Each member is told once per report, whatever happens next — re-publishing this one cannot message anyone twice.
+      </p>
+
+      <div class="mt-4 flex justify-end gap-2">
+        <button class="btn-ghost" onclick={() => (publishing = null)}>Cancel</button>
+        <button
+          class="btn-primary"
+          disabled={busy === publishing + 'publish'}
+          onclick={() => confirmPublish(publishing!)}
+        >
+          {busy === publishing + 'publish' ? 'Publishing…' : 'Publish'}
+        </button>
+      </div>
+    </div>
   </div>
 {/if}
