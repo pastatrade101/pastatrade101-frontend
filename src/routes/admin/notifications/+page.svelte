@@ -120,22 +120,22 @@
 
 <div class="mx-auto max-w-5xl px-4 py-6 space-y-6">
   <header class="flex items-start gap-3">
-    <MessageCircle class="mt-1 size-6 text-emerald-400" />
+    <MessageCircle class="mt-1 size-6 text-mint" />
     <div>
-      <h1 class="text-xl font-bold">WhatsApp notifications</h1>
-      <p class="text-sm text-slate-400">
+      <h1 class="text-xl font-bold text-strong">WhatsApp notifications</h1>
+      <p class="text-sm text-muted">
         Delivered through Makutano Connect, which owns the number, the templates and Meta compliance.
       </p>
     </div>
   </header>
 
   {#if !connected}
-    <div class="flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm">
-      <ShieldAlert class="mt-0.5 size-5 shrink-0 text-amber-400" />
+    <div class="flex items-start gap-3 rounded-xl border border-warn/30 bg-warn/10 p-4 text-sm">
+      <ShieldAlert class="mt-0.5 size-5 shrink-0 text-warn" />
       <div>
-        <p class="font-semibold text-amber-300">Not connected yet</p>
-        <p class="text-slate-300">
-          Set <code class="rounded bg-slate-800 px-1">CONNECT_API_KEY</code> on the backend. Until then rules can be
+        <p class="font-semibold text-warn">Not connected yet</p>
+        <p class="text-soft">
+          Set <code class="rounded bg-panel-2 px-1">CONNECT_API_KEY</code> on the backend. Until then rules can be
           edited but nothing is ever sent.
         </p>
       </div>
@@ -143,42 +143,42 @@
   {/if}
 
   <div class="grid gap-4 sm:grid-cols-3">
-    <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-      <p class="text-xs uppercase tracking-wide text-slate-500">Members opted in</p>
-      <p class="mt-1 text-2xl font-bold">{optedIn}</p>
-      <p class="mt-1 text-xs text-slate-500">Only these people can ever be messaged.</p>
+    <div class="card">
+      <p class="stat-label">Members opted in</p>
+      <p class="stat-value mt-1">{optedIn}</p>
+      <p class="mt-1 text-xs text-muted">Only these people can ever be messaged.</p>
     </div>
-    <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-      <p class="text-xs uppercase tracking-wide text-slate-500">Approved templates</p>
-      <p class="mt-1 text-2xl font-bold">{approved.length}</p>
-      <p class="mt-1 text-xs text-slate-500">{templates.length} total in Connect.</p>
+    <div class="card">
+      <p class="stat-label">Approved templates</p>
+      <p class="stat-value mt-1">{approved.length}</p>
+      <p class="mt-1 text-xs text-muted">{templates.length} total in Connect.</p>
     </div>
-    <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-      <p class="text-xs uppercase tracking-wide text-slate-500">Connection</p>
-      <p class="mt-1 text-2xl font-bold">{connected ? 'Live' : 'Off'}</p>
+    <div class="card">
+      <p class="stat-label">Connection</p>
+      <p class="stat-value mt-1">{connected ? 'Live' : 'Off'}</p>
     </div>
   </div>
 
   {#if message}
-    <p class="rounded-lg border border-slate-700 bg-slate-800/60 px-4 py-2 text-sm text-slate-200">{message}</p>
+    <p class="rounded-lg border border-edge bg-panel-2/60 px-4 py-2 text-sm text-body">{message}</p>
   {/if}
 
   <section class="space-y-3">
-    <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-400">Rules</h2>
+    <h2 class="text-sm font-semibold uppercase tracking-wide text-muted">Rules</h2>
     {#if loading}
-      <p class="text-sm text-slate-500">Loading…</p>
+      <p class="text-sm text-muted">Loading…</p>
     {:else}
       {#each rules as rule (rule.key)}
-        <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+        <div class="card">
           <div class="flex flex-wrap items-center gap-3">
             <div class="min-w-0 flex-1">
-              <p class="font-semibold">{rule.label}</p>
-              <p class="text-sm text-slate-400">{rule.description}</p>
+              <p class="font-semibold text-strong">{rule.label}</p>
+              <p class="text-sm text-muted">{rule.description}</p>
             </div>
             <button
               class="rounded-lg px-3 py-1.5 text-sm font-semibold {rule.enabled
-                ? 'bg-emerald-500/15 text-emerald-300'
-                : 'bg-slate-800 text-slate-400'}"
+                ? 'bg-mint/15 text-mint'
+                : 'bg-panel-2 text-muted'}"
               disabled={busy === rule.key}
               onclick={() => saveRule(rule, { enabled: !rule.enabled })}
             >
@@ -187,10 +187,10 @@
           </div>
 
           <div class="mt-3 grid gap-3 sm:grid-cols-3">
-            <label class="text-xs text-slate-400">
+            <label class="text-xs text-muted">
               Template
               <select
-                class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-800 px-2 py-1.5 text-sm text-slate-100"
+                class="input-sm mt-1 w-full"
                 value={rule.template_name ?? ''}
                 onchange={(e) => saveRule(rule, { template_name: (e.currentTarget as HTMLSelectElement).value || null })}
               >
@@ -200,10 +200,10 @@
                 {/each}
               </select>
             </label>
-            <label class="text-xs text-slate-400">
+            <label class="text-xs text-muted">
               Plans (blank = everyone)
               <input
-                class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-800 px-2 py-1.5 text-sm text-slate-100"
+                class="input-sm mt-1 w-full"
                 value={rule.plan_codes.join(', ')}
                 onchange={(e) =>
                   saveRule(rule, {
@@ -216,7 +216,7 @@
             </label>
             <div class="flex items-end">
               <button
-                class="inline-flex items-center gap-1.5 rounded-lg bg-slate-800 px-3 py-1.5 text-sm text-slate-200"
+                class="btn-ghost gap-1.5 px-3 py-1.5 text-sm"
                 disabled={busy === rule.key}
                 onclick={() => previewAudience(rule)}
               >
@@ -226,7 +226,7 @@
           </div>
 
           {#if rule.enabled && !rule.template_name}
-            <p class="mt-3 text-xs text-amber-300">
+            <p class="mt-3 text-xs text-warn">
               This rule is on but has no approved template, so it cannot send. Business-initiated WhatsApp messages must
               be templates.
             </p>
@@ -236,16 +236,16 @@
     {/if}
   </section>
 
-  <section class="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-    <h2 class="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
+  <section class="card">
+    <h2 class="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted">
       <Send class="size-4" /> Send an announcement
     </h2>
     <div class="mt-3 grid gap-3 sm:grid-cols-2">
-      <label class="text-xs text-slate-400">
+      <label class="text-xs text-muted">
         Approved template
         <select
           bind:value={announceTemplate}
-          class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-800 px-2 py-1.5 text-sm text-slate-100"
+          class="input-sm mt-1 w-full"
         >
           <option value="">— choose —</option>
           {#each approved as t (t.name)}
@@ -253,22 +253,22 @@
           {/each}
         </select>
       </label>
-      <label class="text-xs text-slate-400">
+      <label class="text-xs text-muted">
         Variables, separated by |
         <input
           bind:value={announceVars}
           placeholder="Weekly | Risk-off | pastatrade.com/reports"
-          class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-800 px-2 py-1.5 text-sm text-slate-100"
+          class="input-sm mt-1 w-full"
         />
       </label>
     </div>
     <input
       bind:value={announceNote}
       placeholder="Internal note (why you sent this)"
-      class="mt-3 w-full rounded-lg border border-slate-700 bg-slate-800 px-2 py-1.5 text-sm text-slate-100"
+      class="input-sm mt-3 w-full"
     />
     <button
-      class="mt-3 inline-flex items-center gap-2 rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 disabled:opacity-50"
+      class="btn-primary mt-3 disabled:opacity-50"
       disabled={!connected || !announceTemplate || busy === 'announce'}
       onclick={sendAnnouncement}
     >
@@ -278,24 +278,24 @@
   </section>
 
   <section class="space-y-2">
-    <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-400">Recent sends</h2>
+    <h2 class="text-sm font-semibold uppercase tracking-wide text-muted">Recent sends</h2>
     {#if batches.length === 0}
-      <p class="text-sm text-slate-500">Nothing has been sent yet.</p>
+      <p class="text-sm text-muted">Nothing has been sent yet.</p>
     {:else}
-      <div class="overflow-x-auto rounded-xl border border-slate-800">
+      <div class="overflow-x-auto rounded-xl border border-edge">
         <table class="w-full text-sm">
-          <thead class="bg-slate-900/80 text-left text-xs uppercase tracking-wide text-slate-500">
+          <thead class="bg-panel-2/60 text-left text-xs uppercase tracking-wide text-muted">
             <tr><th class="p-3">When</th><th class="p-3">Rule</th><th class="p-3">Audience</th><th class="p-3">Sent</th><th class="p-3">Skipped</th><th class="p-3">Failed</th></tr>
           </thead>
           <tbody>
             {#each batches as b (b.id)}
-              <tr class="border-t border-slate-800">
-                <td class="p-3 text-slate-400">{new Date(b.created_at).toLocaleString()}</td>
+              <tr class="border-t border-edge">
+                <td class="p-3 text-muted">{new Date(b.created_at).toLocaleString()}</td>
                 <td class="p-3">{b.rule_key}</td>
                 <td class="p-3">{b.audience_count}</td>
-                <td class="p-3 text-emerald-300">{b.sent_count}</td>
-                <td class="p-3 text-slate-400">{b.skipped_count}</td>
-                <td class="p-3 {b.failed_count ? 'text-rose-300' : 'text-slate-500'}">{b.failed_count}</td>
+                <td class="p-3 text-mint">{b.sent_count}</td>
+                <td class="p-3 text-muted">{b.skipped_count}</td>
+                <td class="p-3 {b.failed_count ? 'text-danger' : 'text-muted'}">{b.failed_count}</td>
               </tr>
             {/each}
           </tbody>
@@ -304,8 +304,8 @@
     {/if}
   </section>
 
-  <p class="flex items-start gap-2 text-xs text-slate-500">
-    <CheckCircle2 class="mt-0.5 size-4 shrink-0 text-slate-600" />
+  <p class="flex items-start gap-2 text-xs text-muted">
+    <CheckCircle2 class="mt-0.5 size-4 shrink-0 text-muted" />
     Members opt in themselves under Settings. A number captured for mobile-money checkout is not consent to be
     messaged, and is never used here.
   </p>
