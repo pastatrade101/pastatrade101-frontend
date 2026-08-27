@@ -16,7 +16,7 @@
     min_hours_between: number;
     max_per_day: number;
   }
-  interface Template { name: string; language: string; status: string }
+  interface Template { name: string; language: string; status: string; variableCount: number }
   interface Batch {
     id: string; rule_key: string; subject_type: string; audience_count: number;
     sent_count: number; skipped_count: number; failed_count: number;
@@ -42,6 +42,11 @@
   let announceNote = $state('');
 
   const approved = $derived(templates.filter((t) => t.status.toUpperCase() === 'APPROVED'));
+  const chosen = $derived(approved.find((t) => t.name === announceTemplate) ?? null);
+  const given = $derived(announceVars.split('|').map((v) => v.trim()).filter(Boolean).length);
+  // Meta rejects a mismatch after the send is already recorded, so the button
+  // stays disabled until the count is right.
+  const varsOk = $derived(!chosen || chosen.variableCount === given);
 
   const load = async () => {
     loading = true;
@@ -290,6 +295,13 @@
         />
       </label>
     </div>
+    {#if chosen}
+      <p class="mt-2 text-xs {varsOk ? 'text-muted' : 'text-danger'}">
+        {chosen.name} needs {chosen.variableCount} value{chosen.variableCount === 1 ? '' : 's'} separated by |
+        — you have given {given}.
+      </p>
+    {/if}
+
     <input
       bind:value={announceNote}
       placeholder="Internal note (why you sent this)"
@@ -297,7 +309,7 @@
     />
     <button
       class="btn-primary mt-3 disabled:opacity-50"
-      disabled={!connected || !announceTemplate || busy === 'announce'}
+      disabled={!connected || !announceTemplate || !varsOk || busy === 'announce'}
       onclick={sendAnnouncement}
     >
       <Send class="size-4" />
