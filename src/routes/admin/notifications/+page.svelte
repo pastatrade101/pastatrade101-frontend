@@ -29,6 +29,10 @@
   let templates = $state<Template[]>([]);
   let batches = $state<Batch[]>([]);
   let loading = $state(true);
+  let plans = $state<Array<{ slug: string; name: string }>>([]);
+  // Counts live per rule so the answer appears beside the button that asked,
+  // not in a status bar at the top of a page you have scrolled away from.
+  let counts = $state<Record<string, number | 'loading'>>({});
   let busy = $state('');
   let message = $state('');
 
@@ -52,6 +56,10 @@
       rules = status.rules ?? [];
       const history = await api<{ items: Batch[] }>('/admin/notifications/history', { auth: true });
       batches = history.items ?? [];
+      const planList = await api<{ items: Array<{ slug: string; name: string; is_active: boolean }> }>('/admin/plans', {
+        auth: true
+      });
+      plans = (planList.items ?? []).filter((p) => p.is_active).map((p) => ({ slug: p.slug, name: p.name }));
     } catch (error) {
       message = error instanceof Error ? error.message : 'Could not load notifications.';
     } finally {
@@ -73,15 +81,25 @@
   };
 
   const previewAudience = async (rule: Rule) => {
-    busy = rule.key;
+    counts[rule.key] = 'loading';
     try {
       const res = await api<{ count: number }>(`/admin/notifications/rules/${rule.key}/audience`, { auth: true });
-      message = `${rule.label}: ${res.count} member${res.count === 1 ? '' : 's'} would receive this right now.`;
+      counts[rule.key] = res.count;
     } catch (error) {
+      delete counts[rule.key];
+      counts = { ...counts };
       message = error instanceof Error ? error.message : 'Could not resolve the audience.';
-    } finally {
-      busy = '';
     }
+  };
+
+  /** Tick a plan on or off for a rule and save immediately. */
+  const togglePlan = (rule: Rule, slug: string) => {
+    const next = rule.plan_codes.includes(slug)
+      ? rule.plan_codes.filter((p) => p !== slug)
+      : [...rule.plan_codes, slug];
+    delete counts[rule.key]; // the audience just changed; the old number is a lie
+    counts = { ...counts };
+    return saveRule(rule, { plan_codes: next });
   };
 
   const sendAnnouncement = async () => {
@@ -200,29 +218,39 @@
                 {/each}
               </select>
             </label>
-            <label class="text-xs text-muted">
-              Plans (blank = everyone)
-              <input
-                class="input-sm mt-1 w-full"
-                value={rule.plan_codes.join(', ')}
-                onchange={(e) =>
-                  saveRule(rule, {
-                    plan_codes: (e.currentTarget as HTMLInputElement).value
-                      .split(',')
-                      .map((v) => v.trim())
-                      .filter(Boolean)
-                  })}
-              />
-            </label>
-            <div class="flex items-end">
-              <button
-                class="btn-ghost gap-1.5 px-3 py-1.5 text-sm"
-                disabled={busy === rule.key}
-                onclick={() => previewAudience(rule)}
-              >
+            <div class="text-xs text-muted">
+              Plans
+              <div class="mt-1 flex flex-wrap items-center gap-2">
+                {#each plans as plan (plan.slug)}
+                  <button
+                    type="button"
+                    class="pill border {rule.plan_codes.includes(plan.slug)
+                      ? 'border-mint bg-mint/15 text-mint'
+                      : 'border-edge text-muted'}"
+                    disabled={busy === rule.key}
+                    onclick={() => togglePlan(rule, plan.slug)}
+                  >
+                    {plan.name}
+                  </button>
+                {/each}
+                {#if rule.plan_codes.length === 0}
+                  <span class="text-xs text-muted">none picked — everyone who opted in</span>
+                {/if}
+              </div>
+            </div>
+
+            <div class="flex items-end gap-2">
+              <button class="btn-ghost text-xs" disabled={busy === rule.key} onclick={() => previewAudience(rule)}>
                 <Users class="size-4" /> Who gets this?
               </button>
-            </div>
+              {#if counts[rule.key] !== undefined}
+                <span class="pill bg-mint/15 text-mint">
+                  {counts[rule.key] === 'loading'
+                    ? 'counting…'
+                    : `${counts[rule.key]} member${counts[rule.key] === 1 ? '' : 's'}`}
+                </span>
+              {/if}
+          </div>
           </div>
 
           {#if rule.enabled && !rule.template_name}
