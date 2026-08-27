@@ -5,12 +5,10 @@
 
   // The member's own consent, asked for plainly.
   //
-  // Two things this component is careful about. It never pre-ticks the toggle —
-  // consent has to be an affirmative act, and Meta can ask us to show when it was
-  // given. And it says what will actually arrive and how often, because "alerts"
-  // with no promise attached is how people end up replying STOP.
-
-  let { compact = false }: { compact?: boolean } = $props();
+  // Built on the app's own card/input/button classes rather than hand-picked
+  // colours, so it reads correctly in both themes instead of being a dark panel
+  // pasted onto a light page. Nothing is pre-ticked — consent has to be an
+  // affirmative act, and Meta can ask us to show when it was given.
 
   let enabled = $state(false);
   let number = $state('');
@@ -21,7 +19,7 @@
 
   const load = async () => {
     try {
-      const pref = await api<{ number: string | null; enabled: boolean }>('/membership/whatsapp');
+      const pref = await api<{ number: string | null; enabled: boolean }>('/me/whatsapp');
       enabled = pref.enabled;
       number = pref.number ? `+${pref.number}` : '';
     } catch {
@@ -36,7 +34,7 @@
     message = '';
     busy = true;
     try {
-      const res = await api<{ enabled: boolean; number?: string }>('/membership/whatsapp', {
+      const res = await api<{ enabled: boolean; number?: string }>('/me/whatsapp', {
         method: 'PUT',
         body: { enabled: true, number }
       });
@@ -54,7 +52,7 @@
     busy = true;
     error = '';
     try {
-      await api('/membership/whatsapp', { method: 'PUT', body: { enabled: false } });
+      await api('/me/whatsapp', { method: 'PUT', body: { enabled: false } });
       enabled = false;
       message = 'WhatsApp alerts are off.';
     } catch (e) {
@@ -68,58 +66,51 @@
 </script>
 
 {#if !loading}
-  <div class="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
+  <div class="card">
     <div class="flex items-start gap-3">
-      <span class="mt-0.5 grid size-9 shrink-0 place-items-center rounded-xl bg-emerald-500/15">
-        <MessageCircle class="size-5 text-emerald-400" />
+      <span class="mt-0.5 grid size-9 shrink-0 place-items-center rounded-xl bg-mint/15">
+        <MessageCircle class="size-5 text-mint" />
       </span>
+
       <div class="min-w-0 flex-1">
-        <h3 class="font-semibold text-slate-100">Get reports on WhatsApp</h3>
-        <p class="mt-1 text-sm text-slate-400">
-          When a new market intelligence report is published, we send you a short message with the headline and a link.
-          A few times a week at most — never price calls, never anyone else's number.
+        <h3 class="text-base font-semibold text-strong">Get reports on WhatsApp</h3>
+        <p class="mt-1 text-sm text-body">
+          When a new market intelligence report is published, we send you a short message with the headline and a
+          link. A few times a week at most — never price calls, never anyone else's number.
         </p>
 
         {#if enabled}
-          <div class="mt-3 flex flex-wrap items-center gap-3">
-            <span class="inline-flex items-center gap-1.5 rounded-lg bg-emerald-500/15 px-3 py-1.5 text-sm font-semibold text-emerald-300">
-              <Check class="size-4" /> On for {number}
+          <div class="mt-4 flex flex-wrap items-center gap-3">
+            <span class="pill bg-mint/15 text-mint">
+              <Check class="size-3.5" /> On for {number}
             </span>
-            <button
-              class="inline-flex items-center gap-1.5 rounded-lg bg-slate-800 px-3 py-1.5 text-sm text-slate-300 disabled:opacity-50"
-              disabled={busy}
-              onclick={turnOff}
-            >
+            <button class="btn-ghost" disabled={busy} onclick={turnOff}>
               <X class="size-4" /> Turn off
             </button>
           </div>
         {:else}
-          <div class="mt-3 flex flex-wrap items-end gap-2">
-            <label class="text-xs text-slate-400">
-              Your WhatsApp number
+          <div class="mt-4 flex flex-wrap items-end gap-3">
+            <label class="block">
+              <span class="mb-1 block text-xs text-muted">Your WhatsApp number</span>
               <input
                 bind:value={number}
                 inputmode="tel"
                 placeholder="+255 712 345 678"
-                class="mt-1 w-56 rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500"
+                class="input w-56"
               />
             </label>
-            <button
-              class="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 disabled:opacity-50"
-              disabled={busy || number.trim().length < 9}
-              onclick={save}
-            >
+            <button class="btn-primary" disabled={busy || number.trim().length < 9} onclick={save}>
               {busy ? 'Saving…' : 'Turn on alerts'}
             </button>
           </div>
-          <p class="mt-2 text-xs text-slate-500">
-            Include the country code. By turning this on you agree to receive these messages; you can stop them here or
-            by replying STOP.
+          <p class="mt-2 text-xs text-muted">
+            Include the country code — a number starting 07 is read as Tanzanian. By turning this on you agree to
+            receive these messages; stop them here or by replying STOP.
           </p>
         {/if}
 
-        {#if message}<p class="mt-2 text-sm text-emerald-300">{message}</p>{/if}
-        {#if error}<p class="mt-2 text-sm text-rose-300">{error}</p>{/if}
+        {#if message}<p class="mt-3 text-sm text-mint">{message}</p>{/if}
+        {#if error}<p class="mt-3 text-sm text-danger">{error}</p>{/if}
       </div>
     </div>
   </div>

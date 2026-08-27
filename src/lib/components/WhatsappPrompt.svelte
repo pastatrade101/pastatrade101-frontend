@@ -23,7 +23,7 @@
     error = '';
     busy = true;
     try {
-      await api('/membership/whatsapp', { method: 'PUT', body: { enabled: true, number } });
+      await api('/me/whatsapp', { method: 'PUT', body: { enabled: true, number } });
       done = true;
       setTimeout(() => (show = false), 2200);
     } catch (e) {
@@ -41,7 +41,7 @@
   onMount(async () => {
     if (!browser || localStorage.getItem(DISMISSED)) return;
     try {
-      const pref = await api<{ enabled: boolean; number: string | null }>('/membership/whatsapp');
+      const pref = await api<{ enabled: boolean; number: string | null }>('/me/whatsapp');
       // Never ask someone who already answered — including someone who opted out.
       show = !pref.enabled && !pref.number;
     } catch {
@@ -51,38 +51,38 @@
 </script>
 
 {#if show}
-  <div class="mb-4 rounded-2xl border border-emerald-500/25 bg-emerald-500/5 p-4">
+  <div class="card mb-4 border-mint/30 bg-mint/5">
     {#if done}
-      <p class="text-sm font-medium text-emerald-300">
+      <p class="text-sm font-medium text-mint">
         Done — we'll message you when a new report is published.
       </p>
     {:else}
       <div class="flex flex-wrap items-center gap-3">
-        <MessageCircle class="size-5 shrink-0 text-emerald-400" />
-        <p class="min-w-0 flex-1 text-sm text-slate-200">
+        <MessageCircle class="size-5 shrink-0 text-mint" />
+        <p class="min-w-0 flex-1 text-sm text-body">
           <span class="font-semibold">Want new reports on WhatsApp?</span>
-          <span class="text-slate-400">A short message with the headline and a link, a few times a week at most.</span>
+          <span class="text-muted">A short message with the headline and a link, a few times a week at most.</span>
         </p>
         <div class="flex items-center gap-2">
           <input
             bind:value={number}
             inputmode="tel"
             placeholder="+255 712 345 678"
-            class="w-44 rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm text-slate-100 placeholder:text-slate-500"
+            class="input-sm w-44"
           />
           <button
-            class="rounded-lg bg-emerald-500 px-3 py-1.5 text-sm font-semibold text-slate-950 disabled:opacity-50"
+            class="btn-primary py-1.5"
             disabled={busy || number.trim().length < 9}
             onclick={save}
           >
             {busy ? 'Saving…' : 'Yes, send them'}
           </button>
-          <button class="rounded-lg p-1.5 text-slate-500 hover:text-slate-300" aria-label="Not now" onclick={dismiss}>
+          <button class="rounded-lg p-1.5 text-muted hover:text-strong" aria-label="Not now" onclick={dismiss}>
             <X class="size-4" />
           </button>
         </div>
       </div>
-      {#if error}<p class="mt-2 text-sm text-rose-300">{error}</p>{/if}
+      {#if error}<p class="mt-2 text-sm text-danger">{error}</p>{/if}
     {/if}
   </div>
 {/if}
