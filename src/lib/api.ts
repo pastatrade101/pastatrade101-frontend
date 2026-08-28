@@ -22,10 +22,23 @@ export class ApiError extends Error {
   }
 }
 
-type Options = { method?: string; body?: unknown; auth?: boolean };
+type Options = {
+  method?: string;
+  body?: unknown;
+  auth?: boolean;
+  /**
+   * Give up after this many ms. Opt-in, because some admin sync endpoints
+   * legitimately run for minutes and must not be cut off.
+   *
+   * Worth setting on anything that gates a spinner: fetch() has no timeout of
+   * its own, so a request that never answers leaves the promise pending forever
+   * and the UI stuck on "Loading…" with nothing in the console.
+   */
+  timeoutMs?: number;
+};
 
 export async function api<T = unknown>(path: string, options: Options = {}): Promise<T> {
-  const { method = 'GET', body, auth = false } = options;
+  const { method = 'GET', body, auth = false, timeoutMs } = options;
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
 
   const token = getToken();
@@ -34,7 +47,8 @@ export async function api<T = unknown>(path: string, options: Options = {}): Pro
   const response = await fetch(`${API_BASE}${path}`, {
     method,
     headers,
-    body: body ? JSON.stringify(body) : undefined
+    body: body ? JSON.stringify(body) : undefined,
+    ...(timeoutMs ? { signal: AbortSignal.timeout(timeoutMs) } : {})
   });
 
   const payload = await response.json().catch(() => ({}));

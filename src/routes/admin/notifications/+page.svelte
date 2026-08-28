@@ -173,28 +173,42 @@
     }
   };
 
+  /**
+   * Three independent fetches, in parallel, each allowed to fail on its own.
+   *
+   * They used to run sequentially behind one `loading` flag, so a single slow or
+   * hanging call left the whole Rules section on "Loading…" forever while the
+   * sections outside the flag rendered normally — and fetch() has no timeout, so
+   * "forever" was literal. The plans list is a nice-to-have for the plan chips;
+   * it must never be able to hide the rules.
+   */
   const load = async () => {
     loading = true;
-    try {
-      const status = await api<{ connected: boolean; opted_in_members: number; templates: Template[]; rules: Rule[] }>(
-        '/admin/notifications',
-        { auth: true }
-      );
-      connected = status.connected;
-      optedIn = status.opted_in_members;
-      templates = status.templates ?? [];
-      rules = status.rules ?? [];
-      const history = await api<{ items: Batch[] }>('/admin/notifications/history', { auth: true });
-      batches = history.items ?? [];
-      const planList = await api<{ items: Array<{ slug: string; name: string; is_active: boolean }> }>('/admin/plans', {
-        auth: true
-      });
-      plans = (planList.items ?? []).filter((p) => p.is_active).map((p) => ({ slug: p.slug, name: p.name }));
-    } catch (error) {
-      message = error instanceof Error ? error.message : 'Could not load notifications.';
-    } finally {
-      loading = false;
+    const T = 20_000;
+
+    const [statusRes, historyRes, plansRes] = await Promise.allSettled([
+      api<{ connected: boolean; opted_in_members: number; templates: Template[]; rules: Rule[] }>('/admin/notifications', { auth: true, timeoutMs: T }),
+      api<{ items: Batch[] }>('/admin/notifications/history', { auth: true, timeoutMs: T }),
+      api<{ items: Array<{ slug: string; name: string; is_active: boolean }> }>('/admin/plans', { auth: true, timeoutMs: T })
+    ]);
+
+    if (statusRes.status === 'fulfilled') {
+      connected = statusRes.value.connected;
+      optedIn = statusRes.value.opted_in_members;
+      templates = statusRes.value.templates ?? [];
+      rules = statusRes.value.rules ?? [];
+    } else {
+      // Only this one is worth interrupting the admin for — without it there
+      // are no rules and no templates, so the page cannot do its job.
+      message = statusRes.reason instanceof Error ? statusRes.reason.message : 'Could not load notifications.';
     }
+
+    if (historyRes.status === 'fulfilled') batches = historyRes.value.items ?? [];
+    if (plansRes.status === 'fulfilled') {
+      plans = (plansRes.value.items ?? []).filter((p) => p.is_active).map((p) => ({ slug: p.slug, name: p.name }));
+    }
+
+    loading = false;
   };
 
   const saveRule = async (rule: Rule, patch: Partial<Rule>) => {
@@ -466,6 +480,16 @@
     <h2 class="text-sm font-semibold uppercase tracking-wide text-muted">Rules</h2>
     {#if loading}
       <p class="text-sm text-muted">Loading…</p>
+    {:else if !rules.length}
+      <!-- Distinguish "could not load" from "genuinely none": a blank section
+           reads as an empty list and hides the fact that the call failed. -->
+      <div class="card">
+        <p class="text-sm text-soft">Couldn't load the rules.</p>
+        <p class="mt-1 text-xs text-muted">
+          {message || 'The notifications endpoint returned nothing. Check the backend is running, then try again.'}
+        </p>
+        <button class="btn-ghost mt-3 text-xs" onclick={() => void load()}>Retry</button>
+      </div>
     {:else}
       {#each rules as rule (rule.key)}
         <div class="card">
