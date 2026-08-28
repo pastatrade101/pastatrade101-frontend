@@ -46,7 +46,20 @@
   let announceCount = $state<number | null>(null);
 
   const approved = $derived(templates.filter((t) => t.status.toUpperCase() === 'APPROVED'));
-  const chosen = $derived(approved.find((t) => t.name === announceTemplate) ?? null);
+
+  // One entry per template NAME, not per name+language.
+  //
+  // A rule stores template_name and template_language as separate fields, so the
+  // picker chooses a name — listing the same template once per approved language
+  // showed a duplicate option AND, because that {#each} was keyed on the name,
+  // threw Svelte's each_key_duplicate the moment a second language was approved.
+  // That error aborts the render, which is why the whole Rules section stayed on
+  // "Loading…" while the rest of the page looked fine.
+  const approvedNames = $derived([...new Set(approved.map((t) => t.name))]);
+  let announceLanguage = $state('');
+  const chosen = $derived(
+    approved.find((t) => t.name === announceTemplate && (!announceLanguage || t.language === announceLanguage)) ?? null
+  );
   const varsOk = $derived(
     !chosen || (announceValues.length >= chosen.variableCount && announceValues.slice(0, chosen.variableCount).every((v) => v.trim()))
   );
@@ -68,9 +81,11 @@
   let suggestLabels = $state<string[]>([]);
   let suggesting = $state(false);
 
-  const pickTemplate = async (name: string) => {
+  const pickTemplate = async (value: string) => {
+    const [name, language = ''] = value.split('|');
     announceTemplate = name;
-    const t = approved.find((x) => x.name === name);
+    announceLanguage = language;
+    const t = approved.find((x) => x.name === name && (!language || x.language === language));
     announceValues = Array.from({ length: t?.variableCount ?? 0 }, () => '');
     suggestSource = '';
     suggestLabels = [];
@@ -97,7 +112,7 @@
   };
 
   /** Refill from live data, discarding edits. */
-  const refillFromLive = () => void pickTemplate(announceTemplate);
+  const refillFromLive = () => void pickTemplate(`${announceTemplate}|${announceLanguage}`);
 
   // Each rule feeds its OWN variables into whatever template it points at, so
   // pairing a rule with another rule's template does not just read oddly — the
@@ -266,6 +281,7 @@
           method: 'POST',
           body: {
             template_name: announceTemplate,
+            template_language: announceLanguage || undefined,
             variables: announceValues.map((v) => v.trim()),
             note: announceNote || undefined
           }
@@ -356,8 +372,12 @@
         class="input"
       >
         <option value="">— choose an approved template —</option>
+        <!-- The value carries the language too. Both options used to submit just
+             the name, so picking "(en)" and picking "(sw)" were indistinguishable
+             and `chosen` always resolved to whichever was listed first — you
+             could select English and send Swahili. -->
         {#each approved as tpl (tpl.name + tpl.language)}
-          <option value={tpl.name}>{tpl.name} ({tpl.language})</option>
+          <option value={`${tpl.name}|${tpl.language}`}>{tpl.name} ({tpl.language})</option>
         {/each}
       </select>
     </label>
@@ -527,8 +547,8 @@
                 onchange={(e) => saveRule(rule, { template_name: (e.currentTarget as HTMLSelectElement).value || null })}
               >
                 <option value="">— none —</option>
-                {#each approved as t (t.name)}
-                  <option value={t.name}>{t.name}</option>
+                {#each approvedNames as name (name)}
+                  <option value={name}>{name}</option>
                 {/each}
               </select>
             </label>
