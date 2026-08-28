@@ -99,6 +99,22 @@
   /** Refill from live data, discarding edits. */
   const refillFromLive = () => void pickTemplate(announceTemplate);
 
+  // Each rule feeds its OWN variables into whatever template it points at, so
+  // pairing a rule with another rule's template does not just read oddly — the
+  // blank counts differ and Meta rejects the send with 132000, after it is
+  // already logged. Mirrors ruleForTemplate() on the backend.
+  const TEMPLATE_HINT: Record<string, RegExp> = {
+    'risk.band_changed': /risk_band/i,
+    'exit.threshold_crossed': /exit/i,
+    'altcoin.signal': /altcoin|breadth/i,
+    'report.published': /report/i
+  };
+  const mismatched = (rule: Rule): boolean => {
+    const hint = TEMPLATE_HINT[rule.key];
+    // 'manual' has no expected template — an announcement may use any of them.
+    return Boolean(hint && rule.template_name && !hint.test(rule.template_name));
+  };
+
   // ── Coin picker ──────────────────────────────────────────────────────────
   // Naming coins from memory is how a ticker that already rolled over ends up in
   // a broadcast. This is the live list of what is beating BTC, carrying the same
@@ -522,6 +538,14 @@
             <p class="mt-3 text-xs text-warn">
               This rule is on but has no approved template, so it cannot send. Business-initiated WhatsApp messages must
               be templates.
+            </p>
+          {/if}
+
+          {#if mismatched(rule)}
+            <p class="mt-3 text-xs text-danger">
+              <span class="font-semibold">{rule.template_name}</span> does not look like this rule's template. This rule
+              supplies {rule.label.toLowerCase()} values, so members would get the wrong wording — or the send fails
+              outright if the blank counts differ.
             </p>
           {/if}
         </div>
