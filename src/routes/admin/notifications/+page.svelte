@@ -186,29 +186,38 @@
     loading = true;
     const T = 20_000;
 
-    const [statusRes, historyRes, plansRes] = await Promise.allSettled([
-      api<{ connected: boolean; opted_in_members: number; templates: Template[]; rules: Rule[] }>('/admin/notifications', { auth: true, timeoutMs: T }),
-      api<{ items: Batch[] }>('/admin/notifications/history', { auth: true, timeoutMs: T }),
-      api<{ items: Array<{ slug: string; name: string; is_active: boolean }> }>('/admin/plans', { auth: true, timeoutMs: T })
-    ]);
+    // try/finally is not optional here. Reading `.value.connected` off a
+    // response whose envelope carried no `data` throws a TypeError, and because
+    // onMount() swallows a rejected promise the page would sit on "Loading…"
+    // with nothing in the console — the exact failure this function exists to
+    // stop. Every access below is optional-chained for the same reason.
+    try {
+      const [statusRes, historyRes, plansRes] = await Promise.allSettled([
+        api<{ connected: boolean; opted_in_members: number; templates: Template[]; rules: Rule[] }>('/admin/notifications', { auth: true, timeoutMs: T }),
+        api<{ items: Batch[] }>('/admin/notifications/history', { auth: true, timeoutMs: T }),
+        api<{ items: Array<{ slug: string; name: string; is_active: boolean }> }>('/admin/plans', { auth: true, timeoutMs: T })
+      ]);
 
-    if (statusRes.status === 'fulfilled') {
-      connected = statusRes.value.connected;
-      optedIn = statusRes.value.opted_in_members;
-      templates = statusRes.value.templates ?? [];
-      rules = statusRes.value.rules ?? [];
-    } else {
-      // Only this one is worth interrupting the admin for — without it there
-      // are no rules and no templates, so the page cannot do its job.
-      message = statusRes.reason instanceof Error ? statusRes.reason.message : 'Could not load notifications.';
+      if (statusRes.status === 'fulfilled') {
+        connected = Boolean(statusRes.value?.connected);
+        optedIn = statusRes.value?.opted_in_members ?? 0;
+        templates = statusRes.value?.templates ?? [];
+        rules = statusRes.value?.rules ?? [];
+      } else {
+        // Only this one is worth interrupting the admin for — without it there
+        // are no rules and no templates, so the page cannot do its job.
+        message = statusRes.reason instanceof Error ? statusRes.reason.message : 'Could not load notifications.';
+      }
+
+      if (historyRes.status === 'fulfilled') batches = historyRes.value?.items ?? [];
+      if (plansRes.status === 'fulfilled') {
+        plans = (plansRes.value?.items ?? []).filter((p) => p.is_active).map((p) => ({ slug: p.slug, name: p.name }));
+      }
+    } catch (error) {
+      message = error instanceof Error ? error.message : 'Could not load notifications.';
+    } finally {
+      loading = false;
     }
-
-    if (historyRes.status === 'fulfilled') batches = historyRes.value.items ?? [];
-    if (plansRes.status === 'fulfilled') {
-      plans = (plansRes.value.items ?? []).filter((p) => p.is_active).map((p) => ({ slug: p.slug, name: p.name }));
-    }
-
-    loading = false;
   };
 
   const saveRule = async (rule: Rule, patch: Partial<Rule>) => {
