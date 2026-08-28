@@ -99,6 +99,53 @@
   /** Refill from live data, discarding edits. */
   const refillFromLive = () => void pickTemplate(announceTemplate);
 
+  // ── Coin picker ──────────────────────────────────────────────────────────
+  // Naming coins from memory is how a ticker that already rolled over ends up in
+  // a broadcast. This is the live list of what is beating BTC, carrying the same
+  // confidence/quality verdict the Alt/BTC Lab shows.
+  interface Candidate {
+    symbol: string;
+    name: string;
+    strength_30d: number | null;
+    confidence: string;
+    quality: string;
+    confirmed: boolean;
+  }
+  let coins = $state<Candidate[]>([]);
+  let coinsAsOf = $state<string | null>(null);
+  let coinsLoading = $state(false);
+  let coinsOpen = $state(false);
+  let confirmedOnly = $state(true);
+  let picked = $state<string[]>([]);
+
+  const visibleCoins = $derived(confirmedOnly ? coins.filter((c) => c.confirmed) : coins);
+  const pickedList = $derived(picked.join(', '));
+
+  const loadCoins = async () => {
+    if (coins.length || coinsLoading) return;
+    coinsLoading = true;
+    try {
+      const res = await api<{ items: Candidate[]; as_of: string | null }>('/admin/notifications/outperformers', { auth: true });
+      coins = res.items ?? [];
+      coinsAsOf = res.as_of;
+    } catch {
+      coins = [];
+    } finally {
+      coinsLoading = false;
+    }
+  };
+
+  const toggleCoin = (symbol: string) => {
+    picked = picked.includes(symbol) ? picked.filter((s) => s !== symbol) : [...picked, symbol];
+  };
+
+  /** Drop the picked tickers into one blank as a comma-separated list. */
+  const insertCoins = (index: number) => {
+    if (!pickedList) return;
+    announceValues[index] = pickedList;
+    announceValues = [...announceValues];
+  };
+
   /** How many people this announcement would reach, with the plans chosen here. */
   const countAudience = async () => {
     announceCount = null;
@@ -295,10 +342,73 @@
                 {suggestLabels[i] ?? `{{${i + 1}}}`}
               </span>
               <input bind:value={announceValues[i]} class="input" placeholder={`Value for {{${i + 1}}}`} />
+              {#if picked.length}
+                <button
+                  type="button"
+                  class="btn-ghost shrink-0 px-2 py-1 text-xs"
+                  title="Put the {picked.length} picked coin{picked.length === 1 ? '' : 's'} in this blank"
+                  onclick={() => insertCoins(i)}
+                >
+                  Insert coins
+                </button>
+              {/if}
             </div>
           {/each}
           {#if suggestSource}
             <p class="text-xs text-muted">{suggestSource} Edit anything that looks wrong before sending.</p>
+          {/if}
+        </div>
+
+        <!-- Coin picker. Naming tickers from memory is how a coin that already
+             rolled over ends up in a broadcast; this is the live list. -->
+        <div class="mt-4 rounded-xl border border-edge bg-panel-2/40 p-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <button
+              type="button"
+              class="text-xs font-semibold text-accent hover:underline"
+              onclick={() => { coinsOpen = !coinsOpen; if (coinsOpen) void loadCoins(); }}
+            >
+              {coinsOpen ? 'Hide' : 'Pick'} coins beating BTC{picked.length ? ` · ${picked.length} selected` : ''}
+            </button>
+            {#if coinsOpen && coins.length}
+              <label class="flex items-center gap-1.5 text-xs text-muted">
+                <input type="checkbox" bind:checked={confirmedOnly} class="accent-mint" />
+                Confirmed only
+              </label>
+            {/if}
+          </div>
+
+          {#if picked.length}
+            <p class="mt-2 text-xs text-soft"><span class="text-muted">Picked:</span> {pickedList}</p>
+          {/if}
+
+          {#if coinsOpen}
+            {#if coinsLoading}
+              <p class="mt-2 text-xs text-muted">Reading the Alt/BTC signals…</p>
+            {:else if !coins.length}
+              <p class="mt-2 text-xs text-muted">No signals yet — run a Lab price-series sync.</p>
+            {:else}
+              <div class="mt-2 max-h-56 space-y-1 overflow-y-auto">
+                {#each visibleCoins as c (c.symbol)}
+                  <button
+                    type="button"
+                    class="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs transition hover:bg-panel-2 {picked.includes(c.symbol) ? 'bg-mint/10' : ''}"
+                    onclick={() => toggleCoin(c.symbol)}
+                  >
+                    <span class="w-4 shrink-0 text-mint">{picked.includes(c.symbol) ? '✓' : ''}</span>
+                    <span class="w-14 shrink-0 font-semibold text-strong">{c.symbol}</span>
+                    <span class="w-16 shrink-0 text-mint">{c.strength_30d == null ? '—' : `+${c.strength_30d.toFixed(0)}%`}</span>
+                    <span class="min-w-0 flex-1 truncate text-muted">{c.quality} · {c.confidence}</span>
+                    {#if c.confirmed}<span class="shrink-0 rounded bg-mint/15 px-1.5 py-0.5 text-[10px] font-semibold text-mint">Confirmed</span>{/if}
+                  </button>
+                {/each}
+              </div>
+              <p class="mt-2 text-[11px] leading-relaxed text-muted">
+                30-day strength vs BTC{coinsAsOf ? ` as of ${coinsAsOf}` : ''}. “Confirmed” means the app's own checks agree —
+                clean signal and high confidence. Coins on a short history or still under the 200-day MA are shown only when
+                you untick, because naming those in a broadcast sells a bounce as a trend.
+              </p>
+            {/if}
           {/if}
         </div>
       {/if}
