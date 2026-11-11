@@ -25,7 +25,7 @@
   }
   interface M { final_equity: number; total_return_pct: number; cagr_pct: number | null; max_drawdown_pct: number; volatility_pct: number; sharpe: number | null; sortino: number | null }
   interface Result {
-    params: { rebalance_days: number; worst_rank_held: number; top_n: number };
+    params: { rebalance_days: number; worst_rank_held: number; top_n: number; fee_pct: number };
     window: { start: string; end: string; days: number };
     data_as_of: string;
     universe: Coin[];
@@ -36,6 +36,18 @@
     events: { date: string; bought: string[]; sold: string[]; held: string[] }[];
     final_holdings: { coin: string; symbol: string; entry_date: string; return_pct: number; weight_pct: number }[];
     final_ranking: { coin: string; symbol: string; name: string; rank: number; score: number; in_hold_band: boolean }[];
+    rule_plan: {
+      as_of: string;
+      last_review: string | null;
+      next_review: string;
+      review_due_today: boolean;
+      keep: string[];
+      drop: { symbol: string; reason: string }[];
+      add: string[];
+      cash_slots: number;
+      slots: number;
+      slot_weight_pct: number;
+    };
     score_unit: '%' | 'x';
     warnings: string[];
     assumptions: string[];
@@ -314,22 +326,33 @@
   );
   const cadence = $derived(REBALANCE.find((x) => x.days === (result?.params?.rebalance_days ?? rebalance))?.label.toLowerCase() ?? 'weekly');
 
-  // ── This week ──
-  // The one genuinely forward-looking thing on the page. A backtest says what
-  // would have worked; today's ranking says where the rule points now. Built
-  // from the last day of saved prices, so it needs nothing from the server
-  // beyond what /run already returns. Events are in chronological order, so the
-  // most recent review is the last one.
-  const thisWeek = $derived.by(() => {
+  // ── Right now ──
+  // The forward-looking part of the page. A backtest says what would have worked;
+  // the rule plan says what the rule outputs today. The server computes it with the
+  // same decide() the backtest runs on every review, so the keep/drop/add list can
+  // never disagree with the history below it. NOTE: the API sends `events` newest
+  // first, so the latest change is events[0].
+  const niceDate = (d: string | null | undefined) =>
+    d ? new Date(`${d}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }) : '—';
+  const EVERY: Record<number, string> = { 1: 'every day', 7: 'every week', 14: 'every 2 weeks', 30: 'every 30 days' };
+  const rightNow = $derived.by(() => {
     if (!result) return null;
-    const last = result.events.length ? result.events[result.events.length - 1] : null;
+    const plan = result.rule_plan;
+    // The rule's line-up after a review today: what it keeps, what it adds, then
+    // empty slots held as cash. Every slot gets the same share of the money.
+    const lineup = [
+      ...plan.keep.map((symbol) => ({ symbol, tag: 'Keep' as const })),
+      ...plan.add.map((symbol) => ({ symbol, tag: 'New' as const })),
+      ...Array.from({ length: plan.cash_slots }, () => ({ symbol: 'Cash', tag: 'Cash' as const }))
+    ];
     return {
-      asOf: result.window.end,
+      plan,
+      lineup,
+      inLineup: new Set([...plan.keep, ...plan.add]),
       leaders: result.final_ranking.filter((row) => row.in_hold_band).slice(0, 5),
-      holding: result.final_holdings.map((h) => h.symbol),
-      entered: last?.bought ?? [],
-      left: last?.sold ?? [],
-      reviewed: last?.date ?? null
+      lastChange: result.events[0] ?? null,
+      every: EVERY[result.params.rebalance_days] ?? `every ${result.params.rebalance_days} days`,
+      slotAmount: money(Number(cash) / plan.slots)
     };
   });
 
@@ -357,8 +380,9 @@
   });
 
   // Most recent rotations first — someone checking in on a Sunday wants the last
-  // review, not the first one of the test window.
-  const recentEvents = $derived(result ? [...result.events].reverse().slice(0, 60) : []);
+  // review, not the first one of the test window. The API already sends events
+  // newest first, so no reversing.
+  const recentEvents = $derived(result ? result.events.slice(0, 60) : []);
 </script>
 
 <header class="mb-5">
@@ -414,12 +438,18 @@
                 >
               {/each}
             </div>
+            <!-- Text, not type=number, so the amount reads "1,000,000" instead of "1000000". -->
             <input
-              type="number"
-              min="1"
+              type="text"
+              inputmode="numeric"
+              aria-label="Other amount"
               class="mt-1.5 w-full rounded-lg border border-edge bg-panel-2 px-3 py-2 text-sm text-strong"
               placeholder="Other amount"
-              bind:value={cash}
+              value={Number(cash) > 0 ? Number(cash).toLocaleString('en-US') : ''}
+              oninput={(e) => {
+                const digits = e.currentTarget.value.replace(/[^\d]/g, '');
+                cash = digits ? Number(digits) : 0;
+              }}
             />
           </div>
 
@@ -451,7 +481,12 @@
                 >
               {/each}
             </div>
-            {#if meta}<p class="mt-1 text-[11px] text-muted">Saved prices start {meta.data_from}.</p>{/if}
+            {#if meta}
+              <p class="mt-1 text-[11px] text-muted">
+                Saved prices start {niceDate(meta.data_from)}; the first {lookback} days only warm up the ranking.
+                {#if result}This test runs {niceDate(result.window.start)} → {niceDate(result.window.end)}.{/if}
+              </p>
+            {/if}
           </div>
 
           <p class="rounded-lg bg-panel-2/60 px-2.5 py-2 text-[11px] leading-snug text-muted">
@@ -591,39 +626,75 @@
           <!-- The rule as it stands today. A backtest cannot tell anyone what to
                do next, so the current ranking leads and the history sits behind
                it as evidence. -->
-          {#if thisWeek}
+          {#if rightNow}
+            {@const plan = rightNow.plan}
+            <!-- Right now: today's ranking and the rule's most recent change. -->
             <div class="card {loading ? 'opacity-60' : ''} transition-opacity">
               <div class="flex flex-wrap items-center justify-between gap-2">
-                <h2 class="flex items-center gap-1.5 text-sm font-semibold text-strong"><Trophy class="h-4 w-4 text-accent" /> This week</h2>
-                <span class="text-[11px] text-muted">as of {thisWeek.asOf}</span>
+                <h2 class="flex items-center gap-1.5 text-sm font-semibold text-strong"><Trophy class="h-4 w-4 text-accent" /> Right now</h2>
+                <span class="text-[11px] text-muted">prices as of {niceDate(plan.as_of)}</span>
               </div>
 
-              <p class="mt-2 text-xs text-muted">Strongest right now, by the {activeStyle.label} rule</p>
+              <p class="mt-2 text-xs text-muted">Strongest coins by the {activeStyle.label} rule (green = in the rule's line-up)</p>
               <div class="mt-1 flex flex-wrap gap-1.5">
-                {#each thisWeek.leaders as row, i (row.coin)}
-                  <span class="pill {i < r.params.top_n ? 'bg-mint/15 text-mint' : 'bg-edge text-muted'}">#{row.rank} {row.symbol}</span>
+                {#each rightNow.leaders as row (row.coin)}
+                  <span class="pill {rightNow.inLineup.has(row.symbol) ? 'bg-mint/15 text-mint' : 'bg-edge text-muted'}">#{row.rank} {row.symbol}</span>
                 {:else}
-                  <span class="text-xs text-muted">Nothing is rising — this style would be sitting in cash.</span>
+                  <span class="text-xs text-muted">No coin qualifies today — this style would be sitting in cash.</span>
                 {/each}
               </div>
 
-              <div class="mt-3 grid gap-2 border-t border-edge/60 pt-3 text-xs sm:grid-cols-2">
-                <div>
-                  <p class="text-[11px] text-muted">Would be holding</p>
-                  <p class="font-semibold text-strong">{thisWeek.holding.join(', ') || 'Cash'}</p>
-                </div>
-                <div>
-                  <p class="text-[11px] text-muted">Last review{thisWeek.reviewed ? ` · ${thisWeek.reviewed}` : ''}</p>
-                  <p class="flex flex-wrap items-center gap-1">
-                    {#each thisWeek.left as s}<span class="pill bg-danger/15 text-danger">− {s}</span>{/each}
-                    {#each thisWeek.entered as b}<span class="pill bg-mint/15 text-mint">+ {b}</span>{/each}
-                    {#if !thisWeek.left.length && !thisWeek.entered.length}<span class="text-muted">No change</span>{/if}
-                  </p>
-                </div>
+              <div class="mt-3 border-t border-edge/60 pt-3 text-xs">
+                <p class="text-[11px] text-muted">Last change{rightNow.lastChange ? ` · ${niceDate(rightNow.lastChange.date)}` : ''}</p>
+                <p class="mt-0.5 flex flex-wrap items-center gap-1">
+                  {#if rightNow.lastChange}
+                    {#each rightNow.lastChange.sold as s}<span class="pill bg-danger/15 text-danger">− {s}</span>{/each}
+                    {#each rightNow.lastChange.bought as b}<span class="pill bg-mint/15 text-mint">+ {b}</span>{/each}
+                  {:else}
+                    <span class="text-muted">The rule has not traded in this window.</span>
+                  {/if}
+                </p>
+              </div>
+            </div>
+
+            <!-- How to follow this rule: the mechanical output of the same decide()
+                 the backtest uses, plus the schedule. Rule output, not advice. -->
+            <div class="card {loading ? 'opacity-60' : ''} transition-opacity">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <h2 class="flex items-center gap-1.5 text-sm font-semibold text-strong"><ArrowRightLeft class="h-4 w-4 text-accent" /> How to follow this rule</h2>
+                <span class="pill {plan.review_due_today ? 'bg-accent/15 text-accent' : 'bg-edge text-soft'}">
+                  {plan.review_due_today ? 'Review day is today' : `Next review ${niceDate(plan.next_review)}`}
+                </span>
               </div>
 
+              <p class="mt-2 text-xs text-muted">If the rule reviewed today, its {plan.slots} slots would be</p>
+              <div class="mt-1.5 grid gap-1.5 {plan.slots >= 3 ? 'sm:grid-cols-3' : plan.slots === 2 ? 'sm:grid-cols-2' : ''}">
+                {#each rightNow.lineup as slot, i (i)}
+                  <div class="flex items-center justify-between rounded-lg border border-edge bg-panel-2 px-3 py-2">
+                    <div>
+                      <p class="text-sm font-semibold {slot.tag === 'Cash' ? 'text-muted' : 'text-strong'}">{slot.symbol}</p>
+                      <p class="text-[11px] text-muted">{rightNow.slotAmount}</p>
+                    </div>
+                    <span class="pill {slot.tag === 'New' ? 'bg-mint/15 text-mint' : slot.tag === 'Keep' ? 'bg-edge text-soft' : 'bg-edge text-muted'}">{slot.tag}</span>
+                  </div>
+                {/each}
+              </div>
+              {#if plan.drop.length}
+                <div class="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
+                  <span class="text-muted">{plan.review_due_today ? 'Sold at today’s review' : 'Dropped from the line-up'}</span>
+                  {#each plan.drop as d}<span class="pill bg-danger/15 text-danger">{d.symbol} · {d.reason}</span>{/each}
+                </div>
+              {/if}
+
+              <ol class="mt-3 space-y-1.5 border-t border-edge/60 pt-3 text-xs leading-snug text-soft">
+                <li><span class="font-semibold text-strong">1. Start.</span> Split {plain?.from ?? money(cash)} into {plan.slots} equal parts of {rightNow.slotAmount} and buy the line-up above.{plan.cash_slots ? ' A Cash slot stays in cash until a coin qualifies.' : ''}</li>
+                <li><span class="font-semibold text-strong">2. Review {rightNow.every}.</span> Come back on {plan.review_due_today ? 'today' : niceDate(plan.next_review)} and each review after. Keep coins still in the top {r.params.worst_rank_held}, sell the ones that fell out, and fill free slots with the strongest coin you don't own — this page lists it for you.</li>
+                <li><span class="font-semibold text-strong">3. Do nothing in between.</span> Prices will swing. In this test the rule fell as far as −{plain?.drop.toFixed(0) ?? '—'}% at its worst.</li>
+                <li><span class="font-semibold text-strong">4. Keep fees low.</span> This test charged {r.params.fee_pct}% on every buy and sell; higher fees eat the result.</li>
+              </ol>
+
               <p class="mt-3 text-[11px] leading-snug text-muted">
-                This is where the rule points today, reviewed {cadence}. It describes recent strength — it is not a prediction or a recommendation to buy.
+                This is what the rule outputs from past prices — not a prediction and not advice for you. Only use money you can afford to lose.
               </p>
             </div>
           {/if}
@@ -632,7 +703,7 @@
             <div class="card {loading ? 'opacity-60' : ''} transition-opacity">
               <p class="stat-label">What this rule did in the past</p>
               <p class="mt-1.5 text-base leading-snug text-strong">
-                {plain.from} put into <span class="font-semibold text-accent">{activeStyle.label}</span> on {r.window.start}
+                {plain.from} put into <span class="font-semibold text-accent">{activeStyle.label}</span> on {niceDate(r.window.start)}
                 would be <span class="font-bold {tone(r.metrics.strategy.total_return_pct)}">{plain.ours}</span> today.
               </p>
               <p class="mt-1 text-sm text-muted">Bitcoin alone: <span class="font-semibold text-soft">{plain.btc}</span>.</p>
@@ -841,11 +912,7 @@
           </table>
         </div>
 
-        {#if mode === 'simple'}
-          <button class="btn-ghost w-full justify-center text-xs" onclick={() => (showDetails = false)}>Hide the details</button>
-        {/if}
-        {/if}
-
+        <!-- The fine print lives with the details; simple mode keeps one short disclaimer. -->
         <div class="card">
           <p class="flex items-center gap-1.5 stat-label"><Info class="h-3.5 w-3.5" /> How this backtest works</p>
           <ul class="mt-2 space-y-1 text-xs leading-relaxed text-muted">
@@ -855,6 +922,12 @@
         </div>
 
         <div class="rounded-lg border border-warn/30 bg-warn/5 px-3 py-2 text-xs font-medium text-warn">{r.disclaimer}</div>
+
+        {#if mode === 'simple'}
+          <button class="btn-ghost w-full justify-center text-xs" onclick={() => (showDetails = false)}>Hide the details</button>
+        {/if}
+        {/if}
+
         <Disclaimer compact />
       {/if}
     </div>
