@@ -19,6 +19,7 @@ export const FEATURE_LABELS: Record<string, string> = {
   access_premium_interpretation: 'Premium interpretation (takeaways & signals)',
   access_exit_strategy: 'Dynamic Exit Strategy',
   access_exit_simulator: 'Portfolio Exit Simulator',
+  access_rotation_backtest: 'Rotation Backtest Lab',
   access_log_regression_charts: 'Log Regression Bands',
   access_derivatives: 'Derivatives / Leverage Risk',
   access_macro_regime: 'Macro Regime',

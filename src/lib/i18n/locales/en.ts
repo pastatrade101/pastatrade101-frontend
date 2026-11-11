@@ -54,6 +54,7 @@ export const en: Record<string, string> = {
   'app.nav.exit': 'Exit Strategy',
   'app.nav.logreg': 'Log Regression',
   'app.nav.reports': 'Reports',
+  'app.nav.rotation': 'Rotation Lab',
 
   // Brand panel (auth shell)
   'brand.badge': 'Premium crypto intelligence',
