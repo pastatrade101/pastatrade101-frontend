@@ -55,6 +55,7 @@ export const sw: Record<string, string> = {
   'app.nav.exit': 'Mkakati wa Kutoka',
   'app.nav.logreg': 'Log Regression',
   'app.nav.reports': 'Taarifa',
+  'app.nav.rotation': 'Maabara ya Kuzungusha Sarafu',
 
   // Brand panel
   'brand.badge': 'Akili ya crypto ya kiwango cha juu',

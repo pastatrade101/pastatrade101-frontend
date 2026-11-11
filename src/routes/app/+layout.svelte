@@ -4,7 +4,7 @@
   import { fade, fly } from 'svelte/transition';
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
-  import { Activity, BarChart3, Bitcoin, Crosshair, DoorOpen, FileText, Flame, FlaskConical, Gauge, Globe, LayoutDashboard, Layers, Radar, Rocket, Scale, Search, Spline, Star, Users, X, Menu } from '@lucide/svelte';
+  import { Activity, BarChart3, Bitcoin, Crosshair, DoorOpen, FileText, Flame, FlaskConical, Gauge, Globe, LayoutDashboard, Layers, Radar, Repeat, Rocket, Scale, Search, Spline, Star, Users, X, Menu } from '@lucide/svelte';
   import { api } from '$lib/api';
   import { authReady, user } from '$lib/stores/auth';
   import { sidebarCollapsed, sidebarOpen } from '$lib/stores/ui';
@@ -95,6 +95,7 @@
       items: [
         { href: '/app/watchlist', key: 'app.nav.watchlist', icon: Star },
         { href: '/app/exit-strategy', key: 'app.nav.exit', icon: DoorOpen },
+        { href: '/app/rotation-lab', key: 'app.nav.rotation', icon: Repeat, badge: { text: 'New', cls: 'text-[10px] font-bold text-mint' } },
         { href: '/app/reports', key: 'app.nav.reports', icon: FileText }
       ]
     }
