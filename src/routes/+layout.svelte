@@ -4,7 +4,7 @@
   import { fly } from 'svelte/transition';
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
-  import { ArrowRight, Check, ChevronDown, CreditCard, DoorOpen, FileText, Flame, Languages, LayoutDashboard, LogIn, LogOut, Mail, Menu, Moon, PanelLeftClose, PanelLeftOpen, Phone, Radar, Shield, Spline, Sun, Tag, X } from '@lucide/svelte';
+  import { ArrowRight, Check, ChevronDown, CreditCard, DoorOpen, FileText, Flame, Languages, LayoutDashboard, LogIn, LogOut, Mail, Menu, Moon, PanelLeftClose, PanelLeftOpen, Phone, Radar, Repeat, Shield, Spline, Sun, Tag, X } from '@lucide/svelte';
   import BrandMark from '$lib/components/BrandMark.svelte';
   import { authReady, initAuth, logout, user } from '$lib/stores/auth';
   import { clearMembership, loadMembership, membership } from '$lib/stores/membership';
@@ -147,6 +147,9 @@
                     </a>
                     <a href="/admin/early-opportunity-settings" onclick={() => (menuOpen = false)} class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-body transition hover:bg-panel-2">
                       <Radar class="h-4 w-4" /> Opportunity Radar
+                    </a>
+                    <a href="/admin/rotation-index" onclick={() => (menuOpen = false)} class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-body transition hover:bg-panel-2">
+                      <Repeat class="h-4 w-4" /> Rotation index
                     </a>
                   {/if}
                   <button onclick={handleLogout} class="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-danger transition hover:bg-panel-2">
