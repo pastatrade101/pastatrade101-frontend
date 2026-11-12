@@ -1,10 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import {
-    ArrowRight, Radar, Layers, Waves, Gauge, Star, ShieldCheck, Check, Zap, TrendingUp,
-    Coins, Database, RefreshCw, Clock, LayoutGrid, HeartCrack, UserPlus, LineChart, Rocket,
-    PiggyBank, Repeat, Quote, Plus, Activity, BarChart3, User, Compass, Download, FileText,
-    DoorOpen, Spline, Flame, Languages, ListChecks, MessageSquareText
+    ArrowRight, ArrowDown, Gauge, ShieldCheck, Coins, Database, Layers, RefreshCw, User, Plus,
+    Download, FileText, Languages, LayoutGrid, MessageSquareText
   } from '@lucide/svelte';
   import { api } from '$lib/api';
   import { user } from '$lib/stores/auth';
@@ -14,8 +12,6 @@
   import { browser } from '$app/environment';
   import { fly } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
-
-  const reduceMotion = browser && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   import CoinMarquee from '$lib/components/CoinMarquee.svelte';
   import CountUp from '$lib/components/CountUp.svelte';
   import LiteYouTube from '$lib/components/LiteYouTube.svelte';
@@ -24,6 +20,12 @@
   import { en } from '$lib/i18n/locales/en';
   import { sw } from '$lib/i18n/locales/sw';
   import { inview, whenInView } from '$lib/actions/inview';
+
+  // Landing page. One editorial system: numbered sections divided by hairlines,
+  // at most one level of box (only pricing plans and the plain-read card are
+  // boxed), 8px corners, mint as the single accent. Copy lives in the locales.
+
+  const reduceMotion = browser && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   const SITE_URL = 'https://pastatrade101.com';
   const baseJsonLd = [
@@ -53,6 +55,7 @@
   };
   let pricingVisible = $state(false); // gates the staggered fly-in for pricing cards
   let userCount = $state<number | null>(null); // real registered users (from /stats)
+
   // Videos about the platform itself, from the Pastatrade101 channel. Hand-picked
   // (not the latest uploads) — update the ids when a new walkthrough goes up.
   const HERO_VIDEO = { id: '3Oujv9Xp7UM', title: 'Pastatrade101.com — stop reacting, start reading the crypto market', duration: '1:13' };
@@ -60,6 +63,7 @@
     { id: 'dnbd2-k-5Io', title: 'Is Bitcoin cheap or expensive right now? The risk score explained', duration: '5:23' },
     { id: 'dcvpZab_tX4', title: 'One dashboard, every crypto signal — 19 tools in 72 seconds', duration: '1:12' }
   ];
+
   onMount(async () => {
     try {
       plans = (await api<{ items: Plan[] }>('/plans')).items;
@@ -72,11 +76,10 @@
       /* social-proof count is optional */
     }
   });
-  // Every feature the plan includes (ordered). No longer truncated to 4.
+
   const planFeatures = (p: Plan) => FEATURE_ORDER.filter((k) => p.features?.[k]);
   const teaserFeatures = (p: Plan) => planFeatures(p).slice(0, p.is_popular ? 6 : 5);
   const extraFeatureCount = (p: Plan) => Math.max(0, planFeatures(p).length - teaserFeatures(p).length);
-  const planAccent = (p: Plan, i: number) => (p.is_popular ? '--c-accent' : p.monthly_price === 0 ? '--c-mint' : i % 2 === 0 ? '--c-warn' : '--c-accent');
   const planAudienceKey = (p: Plan) => (p.monthly_price === 0 ? 'landing.price.audience.free' : p.is_popular ? 'landing.price.audience.mid' : 'landing.price.audience.premium');
   const maxPlanFeatureCount = () => plans.reduce((max, p) => Math.max(max, planFeatures(p).length), 0);
 
@@ -84,89 +87,69 @@
   const fmtInvestors = (n: number): string =>
     n >= 1000 ? `${(Math.floor(n / 100) / 10).toString()}k+` : n >= 100 ? `${Math.floor(n / 10) * 10}+` : `${n}`;
 
-  // ── Marketing content (i18n keys; icons + numbers stay here) ─────────────
+  // ── Content (copy in the locales; numbers and structure here) ─────────────
+  const heroTrust = ['landing.trust.free', 'landing.trust.noexchange', 'landing.trust.readonly', 'landing.trust.nfa'];
   const trust: { v?: string; vKey?: string; lKey: string; icon: typeof Coins }[] = [
-    { v: 'Top 100+', lKey: 'landing.stat.coins', icon: Coins },
-    { v: '11+', lKey: 'landing.stat.eco', icon: Layers },
+    { v: 'Top 100', lKey: 'landing.stat.coins', icon: Coins },
+    { v: '11', lKey: 'landing.stat.eco', icon: Layers },
     { v: '9+', lKey: 'landing.stat.sources', icon: Database },
     { vKey: 'landing.stat.daily', lKey: 'landing.stat.refresh', icon: RefreshCw },
     { v: '0–1', lKey: 'landing.stat.riskmodel', icon: Gauge }
   ];
   const pains = [
-    { icon: Clock, tKey: 'landing.prob.1.t', bKey: 'landing.prob.1.b', fixKey: 'landing.prob.1.fix' },
-    { icon: LayoutGrid, tKey: 'landing.prob.2.t', bKey: 'landing.prob.2.b', fixKey: 'landing.prob.2.fix' },
-    { icon: HeartCrack, tKey: 'landing.prob.3.t', bKey: 'landing.prob.3.b', fixKey: 'landing.prob.3.fix' }
+    { tKey: 'landing.prob.1.t', bKey: 'landing.prob.1.b', fixKey: 'landing.prob.1.fix' },
+    { tKey: 'landing.prob.2.t', bKey: 'landing.prob.2.b', fixKey: 'landing.prob.2.fix' },
+    { tKey: 'landing.prob.3.t', bKey: 'landing.prob.3.b', fixKey: 'landing.prob.3.fix' }
   ];
-  const commandFeature = { icon: LayoutGrid, tKey: 'landing.feat.overview.t', bKey: 'landing.feat.overview.b' };
-  const featurePreviewStats = [
-    { labelKey: 'landing.preview.btcrisk', valueKey: 'landing.preview.gooddca', level: '32%', color: '--c-mint' },
-    { labelKey: 'landing.preview.altmarket', valueKey: 'landing.preview.selective', level: '58%', color: '--c-accent' },
-    { labelKey: 'landing.preview.socialrisk', valueKey: 'landing.preview.normalatt', level: '42%', color: '--c-warn' }
+  // The 18 tools behind the Overview, grouped exactly as the app's sidebar
+  // groups them (Overview + 18 = the "19 tools" in the headline and the videos).
+  const featureGroups = [
+    { labelKey: 'app.nav.group.market', color: '--c-mint', items: ['risk', 'social', 'deriv', 'macro'] },
+    { labelKey: 'app.nav.group.cycle', color: '--c-accent', items: ['charts', 'btc', 'cyclelab', 'alt', 'altbottom', 'logreg'] },
+    { labelKey: 'app.nav.group.discovery', color: '--c-warn', items: ['eco', 'eor', 'projects', 'tokenradar'] },
+    { labelKey: 'app.nav.group.strategy', color: '--c-soft', items: ['watch', 'exit', 'rotation', 'reports'] }
   ];
-  const riskSignals = [
-    { icon: Gauge, tKey: 'landing.feat.risk.t', bKey: 'landing.feat.risk.b', level: '32%', color: '--c-mint' },
-    { icon: Radar, tKey: 'landing.feat.radar.t', bKey: 'landing.feat.radar.b', level: '64%', color: '--c-accent' },
-    { icon: DoorOpen, tKey: 'landing.feat.exit.t', bKey: 'landing.feat.exit.b', level: '28%', color: '--c-warn' }
-  ];
-  const rotationSignals = [
-    { icon: TrendingUp, tKey: 'landing.feat.alt.t', bKey: 'landing.feat.alt.b', level: '56%', color: '--c-accent' },
-    { icon: Activity, tKey: 'landing.feat.altbottom.t', bKey: 'landing.feat.altbottom.b', level: '46%', color: '--c-mint' },
-    { icon: Layers, tKey: 'landing.feat.eco.t', bKey: 'landing.feat.eco.b', level: '68%', color: '--c-mint' },
-    { icon: Compass, tKey: 'landing.feat.eor.t', bKey: 'landing.feat.eor.b', level: '52%', color: '--c-warn' }
-  ];
-  const contextSignals = [
-    { icon: Spline, tKey: 'landing.feat.logreg.t', bKey: 'landing.feat.logreg.b', level: '62%', color: '--c-accent' },
-    { icon: Flame, tKey: 'landing.feat.deriv.t', bKey: 'landing.feat.deriv.b', level: '38%', color: '--c-danger' },
-    { icon: Waves, tKey: 'landing.feat.social.t', bKey: 'landing.feat.social.b', level: '42%', color: '--c-warn' }
-  ];
-  const deliverySignals = [
-    { icon: FileText, tKey: 'landing.feat.reports.t', bKey: 'landing.feat.reports.b', color: '--c-accent' },
-    { icon: Star, tKey: 'landing.feat.watch.t', bKey: 'landing.feat.watch.b', color: '--c-mint' }
-  ];
-  const videoSignals = [
-    { icon: LineChart, tKey: 'landing.videos.signal.1.t', bKey: 'landing.videos.signal.1.b', color: '--c-mint' },
-    { icon: ShieldCheck, tKey: 'landing.videos.signal.2.t', bKey: 'landing.videos.signal.2.b', color: '--c-danger' },
-    { icon: Activity, tKey: 'landing.videos.signal.3.t', bKey: 'landing.videos.signal.3.b', color: '--c-accent' }
+  // The Risk Dashboard's zones (0.2 / 0.4 / 0.6 / 0.8) — same cut-offs as the app.
+  const zones = [
+    { key: 'landing.zones.z1', color: 'rgb(var(--c-mint))' },
+    { key: 'landing.zones.z2', color: 'rgb(var(--c-mint) / 0.5)' },
+    { key: 'landing.zones.z3', color: 'rgb(var(--c-muted) / 0.45)' },
+    { key: 'landing.zones.z4', color: 'rgb(var(--c-warn))' },
+    { key: 'landing.zones.z5', color: 'rgb(var(--c-danger))' }
   ];
   const steps = [
-    { n: '01', icon: UserPlus, tKey: 'landing.steps.1.t', bKey: 'landing.steps.1.b' },
-    { n: '02', icon: LineChart, tKey: 'landing.steps.2.t', bKey: 'landing.steps.2.b' },
-    { n: '03', icon: Rocket, tKey: 'landing.steps.3.t', bKey: 'landing.steps.3.b' }
+    { n: '1', tKey: 'landing.steps.1.t', bKey: 'landing.steps.1.b' },
+    { n: '2', tKey: 'landing.steps.2.t', bKey: 'landing.steps.2.b' },
+    { n: '3', tKey: 'landing.steps.3.t', bKey: 'landing.steps.3.b' }
   ];
   const personas = [
-    { icon: PiggyBank, tKey: 'landing.persona.1.t', bKey: 'landing.persona.1.b' },
-    { icon: Repeat, tKey: 'landing.persona.2.t', bKey: 'landing.persona.2.b' },
-    { icon: ShieldCheck, tKey: 'landing.persona.3.t', bKey: 'landing.persona.3.b' }
+    { tKey: 'landing.persona.1.t', bKey: 'landing.persona.1.b' },
+    { tKey: 'landing.persona.2.t', bKey: 'landing.persona.2.b' },
+    { tKey: 'landing.persona.3.t', bKey: 'landing.persona.3.b' }
   ];
   // Ordered as a funnel: what it is → who it's for → plans/value → trust →
   // accuracy → support/payment → logistics/safety → differentiation.
   const faqs = [
-    { qKey: 'landing.faq.7.q', aKey: 'landing.faq.7.a', groupKey: 'landing.faq.group.platform' }, // What is Pastatrade101?
-    { qKey: 'landing.faq.8.q', aKey: 'landing.faq.8.a', groupKey: 'landing.faq.group.platform' }, // Who is it for?
-    { qKey: 'landing.faq.9.q', aKey: 'landing.faq.9.a', groupKey: 'landing.faq.group.plans' }, // Free vs Mid vs Premium
-    { qKey: 'landing.faq.10.q', aKey: 'landing.faq.10.a', groupKey: 'landing.faq.group.plans' }, // What do I get with Premium?
-    { qKey: 'landing.faq.2.q', aKey: 'landing.faq.2.a', groupKey: 'landing.faq.group.plans' }, // What do I get for free?
-    { qKey: 'landing.faq.11.q', aKey: 'landing.faq.11.a', groupKey: 'landing.faq.group.risk' }, // Does it tell me what to buy/sell?
-    { qKey: 'landing.faq.1.q', aKey: 'landing.faq.1.a', groupKey: 'landing.faq.group.risk' }, // Is this financial advice?
-    { qKey: 'landing.faq.12.q', aKey: 'landing.faq.12.a', groupKey: 'landing.faq.group.risk' }, // How accurate are the signals?
-    { qKey: 'landing.faq.13.q', aKey: 'landing.faq.13.a', groupKey: 'landing.faq.group.support' }, // Can I call/ask questions?
-    { qKey: 'landing.faq.14.q', aKey: 'landing.faq.14.a', groupKey: 'landing.faq.group.support' }, // Payment methods
-    { qKey: 'landing.faq.4.q', aKey: 'landing.faq.4.a', groupKey: 'landing.faq.group.data' }, // How often is data updated?
-    { qKey: 'landing.faq.3.q', aKey: 'landing.faq.3.a', groupKey: 'landing.faq.group.safety' }, // Do you touch my funds/keys?
-    { qKey: 'landing.faq.5.q', aKey: 'landing.faq.5.a', groupKey: 'landing.faq.group.plans' }, // Cancel/downgrade?
-    { qKey: 'landing.faq.6.q', aKey: 'landing.faq.6.a', groupKey: 'landing.faq.group.compare' } // Different from CoinGecko/DefiLlama?
+    { qKey: 'landing.faq.7.q', aKey: 'landing.faq.7.a', groupKey: 'landing.faq.group.platform' },
+    { qKey: 'landing.faq.8.q', aKey: 'landing.faq.8.a', groupKey: 'landing.faq.group.platform' },
+    { qKey: 'landing.faq.9.q', aKey: 'landing.faq.9.a', groupKey: 'landing.faq.group.plans' },
+    { qKey: 'landing.faq.10.q', aKey: 'landing.faq.10.a', groupKey: 'landing.faq.group.plans' },
+    { qKey: 'landing.faq.2.q', aKey: 'landing.faq.2.a', groupKey: 'landing.faq.group.plans' },
+    { qKey: 'landing.faq.11.q', aKey: 'landing.faq.11.a', groupKey: 'landing.faq.group.risk' },
+    { qKey: 'landing.faq.1.q', aKey: 'landing.faq.1.a', groupKey: 'landing.faq.group.risk' },
+    { qKey: 'landing.faq.12.q', aKey: 'landing.faq.12.a', groupKey: 'landing.faq.group.risk' },
+    { qKey: 'landing.faq.13.q', aKey: 'landing.faq.13.a', groupKey: 'landing.faq.group.support' },
+    { qKey: 'landing.faq.14.q', aKey: 'landing.faq.14.a', groupKey: 'landing.faq.group.support' },
+    { qKey: 'landing.faq.4.q', aKey: 'landing.faq.4.a', groupKey: 'landing.faq.group.data' },
+    { qKey: 'landing.faq.3.q', aKey: 'landing.faq.3.a', groupKey: 'landing.faq.group.safety' },
+    { qKey: 'landing.faq.5.q', aKey: 'landing.faq.5.a', groupKey: 'landing.faq.group.plans' },
+    { qKey: 'landing.faq.6.q', aKey: 'landing.faq.6.a', groupKey: 'landing.faq.group.compare' }
   ];
   const faqHighlights = [
-    { icon: ShieldCheck, tKey: 'landing.faq.highlight.1.t', bKey: 'landing.faq.highlight.1.b', color: '--c-mint' },
-    { icon: Coins, tKey: 'landing.faq.highlight.2.t', bKey: 'landing.faq.highlight.2.b', color: '--c-accent' },
-    { icon: User, tKey: 'landing.faq.highlight.3.t', bKey: 'landing.faq.highlight.3.b', color: '--c-warn' }
+    { icon: ShieldCheck, tKey: 'landing.faq.highlight.1.t', bKey: 'landing.faq.highlight.1.b' },
+    { icon: Coins, tKey: 'landing.faq.highlight.2.t', bKey: 'landing.faq.highlight.2.b' },
+    { icon: User, tKey: 'landing.faq.highlight.3.t', bKey: 'landing.faq.highlight.3.b' }
   ];
-  const finalProofs = [
-    { icon: Gauge, labelKey: 'landing.preview.btcrisk', valueKey: 'landing.preview.gooddca', level: '32%', color: '--c-mint' },
-    { icon: Activity, labelKey: 'landing.preview.altbtcsignal', valueKey: 'landing.preview.confirmed', level: '58%', color: '--c-accent' },
-    { icon: FileText, labelKey: 'landing.final.preview.report', valueKey: 'landing.final.preview.ready', level: '78%', color: '--c-warn' }
-  ];
-  const finalTrust = ['landing.trust.free', 'landing.trust.noexchange', 'landing.trust.readonly'];
 
   // ── Plain read section ───────────────────────────────────────────────────
   const readPoints = [
@@ -174,11 +157,17 @@
     { icon: Languages, tKey: 'landing.read.b2.t', bKey: 'landing.read.b2.b' },
     { icon: LayoutGrid, tKey: 'landing.read.b3.t', bKey: 'landing.read.b3.b' }
   ];
-  // Modules that show the same plain read (proof of breadth in the demo panel).
+  // Three sample signals the demo reads.
+  const demoSignals = [
+    { labelKey: 'landing.preview.btcrisk', valueKey: 'landing.preview.gooddca', color: '--c-mint' },
+    { labelKey: 'landing.preview.altmarket', valueKey: 'landing.preview.selective', color: '--c-accent' },
+    { labelKey: 'landing.preview.socialrisk', valueKey: 'landing.preview.normalatt', color: '--c-warn' }
+  ];
+  // Modules that show the same plain read.
   const readModules = ['BTC Risk', 'Alt/BTC Strength', 'Exit Strategy', 'Ecosystems', 'Derivatives', 'Social Risk', 'Log Regression', 'Token Radar'];
-  // The demo runs the app's real read rules ($lib/plain-read) on the three sample
-  // signals above. It has its own language switch, independent of the site
-  // language, so a visitor can see the same read in Kiswahili.
+  // The demo runs the app's real read rules ($lib/plain-read) on the sample
+  // signals. It has its own language switch, independent of the site language,
+  // so a visitor can see the same read in Kiswahili.
   const READ_LANGS = ['en', 'sw'] as const;
   type ReadDemoLang = (typeof READ_LANGS)[number];
   let readDemoLang = $state<ReadDemoLang>('en');
@@ -187,7 +176,7 @@
   const demoTone: Record<string, string> = { 'landing.preview.btcrisk': 'good' };
   const readDemo = $derived(
     buildPlainRead(
-      featurePreviewStats.map((s) => ({ name: tr(readDemoLang, s.labelKey), label: tr(readDemoLang, s.valueKey), tone: demoTone[s.labelKey] ?? 'neutral' })),
+      demoSignals.map((s) => ({ name: tr(readDemoLang, s.labelKey), label: tr(readDemoLang, s.valueKey), tone: demoTone[s.labelKey] ?? 'neutral' })),
       readDemoLang
     )
   );
@@ -215,491 +204,303 @@
   <link rel="preload" as="image" href="https://i.ytimg.com/vi_webp/{HERO_VIDEO.id}/maxresdefault.webp" type="image/webp" fetchpriority="high" />
 </svelte:head>
 
-<!-- ── 1 · HERO ───────────────────────────────────────────────────────────── -->
-<section class="relative overflow-hidden py-10 sm:py-12 lg:py-16">
-  <div class="hero-grid"></div>
-  <div class="relative grid grid-cols-1 items-center gap-8 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:gap-12">
-    <div class="min-w-0 lg:order-2">
-      <span class="pill bg-mint/10 text-mint">{$t('landing.eyebrow')}</span>
-      <h1 class="mt-5 text-3xl font-bold leading-[1.1] tracking-tight sm:text-4xl lg:text-[3.25rem] lg:leading-[1.07]">
-        <span class="text-strong">{$t('landing.h1.a')}</span>
-        <span class="mt-1 block text-mint">{$t('landing.h1.accent')}</span>
+{#snippet sectionHead(n: string, eyebrowKey: string, titleKey: string, subKey?: string)}
+  <div class="max-w-2xl">
+    <p class="lp-eyebrow"><span class="lp-eyebrow-n">{n}</span>{$t(eyebrowKey)}</p>
+    <h2 class="lp-h2">{$t(titleKey)}</h2>
+    {#if subKey}<p class="lp-sub">{$t(subKey)}</p>{/if}
+  </div>
+{/snippet}
+
+<!-- ── HERO ─────────────────────────────────────────────────────────────── -->
+<section class="lp-wrap pb-12 pt-6 sm:pt-10 lg:pb-16 lg:pt-14">
+  <div class="grid grid-cols-1 items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.12fr)] lg:gap-14">
+    <div class="min-w-0">
+      <p class="lp-kicker">{$t('landing.eyebrow')}</p>
+      <h1 class="lp-h1">
+        <span class="block">{$t('landing.h1.a')}</span>
+        <span class="block text-mint">{$t('landing.h1.accent')}</span>
       </h1>
-      <p class="mt-4 max-w-xl text-base leading-relaxed text-muted sm:mt-5 sm:text-lg">{$t('landing.sub')}</p>
+      <p class="lp-lead">{$t('landing.sub')}</p>
 
-      <div class="mt-6 flex flex-col gap-3 sm:mt-7 sm:flex-row sm:flex-wrap sm:items-center">
-        <a href="/register" class="btn-primary w-full justify-center px-6 py-3 text-base sm:w-auto">{$t('landing.cta.startFree')} <ArrowRight class="h-4 w-4" /></a>
-        <a href="/pricing" class="btn-ghost w-full justify-center px-6 py-3 text-base sm:w-auto">{$t('landing.cta.viewPricing')}</a>
+      <div class="mt-8 flex flex-col gap-3 sm:flex-row">
+        <a href="/register" class="btn-primary justify-center px-6 py-3 text-base">{$t('landing.cta.startFree')} <ArrowRight class="h-4 w-4" /></a>
+        <a href="/pricing" class="btn-ghost justify-center px-6 py-3 text-base">{$t('landing.cta.viewPricing')}</a>
       </div>
-      <p class="mt-3 flex items-center gap-1.5 text-xs text-muted"><Star class="h-3.5 w-3.5 text-accent" /> {$t('landing.hero.builtfor')}</p>
 
-      <div class="mt-5 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted">
-        {#each ['landing.trust.free', 'landing.trust.noexchange', 'landing.trust.readonly', 'landing.trust.nfa'] as b, i}
-          {#if i > 0}<span class="text-edge">·</span>{/if}
-          <span class="flex items-center gap-1.5"><Check class="h-3.5 w-3.5 text-mint" /> {$t(b)}</span>
+      <ul class="mt-6 flex flex-wrap gap-x-5 gap-y-1.5 text-xs text-muted">
+        {#each heroTrust as k}
+          <li class="flex items-center gap-1.5"><span class="h-1 w-1 rounded-full bg-mint" aria-hidden="true"></span>{$t(k)}</li>
         {/each}
+      </ul>
+
+      <div class="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-edge/60 pt-5 text-sm">
+        {#if userCount != null}
+          <p class="text-soft">{$t('landing.hero.proof', { count: fmtInvestors(userCount) })}</p>
+        {/if}
+        <a href="/journey" class="lp-link">{$t('landing.cta.journey')} <ArrowRight class="h-3.5 w-3.5" /></a>
       </div>
     </div>
 
-    <!-- Platform tour video (thumbnail until clicked, then plays in place) -->
-    <div class="relative min-w-0 lg:order-1">
-      <div class="hero-glow"></div>
-      <div class="relative w-full shadow-[0_24px_60px_-12px_rgb(0_0_0/0.55)]">
-        <LiteYouTube id={HERO_VIDEO.id} title={HERO_VIDEO.title} duration={HERO_VIDEO.duration} cta={$t('landing.hero.watchTour')} eager />
-      </div>
-
-      <!-- Discover my journey CTA -->
-      <div class="mt-5 flex justify-center lg:justify-start">
-        <a href="/journey" class="inline-flex items-center gap-2 rounded-full border border-mint/40 bg-mint/10 px-5 py-2.5 text-sm font-semibold text-mint transition hover:bg-mint/20">
-          <Compass class="h-4 w-4" /> {$t('landing.cta.journey')} <ArrowRight class="h-4 w-4" />
-        </a>
-      </div>
-
-      <!-- Social proof strip (below the portrait) -->
-      <div class="mt-6 flex flex-wrap items-center gap-x-5 gap-y-3">
-        <div class="flex items-center gap-3">
-          <div class="flex -space-x-2.5">
-            {#each [0, 1, 2] as i}
-              <span class="flex h-9 w-9 items-center justify-center rounded-full border-2 border-ink bg-panel-2 text-muted">
-                <User class="h-4 w-4" />
-              </span>
-            {/each}
-          </div>
-          <div>
-            <div class="text-sm font-bold text-strong">{userCount != null ? `${fmtInvestors(userCount)} ` : ''}Investors</div>
-            <div class="text-xs text-muted">Learn from our analysis</div>
-          </div>
-        </div>
-
-        <span class="hidden h-8 w-px bg-edge sm:block"></span>
-
-        <div class="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs font-semibold uppercase tracking-wide text-soft">
-          <span class="flex items-center gap-1.5"><BarChart3 class="h-4 w-4 text-accent" /> Macro</span>
-          <span class="flex items-center gap-1.5"><TrendingUp class="h-4 w-4 text-mint" /> Crypto</span>
-          <span class="flex items-center gap-1.5"><Activity class="h-4 w-4 text-warn" /> TradFi</span>
-        </div>
-      </div>
+    <!-- Platform tour (thumbnail until clicked). Flat: thin border, no drop shadow. -->
+    <div class="min-w-0">
+      <LiteYouTube id={HERO_VIDEO.id} title={HERO_VIDEO.title} duration={HERO_VIDEO.duration} cta={$t('landing.hero.watchTour')} eager />
     </div>
+  </div>
 
-    <!-- Live coin logos marquee (hover for label) -->
-    <div class="col-span-full mt-2 lg:order-3 lg:mt-6">
-      <CoinMarquee />
-    </div>
+  <div class="mt-12 lg:mt-16">
+    <CoinMarquee />
   </div>
 </section>
 
-<!-- ── 2 · TRUST BAR (value-based stats, animated count-up) ───────────────── -->
-<section class="py-8">
-  <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-    {#each trust as s, i}
-      <div class="stat-tile text-center" use:inview={{ delay: i * 70 }}>
-        <span class="mx-auto flex h-9 w-9 items-center justify-center rounded-xl bg-mint/10 text-mint"><s.icon class="h-5 w-5" /></span>
-        <div class="mt-2.5 text-3xl font-bold tracking-tight text-mint"><CountUp value={s.v ?? $t(s.vKey ?? '')} /></div>
-        <div class="mt-1 text-xs leading-snug text-muted">{$t(s.lKey)}</div>
+<!-- ── PROOF STRIP ─────────────────────────────────────────────────────── -->
+<section class="lp-wrap">
+  <div class="grid grid-cols-2 gap-x-6 gap-y-8 border-y border-edge/60 py-8 sm:grid-cols-3 lg:grid-cols-5">
+    {#each trust as s}
+      <div class="min-w-0">
+        <p class="text-2xl font-semibold tracking-tight text-strong sm:text-3xl"><CountUp value={s.v ?? $t(s.vKey ?? '')} /></p>
+        <p class="mt-1 text-sm leading-snug text-muted">{$t(s.lKey)}</p>
       </div>
     {/each}
   </div>
 </section>
 
-<!-- ── 3 · PROBLEM → SOLUTION ─────────────────────────────────────────────── -->
-<section class="py-10 sm:py-14">
-  <div class="mx-auto max-w-2xl text-center">
-    <span class="pill bg-warn/10 text-warn">{$t('landing.prob.eyebrow')}</span>
-    <h2 class="mt-3 text-2xl font-semibold text-strong sm:text-3xl">{$t('landing.prob.title')}</h2>
-    <p class="mt-2 text-muted">{$t('landing.prob.sub')}</p>
-  </div>
-  <div class="mt-8 grid grid-cols-1 gap-4 md:grid-cols-3">
-    {#each pains as p, i}
-      <div class="card rail-card flex flex-col" style="--rail: var(--c-warn)" use:inview={{ delay: i * 80 }}>
-        <span class="icon-badge bg-warn/12 text-warn"><p.icon class="h-5 w-5" /></span>
-        <h3 class="mt-3 font-semibold text-strong">{$t(p.tKey)}</h3>
-        <p class="mt-1.5 flex-1 text-sm leading-relaxed text-muted">{$t(p.bKey)}</p>
-        <p class="mt-3 flex items-start gap-1.5 border-t border-edge/50 pt-3 text-sm text-mint">
-          <Check class="mt-0.5 h-4 w-4 shrink-0" /> {$t(p.fixKey)}
-        </p>
-      </div>
-    {/each}
+<!-- ── 01 · THE PROBLEM ─────────────────────────────────────────────────── -->
+<section class="lp-section">
+  <div class="lp-wrap" use:inview>
+    {@render sectionHead('01', 'landing.prob.eyebrow', 'landing.prob.title', 'landing.prob.sub')}
+    <div class="mt-12 grid gap-10 md:grid-cols-3 md:gap-8">
+      {#each pains as p}
+        <div class="border-t border-edge pt-6">
+          <h3 class="lp-h3">{$t(p.tKey)}</h3>
+          <p class="mt-2 text-[15px] leading-relaxed text-muted">{$t(p.bKey)}</p>
+          <p class="mt-4 flex items-start gap-2 text-[15px] font-medium leading-snug text-mint">
+            <ArrowRight class="mt-1 h-4 w-4 shrink-0" />{$t(p.fixKey)}
+          </p>
+        </div>
+      {/each}
+    </div>
   </div>
 </section>
 
-<!-- ── 4 · FEATURES ───────────────────────────────────────────────────────── -->
-<section class="py-10 sm:py-14">
-  <div class="feature-map">
-    <div class="feature-map-grid"></div>
-    <div class="relative z-[1]">
-      <div class="feature-top">
+<!-- ── 02 · THE PLATFORM ────────────────────────────────────────────────── -->
+<section class="lp-section">
+  <div class="lp-wrap" use:inview>
+    <div class="grid gap-10 lg:grid-cols-12 lg:items-end lg:gap-12">
+      <div class="lg:col-span-7">
+        {@render sectionHead('02', 'landing.feat.eyebrow', 'landing.feat.title', 'landing.feat.overview.b')}
+      </div>
+
+      <!-- The one graphic on the page: the risk score's five zones -->
+      <figure class="lg:col-span-5">
+        <figcaption class="lp-label">{$t('landing.zones.title')}</figcaption>
+        <div class="mt-4 flex h-2.5 gap-0.5 overflow-hidden rounded-sm" aria-hidden="true">
+          {#each zones as z}<span class="flex-1" style="background: {z.color};"></span>{/each}
+        </div>
+        <div class="mt-2 grid grid-cols-5 gap-x-2 text-[11px] leading-tight text-muted">
+          {#each zones as z}<span>{$t(z.key)}</span>{/each}
+        </div>
+        <div class="mt-1 flex justify-between text-[11px] tabular-nums text-muted/70" aria-hidden="true">
+          {#each ['0', '0.2', '0.4', '0.6', '0.8', '1'] as tick}<span>{tick}</span>{/each}
+        </div>
+        <p class="mt-4 text-sm leading-relaxed text-muted">{$t('landing.zones.caption')}</p>
+      </figure>
+    </div>
+
+    <div class="mt-14 grid gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-4">
+      {#each featureGroups as g}
         <div class="min-w-0">
-          <span class="pill bg-mint/10 text-mint">{$t('landing.feat.eyebrow')}</span>
-          <h2 class="mt-4 text-2xl font-semibold leading-tight text-strong sm:text-3xl lg:text-4xl">{$t('landing.feat.title')}</h2>
-          <p class="mt-3 max-w-xl text-sm leading-relaxed text-muted sm:text-base">{$t(commandFeature.bKey)}</p>
-        </div>
-
-        <div class="feature-command-strip" use:inview>
-          <div class="feature-command-head">
-            <div>
-              <p class="text-xs font-semibold uppercase tracking-wider text-muted">{$t('landing.feat.map.command')}</p>
-              <h3 class="mt-1 text-base font-semibold text-strong">{$t(commandFeature.tKey)}</h3>
-            </div>
-            <span class="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-mint/25 bg-mint/10 px-2.5 py-1 text-xs font-medium text-mint">
-              <span class="h-1.5 w-1.5 rounded-full bg-mint"></span>
-              {$t('landing.preview.synced')}
-            </span>
-          </div>
-
-          <div class="feature-command-metrics">
-            {#each featurePreviewStats as stat}
-              <div class="feature-command-metric" style="--signal: var({stat.color}); --level: {stat.level};">
-                <p class="text-xs text-muted">{$t(stat.labelKey)}</p>
-                <div class="mt-1 flex items-center justify-between gap-3">
-                  <p class="truncate text-sm font-semibold text-strong">{$t(stat.valueKey)}</p>
-                  <div class="feature-meter"><span></span></div>
-                </div>
-              </div>
-            {/each}
-          </div>
-        </div>
-      </div>
-
-      <div class="feature-board mt-5" use:inview={{ delay: 80 }}>
-        <section class="feature-column" style="--group: var(--c-mint);">
-          <div class="feature-column-head">
-            <div class="min-w-0">
-              <p class="text-xs font-semibold uppercase tracking-wider text-muted">{$t('landing.feat.map.risk')}</p>
-              <h3 class="mt-1 text-lg font-semibold text-strong">{$t('landing.feat.radar.t')}</h3>
-            </div>
-            <Radar class="h-5 w-5 shrink-0 text-mint" />
-          </div>
-          <div class="feature-list">
-            {#each riskSignals as item, i}
-              <div class="feature-list-row" style="--signal: var({item.color}); --level: {item.level};" use:inview={{ delay: 120 + i * 45 }}>
-                <span class="signal-icon"><item.icon class="h-4 w-4" /></span>
-                <div class="feature-list-copy">
-                  <h4>{$t(item.tKey)}</h4>
-                  <p>{$t(item.bKey)}</p>
-                </div>
-                <div class="feature-row-meter"><span></span></div>
-              </div>
-            {/each}
-          </div>
-        </section>
-
-        <section class="feature-column" style="--group: var(--c-accent);">
-          <div class="feature-column-head">
-            <div class="min-w-0">
-              <p class="text-xs font-semibold uppercase tracking-wider text-muted">{$t('landing.feat.map.rotation')}</p>
-              <h3 class="mt-1 text-lg font-semibold text-strong">{$t('landing.feat.alt.t')}</h3>
-            </div>
-            <TrendingUp class="h-5 w-5 shrink-0 text-accent" />
-          </div>
-          <div class="feature-list">
-            {#each rotationSignals as item, i}
-              <div class="feature-list-row" style="--signal: var({item.color}); --level: {item.level};" use:inview={{ delay: 180 + i * 45 }}>
-                <span class="signal-icon"><item.icon class="h-4 w-4" /></span>
-                <div class="feature-list-copy">
-                  <h4>{$t(item.tKey)}</h4>
-                  <p>{$t(item.bKey)}</p>
-                </div>
-                <div class="feature-row-meter"><span></span></div>
-              </div>
-            {/each}
-          </div>
-        </section>
-
-        <section class="feature-column" style="--group: var(--c-warn);">
-          <div class="feature-column-head">
-            <div class="min-w-0">
-              <p class="text-xs font-semibold uppercase tracking-wider text-muted">{$t('landing.feat.map.context')}</p>
-              <h3 class="mt-1 text-lg font-semibold text-strong">{$t('landing.feat.logreg.t')}</h3>
-            </div>
-            <Spline class="h-5 w-5 shrink-0 text-warn" />
-          </div>
-          <div class="feature-list">
-            {#each contextSignals as item, i}
-              <div class="feature-list-row" style="--signal: var({item.color}); --level: {item.level};" use:inview={{ delay: 240 + i * 45 }}>
-                <span class="signal-icon"><item.icon class="h-4 w-4" /></span>
-                <div class="feature-list-copy">
-                  <h4>{$t(item.tKey)}</h4>
-                  <p>{$t(item.bKey)}</p>
-                </div>
-                <div class="feature-row-meter"><span></span></div>
-              </div>
-            {/each}
-          </div>
-        </section>
-
-        <section class="feature-column" style="--group: var(--c-mint);">
-          <div class="feature-column-head">
-            <div class="min-w-0">
-              <p class="text-xs font-semibold uppercase tracking-wider text-muted">{$t('landing.feat.map.delivery')}</p>
-              <h3 class="mt-1 text-lg font-semibold text-strong">{$t('landing.feat.reports.t')}</h3>
-            </div>
-            <FileText class="h-5 w-5 shrink-0 text-mint" />
-          </div>
-          <div class="feature-list">
-            {#each deliverySignals as item}
-              <div class="feature-list-row feature-list-row-delivery" style="--signal: var({item.color}); --level: 72%;">
-                <span class="signal-icon"><item.icon class="h-4 w-4" /></span>
-                <div class="feature-list-copy">
-                  <h4>{$t(item.tKey)}</h4>
-                  <p>{$t(item.bKey)}</p>
-                </div>
-              </div>
-            {/each}
-          </div>
-        </section>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ── 4b · PLAIN READS ──────────────────────────────────────────────────── -->
-<section id="plain-read" class="scroll-mt-24 py-10 sm:py-14">
-  <div class="read-studio" style="--c-read: var(--c-mint);" use:inview>
-    <div class="read-studio-grid"></div>
-    <div class="relative z-[1]">
-      <!-- Header spans full width so the two body columns stay balanced -->
-      <div class="max-w-2xl">
-        <span class="pill read-pill"><MessageSquareText class="h-3.5 w-3.5" /> {$t('landing.read.eyebrow')}</span>
-        <h2 class="mt-4 text-2xl font-semibold leading-tight text-strong sm:text-3xl lg:text-4xl">{$t('landing.read.title')}</h2>
-        <p class="mt-3 text-sm leading-relaxed text-muted sm:text-base">{$t('landing.read.sub')}</p>
-      </div>
-
-      <div class="mt-8 grid gap-6 lg:grid-cols-2 lg:items-stretch lg:gap-8">
-        <!-- Benefits + CTA (CTA pinned to the bottom to fill the column) -->
-        <div class="flex flex-col">
-          <ul class="space-y-3.5">
-            {#each readPoints as p, i}
-              <li class="flex items-start gap-3" use:inview={{ delay: 60 + i * 70 }}>
-                <span class="read-point-icon"><p.icon class="h-4 w-4" /></span>
-                <div class="min-w-0">
-                  <h3 class="text-sm font-semibold text-strong">{$t(p.tKey)}</h3>
-                  <p class="mt-0.5 text-sm leading-relaxed text-muted">{$t(p.bKey)}</p>
-                </div>
+          <h3 class="lp-label flex items-center gap-2">
+            <span class="h-1.5 w-1.5 rounded-full" style="background: rgb(var({g.color}));"></span>{$t(g.labelKey)}
+          </h3>
+          <ul class="mt-4 divide-y divide-edge/60 border-t border-edge">
+            {#each g.items as k}
+              <li class="py-4">
+                <p class="text-[15px] font-semibold text-strong">{$t(`landing.feat.${k}.t`)}</p>
+                <p class="mt-1 text-sm leading-relaxed text-muted">{$t(`landing.feat.${k}.b`)}</p>
               </li>
             {/each}
           </ul>
-          <div class="mt-auto flex flex-wrap items-center gap-3 pt-7">
-            <a href={$user ? '/app' : '/register'} class="btn-primary">{$t('landing.read.cta.primary')} <ArrowRight class="h-4 w-4" /></a>
-            <a href="/pricing" class="btn-ghost">{$t('landing.read.cta.secondary')}</a>
-          </div>
         </div>
-
-        <!-- Demo: three sample signals → the plain read the rules write, in either language -->
-        <div class="read-demo" use:inview={{ delay: 120 }}>
-          <p class="read-demo-label">{$t('landing.read.demo.from')}</p>
-          <div class="read-demo-signals">
-            {#each featurePreviewStats as stat}
-              <span class="read-chip" style="--signal: var({stat.color});">
-                <span class="read-chip-dot"></span>
-                <span class="truncate text-muted">{tr(readDemoLang, stat.labelKey)}</span>
-                <span class="read-chip-val truncate">{tr(readDemoLang, stat.valueKey)}</span>
-              </span>
-            {/each}
-          </div>
-
-          <div class="read-demo-flow" aria-hidden="true">
-            <span class="read-demo-line"></span>
-            <span class="read-demo-flow-label"><ListChecks class="h-4 w-4" /> {$t('landing.read.demo.reads')}</span>
-            <span class="read-demo-line"></span>
-          </div>
-
-          {#if readDemo}
-            <div class="read-card">
-              <div class="flex items-center justify-between gap-2">
-                <span class="read-brand inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide"><MessageSquareText class="h-3.5 w-3.5" /> {readDemoLang === 'sw' ? 'Kwa lugha rahisi' : 'Plain read'}</span>
-                <div class="read-lang-toggle" role="group" aria-label="Language">
-                  {#each READ_LANGS as lng}
-                    <button type="button" class="read-lang-btn {readDemoLang === lng ? 'is-active' : ''}" aria-pressed={readDemoLang === lng} onclick={() => (readDemoLang = lng)}>{lng === 'en' ? 'EN' : 'SW'}</button>
-                  {/each}
-                </div>
-              </div>
-              <p class="read-brand mt-2 text-[15px] font-semibold leading-snug">{readDemo.headline}</p>
-              <p class="mt-1 text-sm leading-relaxed text-soft">{readDemo.body}</p>
-              <p class="mt-3 border-t border-edge/60 pt-2.5 text-[11px] text-muted">{plainReadFooter(readDemoLang)}</p>
-            </div>
-          {/if}
-
-          <!-- Same read on every module — fills the column + reinforces breadth -->
-          <div class="read-modules">
-            <span class="read-modules-label">{$t('landing.read.demo.everywhere')}</span>
-            <div class="read-modules-chips">
-              {#each readModules as m}<span class="read-module-chip">{m}</span>{/each}
-            </div>
-          </div>
-        </div>
-      </div>
+      {/each}
     </div>
   </div>
 </section>
 
-<!-- ── 5 · HOW IT WORKS ───────────────────────────────────────────────────── -->
-<section class="py-10 sm:py-14">
-  <div class="mx-auto mb-8 max-w-2xl text-center">
-    <span class="pill bg-mint/10 text-mint">{$t('landing.steps.eyebrow')}</span>
-    <h2 class="mt-3 text-2xl font-semibold text-strong sm:text-3xl">{$t('landing.steps.title')}</h2>
-  </div>
-  <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
-    {#each steps as s, i}
-      <div class="card rail-card relative overflow-hidden" style="--rail: var(--c-mint)" use:inview={{ delay: i * 80 }}>
-        <span class="pointer-events-none absolute -right-1 top-1 select-none text-6xl font-bold leading-none text-mint/10">{s.n}</span>
-        <span class="icon-badge bg-mint/12 text-mint"><s.icon class="h-5 w-5" /></span>
-        <p class="mt-3 text-[11px] font-bold uppercase tracking-wider text-mint/60">{$t('landing.steps.step')} {s.n}</p>
-        <h3 class="mt-0.5 font-semibold text-strong">{$t(s.tKey)}</h3>
-        <p class="mt-1.5 text-sm leading-relaxed text-muted">{$t(s.bKey)}</p>
+<!-- ── 03 · PLAIN LANGUAGE ──────────────────────────────────────────────── -->
+<section id="plain-read" class="lp-section scroll-mt-24">
+  <div class="lp-wrap grid gap-12 lg:grid-cols-2 lg:gap-16" use:inview>
+    <div class="flex min-w-0 flex-col">
+      {@render sectionHead('03', 'landing.read.eyebrow', 'landing.read.title', 'landing.read.sub')}
+      <ul class="mt-8 space-y-5">
+        {#each readPoints as p}
+          <li class="flex items-start gap-3">
+            <p.icon class="mt-0.5 h-4 w-4 shrink-0 text-mint" />
+            <div class="min-w-0">
+              <h3 class="text-[15px] font-semibold text-strong">{$t(p.tKey)}</h3>
+              <p class="mt-0.5 text-sm leading-relaxed text-muted">{$t(p.bKey)}</p>
+            </div>
+          </li>
+        {/each}
+      </ul>
+      <div class="mt-8 flex flex-wrap items-center gap-3 lg:mt-auto lg:pt-8">
+        <a href={$user ? '/app' : '/register'} class="btn-primary">{$t('landing.read.cta.primary')} <ArrowRight class="h-4 w-4" /></a>
+        <a href="/pricing" class="btn-ghost">{$t('landing.read.cta.secondary')}</a>
       </div>
-    {/each}
-  </div>
+    </div>
 
-  <!-- Download the full overview deck (PDF) -->
-  <div class="mx-auto mt-6 max-w-3xl">
-    <div class="card flex flex-col items-center gap-4 sm:flex-row sm:items-center sm:justify-between">
-      <div class="flex items-start gap-3">
-        <span class="icon-badge bg-mint/12 text-mint"><FileText class="h-5 w-5" /></span>
-        <div>
+    <!-- Demo: three sample signals → the read the rules write, in either language -->
+    <div class="min-w-0 lg:pt-14">
+      <p class="lp-label">{$t('landing.read.demo.from')}</p>
+      <ul class="mt-3 divide-y divide-edge/60 border-y border-edge/60">
+        {#each demoSignals as s}
+          <li class="flex items-center justify-between gap-4 py-3 text-sm">
+            <span class="flex min-w-0 items-center gap-2 text-muted">
+              <span class="h-1.5 w-1.5 shrink-0 rounded-full" style="background: rgb(var({s.color}));"></span>
+              <span class="truncate">{tr(readDemoLang, s.labelKey)}</span>
+            </span>
+            <span class="font-medium text-strong">{tr(readDemoLang, s.valueKey)}</span>
+          </li>
+        {/each}
+      </ul>
+
+      <p class="lp-label mt-6 flex items-center gap-2"><ArrowDown class="h-3.5 w-3.5" /> {$t('landing.read.demo.reads')}</p>
+
+      {#if readDemo}
+        <div class="mt-3 rounded-lg border border-mint/25 bg-mint/[0.05] p-5">
+          <div class="flex items-center justify-between gap-3">
+            <span class="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-mint">
+              <MessageSquareText class="h-3.5 w-3.5" /> {readDemoLang === 'sw' ? 'Kwa lugha rahisi' : 'Plain read'}
+            </span>
+            <div class="lp-toggle" role="group" aria-label="Language">
+              {#each READ_LANGS as lng}
+                <button type="button" class:is-active={readDemoLang === lng} aria-pressed={readDemoLang === lng} onclick={() => (readDemoLang = lng)}>{lng === 'en' ? 'EN' : 'SW'}</button>
+              {/each}
+            </div>
+          </div>
+          <p class="mt-3 text-base font-semibold leading-snug text-strong">{readDemo.headline}</p>
+          <p class="mt-1.5 text-sm leading-relaxed text-soft">{readDemo.body}</p>
+          <p class="mt-4 border-t border-edge/60 pt-3 text-[11px] text-muted">{plainReadFooter(readDemoLang)}</p>
+        </div>
+      {/if}
+
+      <p class="mt-5 text-xs leading-relaxed text-muted">
+        <span class="font-medium text-soft">{$t('landing.read.demo.everywhere')}:</span> {readModules.join(' · ')}
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ── 04 · HOW IT WORKS ────────────────────────────────────────────────── -->
+<section class="lp-section">
+  <div class="lp-wrap" use:inview>
+    {@render sectionHead('04', 'landing.steps.eyebrow', 'landing.steps.title')}
+    <ol class="mt-12 grid gap-10 md:grid-cols-3 md:gap-8">
+      {#each steps as s}
+        <li class="border-t border-edge pt-6">
+          <span class="lp-num">{s.n}</span>
+          <h3 class="lp-h3 mt-4">{$t(s.tKey)}</h3>
+          <p class="mt-2 text-[15px] leading-relaxed text-muted">{$t(s.bKey)}</p>
+        </li>
+      {/each}
+    </ol>
+
+    <!-- Overview deck (PDF) — bilingual on purpose -->
+    <div class="mt-14 flex flex-col gap-5 border-t border-edge/60 pt-6 sm:flex-row sm:items-center sm:justify-between sm:gap-8">
+      <div class="flex min-w-0 items-start gap-4">
+        <FileText class="mt-0.5 h-5 w-5 shrink-0 text-mint" />
+        <div class="min-w-0">
           <h3 class="font-semibold text-strong">New to Pastatrade? Start here.</h3>
-          <p class="mt-0.5 text-sm leading-relaxed text-muted">A simple PDF that explains the whole platform in plain language — English &amp; Swahili. It’s not too technical; it answers the everyday crypto questions you already ask.</p>
-          <p class="mt-1 text-sm italic leading-relaxed text-muted/80">Mpya kwa Pastatrade? PDF rahisi inayoeleza platform nzima kwa lugha rahisi — Kiingereza na Kiswahili.</p>
+          <p class="mt-1 text-sm leading-relaxed text-muted">A short PDF that explains the whole platform in plain language — English &amp; Kiswahili — and answers the everyday crypto questions you already ask.</p>
+          <p class="mt-1 text-sm italic leading-relaxed text-muted/80">Mpya kwa Pastatrade? PDF fupi inayoeleza jukwaa zima kwa lugha rahisi — Kiingereza na Kiswahili.</p>
         </div>
       </div>
-      <a href="/pastatrade-overview.pdf" download class="btn-primary shrink-0 whitespace-nowrap">
+      <a href="/pastatrade-overview.pdf" download class="btn-ghost shrink-0 whitespace-nowrap">
         <Download class="h-4 w-4" /> Download overview (PDF)
       </a>
     </div>
   </div>
 </section>
 
-<!-- ── 5b · VIDEOS (latest YouTube uploads) ───────────────────────────────── -->
-{#if videos.length}
-  <section class="video-studio py-12 sm:py-16" use:inview>
-    <div class="video-studio-grid"></div>
+<!-- ── 05 · WATCH ───────────────────────────────────────────────────────── -->
+<section class="lp-section">
+  <div class="lp-wrap" use:inview>
+    {@render sectionHead('05', 'landing.videos.eyebrow', 'landing.videos.title', 'landing.videos.sub')}
 
-    <div class="relative z-[1]">
-      <div class="grid gap-6 lg:grid-cols-[minmax(0,0.95fr)_minmax(340px,0.45fr)] lg:items-end">
-        <div>
-          <span class="pill border border-danger/25 bg-danger/10 text-danger"><Flame class="h-3.5 w-3.5" /> {$t('landing.videos.eyebrow')}</span>
-          <h2 class="mt-4 max-w-3xl text-3xl font-semibold leading-tight text-strong sm:text-4xl lg:text-5xl">{$t('landing.videos.title')}</h2>
-          <p class="mt-3 max-w-2xl text-sm leading-relaxed text-muted sm:text-base">{$t('landing.videos.sub')}</p>
-        </div>
-
-        <div>
-          <p class="text-xs font-semibold uppercase tracking-wider text-muted">{$t('landing.videos.channel')}</p>
-          <ul class="mt-3 flex flex-wrap gap-x-5 gap-y-2">
-            {#each videoSignals as signal}
-              <li class="flex items-center gap-2 text-sm font-semibold text-strong">
-                <signal.icon class="h-4 w-4" style="color: rgb(var({signal.color}));" />
-                {$t(signal.tKey)}
-              </li>
-            {/each}
-          </ul>
-        </div>
+    <div class="mt-12 grid gap-10 lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)] lg:gap-10">
+      <div class="min-w-0">
+        <p class="lp-label mb-3">{$t('landing.videos.featured')}</p>
+        <LiteYouTube id={videos[0].id} title={videos[0].title} duration={videos[0].duration} cta={$t('landing.videos.watch')} featured caption={false} />
+        <h3 class="mt-3 text-lg font-semibold leading-snug text-strong">{videos[0].title}</h3>
       </div>
 
-      <!-- Flat layout: videos sit straight on the section, titles under each video -->
-      <div class="mt-10 grid gap-8 lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)] lg:gap-10">
-        <div class="min-w-0">
-          <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-muted">{$t('landing.videos.featured')}</p>
-          <LiteYouTube id={videos[0].id} title={videos[0].title} duration={videos[0].duration} featured caption={false} />
-          <h3 class="mt-3 text-lg font-semibold leading-snug text-strong sm:text-xl">{videos[0].title}</h3>
-        </div>
-
-        <div class="flex min-w-0 flex-col">
-          <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-muted">{$t('landing.videos.playlist')}</p>
-          {#each videos.slice(1, 3) as v}
-            <div class="mb-5">
-              <LiteYouTube id={v.id} title={v.title} duration={v.duration} compact caption={false} />
-              <h3 class="mt-2.5 text-sm font-semibold leading-snug text-strong sm:text-base">{v.title}</h3>
-            </div>
-          {/each}
-
-          <div class="mt-auto">
-            <p class="mb-3 text-sm leading-relaxed text-muted">{$t('landing.videos.note')}</p>
-            <a href="https://www.youtube.com/@pastatrade101" target="_blank" rel="noopener noreferrer" class="video-youtube-link">
-              <span>{$t('landing.videos.cta')}</span>
-              <ArrowRight class="h-4 w-4" />
-            </a>
+      <div class="flex min-w-0 flex-col">
+        <p class="lp-label mb-3">{$t('landing.videos.playlist')}</p>
+        {#each videos.slice(1, 3) as v}
+          <div class="mb-6">
+            <LiteYouTube id={v.id} title={v.title} duration={v.duration} cta={$t('landing.videos.watch')} compact caption={false} />
+            <h3 class="mt-2.5 text-[15px] font-semibold leading-snug text-strong">{v.title}</h3>
           </div>
+        {/each}
+        <div class="mt-auto border-t border-edge/60 pt-5">
+          <p class="text-sm text-muted">{$t('landing.videos.note')}</p>
+          <a href="https://www.youtube.com/@pastatrade101" target="_blank" rel="noopener noreferrer" class="lp-link mt-2">
+            {$t('landing.videos.cta')} <ArrowRight class="h-3.5 w-3.5" />
+          </a>
         </div>
       </div>
     </div>
-  </section>
-{/if}
+  </div>
+</section>
 
-<!-- ── 6 · PRICING TEASER ─────────────────────────────────────────────────── -->
+<!-- ── 06 · PRICING ─────────────────────────────────────────────────────── -->
 {#if plans.length}
-  <section class="pricing-studio py-10 sm:py-14" use:whenInView={() => (pricingVisible = true)}>
-    <div class="grid gap-8 lg:grid-cols-[minmax(0,0.78fr)_minmax(0,1.22fr)] lg:items-start">
-      <div class="pricing-story" use:inview>
-        <span class="pill bg-accent/10 text-accent">{$t('landing.price.eyebrow')}</span>
-        <h2 class="mt-4 text-2xl font-semibold leading-tight text-strong sm:text-3xl lg:text-4xl">{$t('landing.price.title')}</h2>
-        <p class="mt-3 max-w-xl text-sm leading-relaxed text-muted sm:text-base">{$t('landing.price.sub')}</p>
+  <section class="lp-section" use:whenInView={() => (pricingVisible = true)}>
+    <div class="lp-wrap grid gap-12 lg:grid-cols-12 lg:gap-12">
+      <div class="min-w-0 lg:col-span-4" use:inview>
+        {@render sectionHead('06', 'landing.price.eyebrow', 'landing.price.title', 'landing.price.sub')}
 
-        <div class="mt-6 space-y-3">
-          <div class="pricing-route">
-            <span class="icon-badge bg-accent/12 text-accent"><Rocket class="h-5 w-5" /></span>
-            <div>
-              <p class="text-sm font-semibold text-strong">{$t('landing.price.route')}</p>
-              <p class="mt-1 text-xs leading-relaxed text-muted">{$t('landing.price.route.copy')}</p>
-            </div>
-          </div>
-          <div class="grid grid-cols-3 gap-2">
-            <div class="pricing-mini-stat">
-              <span class="text-lg font-semibold text-strong">{plans.length}</span>
-              <span>{$t('landing.price.stat.plans')}</span>
-            </div>
-            <div class="pricing-mini-stat">
-              <span class="text-lg font-semibold text-strong">{maxPlanFeatureCount()}</span>
-              <span>{$t('landing.price.stat.tools')}</span>
-            </div>
-            <div class="pricing-mini-stat">
-              <span class="text-lg font-semibold text-strong">0</span>
-              <span>{$t('landing.price.stat.keys')}</span>
-            </div>
-          </div>
+        <div class="mt-8 border-t border-edge pt-5">
+          <p class="lp-label text-mint">{$t('landing.price.route')}</p>
+          <p class="mt-2 text-sm leading-relaxed text-muted">{$t('landing.price.route.copy')}</p>
         </div>
-
-        <a href="/pricing" class="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-mint hover:underline">
-          {$t('landing.price.compare')} <ArrowRight class="h-4 w-4" />
-        </a>
+        <div class="mt-6 grid grid-cols-3 gap-4 border-t border-edge pt-5">
+          <div><p class="text-2xl font-semibold text-strong">{plans.length}</p><p class="mt-0.5 text-xs text-muted">{$t('landing.price.stat.plans')}</p></div>
+          <div><p class="text-2xl font-semibold text-strong">{maxPlanFeatureCount()}</p><p class="mt-0.5 text-xs text-muted">{$t('landing.price.stat.tools')}</p></div>
+          <div><p class="text-2xl font-semibold text-strong">0</p><p class="mt-0.5 text-xs text-muted">{$t('landing.price.stat.keys')}</p></div>
+        </div>
+        <a href="/pricing" class="lp-link mt-6">{$t('landing.price.compare')}</a>
       </div>
 
-      <div class="pricing-plan-grid">
+      <div class="grid min-w-0 gap-4 md:grid-cols-3 lg:col-span-8">
         {#if pricingVisible}
           {#each plans as p, i}
             <article
-              class="pricing-plan {p.is_popular ? 'pricing-plan-featured' : ''}"
-              style="--signal: var({planAccent(p, i)});"
-              in:fly={{ y: reduceMotion ? 0 : 24, duration: reduceMotion ? 0 : 520, delay: reduceMotion ? 0 : i * 120, easing: cubicOut }}
+              class="lp-plan {p.is_popular ? 'is-featured' : ''}"
+              in:fly={{ y: reduceMotion ? 0 : 20, duration: reduceMotion ? 0 : 480, delay: reduceMotion ? 0 : i * 110, easing: cubicOut }}
             >
               <div class="flex items-start justify-between gap-3">
-                <div>
-                  <h3 class="text-lg font-semibold text-strong">{p.name}</h3>
-                  <p class="mt-1 text-xs font-medium text-muted">{$t(planAudienceKey(p))}</p>
-                </div>
-                {#if p.badge}<span class="pill shrink-0 bg-accent/15 text-accent">{p.badge}</span>{/if}
+                <h3 class="text-lg font-semibold text-strong">{p.name}</h3>
+                {#if p.badge}<span class="rounded-md bg-accent/12 px-2 py-0.5 text-[11px] font-semibold text-accent">{p.badge}</span>{/if}
               </div>
+              <p class="mt-1 text-xs text-muted">{$t(planAudienceKey(p))}</p>
 
-              <div class="mt-5 flex items-end gap-1">
+              <p class="mt-5 flex items-baseline gap-1">
                 <span class="text-3xl font-semibold tracking-tight text-strong">{fmtMoney(p.monthly_price, p.currency)}</span>
-                <span class="mb-1 text-sm text-muted">{$t('common.perMonth')}</span>
-              </div>
-              {#if p.description}<p class="mt-2 min-h-[2.5rem] text-sm leading-relaxed text-muted">{p.description}</p>{/if}
+                <span class="text-sm text-muted">{$t('common.perMonth')}</span>
+              </p>
+              {#if p.description}<p class="mt-2 text-sm leading-relaxed text-muted">{p.description}</p>{/if}
 
-              <div class="mt-5 rounded-xl border border-edge/70 bg-panel-2/35 p-3">
-                <div class="flex items-center justify-between gap-3">
-                  <span class="text-xs font-semibold uppercase tracking-wider text-muted">{$t('landing.price.included')}</span>
-                  <span class="rounded-full bg-mint/10 px-2 py-0.5 text-xs font-semibold text-mint">{planFeatures(p).length}</span>
-                </div>
-                <ul class="mt-3 space-y-2 text-sm">
-                  {#each teaserFeatures(p) as fk}
-                    <li class="flex items-center gap-2 text-soft"><Check class="h-4 w-4 shrink-0 text-mint" />{FEATURE_LABELS[fk] ?? fk}</li>
-                  {/each}
-                </ul>
-                {#if extraFeatureCount(p) > 0}
-                  <p class="mt-3 text-xs font-medium text-accent">{$t('landing.price.more', { count: extraFeatureCount(p) })}</p>
-                {/if}
-              </div>
+              <ul class="mt-5 space-y-2 border-t border-edge/70 pt-4 text-sm">
+                {#each teaserFeatures(p) as fk}
+                  <li class="flex items-start gap-2 text-soft"><span class="mt-[0.55rem] h-1 w-1 shrink-0 rounded-full bg-mint"></span>{FEATURE_LABELS[fk] ?? fk}</li>
+                {/each}
+              </ul>
+              {#if extraFeatureCount(p) > 0}
+                <p class="mt-3 text-xs text-muted">{$t('landing.price.more', { count: extraFeatureCount(p) })}</p>
+              {/if}
 
-              <a href={planHref(p)} class="{p.is_popular ? 'btn-primary' : 'btn-ghost'} mt-5 w-full">
+              <a href={planHref(p)} class="{p.is_popular ? 'btn-primary' : 'btn-ghost'} mt-6 w-full justify-center lg:mt-auto">
                 {p.monthly_price === 0 ? $t('landing.price.startFree') : $t('landing.price.get', { name: p.name })}
               </a>
             </article>
@@ -710,1041 +511,255 @@
   </section>
 {/if}
 
-<!-- ── 7 · WHO IT'S FOR ───────────────────────────────────────────────────── -->
-<section class="py-10 sm:py-14">
-  <div class="mx-auto mb-8 max-w-2xl text-center">
-    <span class="pill bg-accent/10 text-accent">{$t('landing.persona.eyebrow')}</span>
-    <h2 class="mt-3 text-2xl font-semibold text-strong sm:text-3xl">{$t('landing.persona.title')}</h2>
-  </div>
-  <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
-    {#each personas as p, i}
-      <div class="card rail-card flex flex-col" style="--rail: var(--c-accent)" use:inview={{ delay: i * 80 }}>
-        <Quote class="h-7 w-7 text-accent/30" />
-        <p class="mt-2 flex-1 text-[15px] leading-relaxed text-soft">{$t(p.bKey)}</p>
-        <div class="mt-4 flex items-center gap-2.5 border-t border-edge/50 pt-3">
-          <span class="icon-badge bg-accent/12 text-accent"><p.icon class="h-5 w-5" /></span>
-          <span class="text-sm font-medium text-accent">{$t(p.tKey)}</span>
+<!-- ── 07 · WHO IT'S FOR ────────────────────────────────────────────────── -->
+<section class="lp-section">
+  <div class="lp-wrap" use:inview>
+    {@render sectionHead('07', 'landing.persona.eyebrow', 'landing.persona.title')}
+    <div class="mt-12 grid gap-10 md:grid-cols-3 md:gap-8">
+      {#each personas as p}
+        <div class="border-t border-edge pt-6">
+          <h3 class="lp-label text-mint">{$t(p.tKey)}</h3>
+          <p class="mt-3 text-lg leading-relaxed text-soft">{$t(p.bKey)}</p>
         </div>
-      </div>
-    {/each}
+      {/each}
+    </div>
+    <p class="mt-14 text-2xl font-semibold tracking-tight text-strong sm:text-3xl">{$t('landing.persona.quote')}</p>
   </div>
-  <p class="mx-auto mt-8 max-w-2xl text-center text-lg italic text-soft">{$t('landing.persona.quote')}</p>
 </section>
 
-<!-- ── 8 · FAQ ────────────────────────────────────────────────────────────── -->
-<section class="py-10 sm:py-14">
-  <div class="faq-center">
-    <div class="faq-intro" use:inview>
-      <span class="pill bg-mint/10 text-mint">{$t('landing.faq.eyebrow')}</span>
-      <h2 class="mt-4 text-2xl font-semibold leading-tight text-strong sm:text-3xl lg:text-4xl">{$t('landing.faq.title')}</h2>
-      <p class="mt-3 text-sm leading-relaxed text-muted sm:text-base">{$t('landing.faq.sub')}</p>
-
-      <div class="mt-6 space-y-3">
-        {#each faqHighlights as item, i}
-          <div class="faq-highlight" style="--signal: var({item.color});" use:inview={{ delay: 100 + i * 70 }}>
-            <span class="signal-icon"><item.icon class="h-4 w-4" /></span>
-            <div>
-              <h3 class="text-sm font-semibold text-strong">{$t(item.tKey)}</h3>
-              <p class="mt-1 text-xs leading-relaxed text-muted">{$t(item.bKey)}</p>
+<!-- ── 08 · FAQ ─────────────────────────────────────────────────────────── -->
+<section class="lp-section">
+  <div class="lp-wrap grid gap-12 lg:grid-cols-12 lg:gap-12">
+    <div class="min-w-0 lg:col-span-4" use:inview>
+      {@render sectionHead('08', 'landing.faq.eyebrow', 'landing.faq.title', 'landing.faq.sub')}
+      <ul class="mt-8 space-y-5">
+        {#each faqHighlights as h}
+          <li class="flex items-start gap-3">
+            <h.icon class="mt-0.5 h-4 w-4 shrink-0 text-mint" />
+            <div class="min-w-0">
+              <h3 class="text-[15px] font-semibold text-strong">{$t(h.tKey)}</h3>
+              <p class="mt-0.5 text-sm leading-relaxed text-muted">{$t(h.bKey)}</p>
             </div>
-          </div>
+          </li>
         {/each}
-      </div>
+      </ul>
     </div>
 
-    <div class="faq-board" use:inview={{ delay: 120 }}>
-      <div class="faq-board-head">
-        <div>
-          <p class="text-xs font-semibold uppercase tracking-wider text-muted">{$t('landing.faq.board')}</p>
-          <p class="mt-1 text-sm text-soft">{faqs.length} {$t('landing.faq.count')}</p>
-        </div>
-        <span class="flex h-10 w-10 items-center justify-center rounded-2xl bg-mint/12 text-mint">
-          <Quote class="h-5 w-5" />
-        </span>
-      </div>
-
-      <div class="mt-4 space-y-2.5">
-        {#each faqs as f, i}
-          <details class="faq-item group" open={i === 0} use:inview={{ delay: 160 + Math.min(i, 8) * 45 }}>
-            <summary>
-              <span class="faq-index">{String(i + 1).padStart(2, '0')}</span>
-              <span class="min-w-0 flex-1">
-                <span class="faq-group-label">{$t(f.groupKey)}</span>
-                <span class="mt-1 block text-sm font-semibold leading-snug text-strong sm:text-base">{$t(f.qKey)}</span>
-              </span>
-              <span class="faq-toggle">
-                <Plus class="h-4 w-4" />
-              </span>
-            </summary>
-            <p class="faq-answer">{$t(f.aKey)}</p>
-          </details>
-        {/each}
-      </div>
+    <div class="min-w-0 border-t border-edge lg:col-span-8">
+      {#each faqs as f, i}
+        <details class="lp-faq group" open={i === 0}>
+          <summary>
+            <span class="min-w-0 flex-1">
+              <span class="block text-[11px] font-semibold uppercase tracking-wider text-muted">{$t(f.groupKey)}</span>
+              <span class="mt-1 block text-[15px] font-semibold leading-snug text-strong sm:text-base">{$t(f.qKey)}</span>
+            </span>
+            <Plus class="lp-faq-icon mt-5 h-4 w-4 shrink-0 text-muted" />
+          </summary>
+          <p class="max-w-2xl pb-6 pr-8 text-[15px] leading-relaxed text-muted">{$t(f.aKey)}</p>
+        </details>
+      {/each}
     </div>
   </div>
 </section>
 
-<!-- ── 9 · FINAL CTA ──────────────────────────────────────────────────────── -->
-<section class="py-10 sm:py-14">
-  <div class="final-cta" use:inview>
-    <div class="final-cta-grid"></div>
-    <div class="relative z-[1] grid gap-7 lg:grid-cols-[minmax(0,0.95fr)_minmax(360px,0.72fr)] lg:items-center">
-      <div class="min-w-0">
-        <span class="pill bg-mint/10 text-mint"><Zap class="h-3.5 w-3.5" /> {$t('landing.final.eyebrow')}</span>
-        <h2 class="mt-4 max-w-3xl text-2xl font-semibold leading-tight text-strong sm:text-3xl lg:text-4xl">{$t('landing.final.title')}</h2>
-        <p class="mt-3 max-w-2xl text-sm leading-relaxed text-muted sm:text-base">{$t('landing.final.sub')}</p>
-
-        <div class="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-          <a href="/register" class="btn-primary w-full justify-center px-6 py-3 text-base shadow-lg shadow-mint/15 sm:w-auto">
-            {$t('landing.cta.startFree')} <ArrowRight class="h-4 w-4" />
-          </a>
-          <a href="/pricing" class="btn-ghost w-full justify-center px-6 py-3 text-base sm:w-auto">{$t('landing.cta.viewPricing')}</a>
-        </div>
-
-        <div class="mt-5 flex flex-wrap gap-2.5">
-          {#each finalTrust as item}
-            <span class="final-trust-chip"><Check class="h-3.5 w-3.5 text-mint" /> {$t(item)}</span>
-          {/each}
-        </div>
+<!-- ── FINAL CTA (one panel, nothing nested) ───────────────────────────── -->
+<section class="lp-section">
+  <div class="lp-wrap">
+    <div class="rounded-lg border border-mint/20 bg-mint/[0.05] px-6 py-14 text-center sm:px-12 sm:py-20" use:inview>
+      <p class="lp-eyebrow justify-center">{$t('landing.final.eyebrow')}</p>
+      <h2 class="lp-h2 mx-auto max-w-3xl">{$t('landing.final.title')}</h2>
+      <p class="lp-sub mx-auto">{$t('landing.final.sub')}</p>
+      <div class="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
+        <a href="/register" class="btn-primary justify-center px-6 py-3 text-base">{$t('landing.cta.startFree')} <ArrowRight class="h-4 w-4" /></a>
+        <a href="/pricing" class="btn-ghost justify-center px-6 py-3 text-base">{$t('landing.cta.viewPricing')}</a>
       </div>
-
-      <div class="final-proof">
-        <div class="flex items-start justify-between gap-3">
-          <div>
-            <p class="text-xs font-semibold uppercase tracking-wider text-muted">{$t('landing.final.preview.title')}</p>
-            <h3 class="mt-1 text-lg font-semibold text-strong">{$t('landing.feat.overview.t')}</h3>
-          </div>
-          <span class="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-mint/25 bg-mint/10 px-2.5 py-1 text-xs font-medium text-mint">
-            <span class="h-1.5 w-1.5 rounded-full bg-mint"></span>
-            {$t('landing.preview.synced')}
-          </span>
-        </div>
-
-        <div class="mt-5 space-y-3">
-          {#each finalProofs as item}
-            <div class="final-proof-row" style="--signal: var({item.color}); --level: {item.level};">
-              <span class="signal-icon"><item.icon class="h-4 w-4" /></span>
-              <div class="min-w-0 flex-1">
-                <div class="flex items-center justify-between gap-3">
-                  <span class="text-sm font-semibold text-strong">{$t(item.labelKey)}</span>
-                  <span class="text-xs font-medium text-muted">{$t(item.valueKey)}</span>
-                </div>
-                <div class="feature-meter mt-2"><span></span></div>
-              </div>
-            </div>
-          {/each}
-        </div>
-
-        <p class="mt-4 flex items-start gap-2 border-t border-edge/60 pt-4 text-xs leading-relaxed text-muted">
-          <ShieldCheck class="mt-0.5 h-3.5 w-3.5 shrink-0 text-mint" /> {$t('landing.final.trust')}
-        </p>
-      </div>
+      <p class="mx-auto mt-6 flex max-w-xl items-start justify-center gap-2 text-xs leading-relaxed text-muted">
+        <ShieldCheck class="mt-0.5 h-3.5 w-3.5 shrink-0 text-mint" /> {$t('landing.final.trust')}
+      </p>
     </div>
   </div>
 </section>
 
 <style>
-  /* ── Plain read section (mint --c-read accent, set inline on .read-studio) ── */
-  .read-studio {
-    position: relative;
-    overflow: hidden;
-    border-radius: 2rem;
-    border: 1px solid rgb(var(--glass-brd) / var(--glass-brd-a));
-    background:
-      radial-gradient(85% 80% at 6% 0%, rgb(var(--c-read) / 0.16), transparent 52%),
-      radial-gradient(75% 85% at 100% 100%, rgb(var(--c-read) / 0.1), transparent 50%),
-      rgb(var(--c-panel) / calc(var(--card-a) + 0.08));
-    box-shadow: var(--glass-sh);
-    padding: 1.5rem;
-  }
-  @supports ((backdrop-filter: blur(2px)) or (-webkit-backdrop-filter: blur(2px))) {
-    .read-studio {
-      backdrop-filter: blur(22px) saturate(165%);
-      -webkit-backdrop-filter: blur(22px) saturate(165%);
-    }
-  }
-  @media (min-width: 640px) {
-    .read-studio { padding: 2rem; }
-  }
-  @media (min-width: 1024px) {
-    .read-studio { padding: 2.5rem; }
-  }
-  .read-studio::after {
-    content: '';
-    position: absolute;
-    inset: 0 0 auto 0;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, rgb(var(--c-read) / 0.6), transparent);
-    pointer-events: none;
-  }
-  .read-studio-grid {
-    position: absolute;
-    inset: 0;
-    background-image: radial-gradient(rgb(var(--c-read) / 0.14) 1px, transparent 1.5px);
-    background-size: 22px 22px;
-    -webkit-mask-image: radial-gradient(70% 75% at 50% 25%, #000, transparent 78%);
-    mask-image: radial-gradient(70% 75% at 50% 25%, #000, transparent 78%);
-    pointer-events: none;
-  }
-  .read-pill {
-    border: 1px solid rgb(var(--c-read) / 0.3);
-    background: rgb(var(--c-read) / 0.1);
-    color: rgb(var(--c-read));
-    padding-left: 0.5rem;
-  }
-  .read-brand {
-    color: rgb(var(--c-read));
-  }
-  .read-point-icon {
-    display: inline-flex;
-    height: 2rem;
-    width: 2rem;
-    flex: 0 0 auto;
-    align-items: center;
-    justify-content: center;
-    border-radius: 0.75rem;
-    border: 1px solid rgb(var(--c-read) / 0.28);
-    background: rgb(var(--c-read) / 0.1);
-    color: rgb(var(--c-read));
-  }
-  .read-demo {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    border-radius: 1.5rem;
-    border: 1px solid rgb(var(--c-edge) / 0.72);
-    background: linear-gradient(180deg, rgb(var(--c-panel) / calc(var(--card-a) + 0.2)), rgb(var(--c-panel) / calc(var(--card-a) + 0.06)));
-    padding: 1.1rem;
-  }
-  /* Module-coverage footer — pinned to the bottom so the demo fills its column. */
-  .read-modules {
-    margin-top: auto;
-    padding-top: 1rem;
-  }
-  .read-modules-label {
-    font-size: 0.68rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: rgb(var(--c-muted));
-  }
-  .read-modules-chips {
-    margin-top: 0.55rem;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.4rem;
-  }
-  .read-module-chip {
-    border-radius: 9999px;
-    border: 1px solid rgb(var(--c-edge) / 0.7);
-    background: rgb(var(--c-panel-2) / 0.45);
-    padding: 0.22rem 0.6rem;
-    font-size: 0.7rem;
-    color: rgb(var(--c-soft));
-  }
-  .read-demo-label {
-    font-size: 0.68rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.09em;
-    color: rgb(var(--c-muted));
-  }
-  .read-demo-signals {
-    margin-top: 0.6rem;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
-  .read-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    min-width: 0;
-    max-width: 100%;
-    border-radius: 9999px;
-    border: 1px solid rgb(var(--c-edge) / 0.7);
-    background: rgb(var(--c-panel-2) / 0.5);
-    padding: 0.3rem 0.7rem;
-    font-size: 0.72rem;
-  }
-  .read-chip-dot {
-    height: 0.45rem;
-    width: 0.45rem;
-    flex: 0 0 auto;
-    border-radius: 9999px;
-    background: rgb(var(--signal));
-  }
-  .read-chip-val {
-    font-weight: 600;
-    color: rgb(var(--c-strong));
-  }
-  .read-demo-flow {
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    margin: 0.9rem 0;
-  }
-  .read-demo-line {
-    height: 1px;
-    flex: 1;
-    background: linear-gradient(90deg, transparent, rgb(var(--c-read) / 0.45), transparent);
-  }
-  .read-demo-flow-label {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    white-space: nowrap;
-    font-size: 0.72rem;
-    font-weight: 600;
-    color: rgb(var(--c-read));
-  }
-  .read-card {
-    border-radius: 1.25rem;
-    border: 1px solid rgb(var(--c-read) / 0.35);
-    background: rgb(var(--c-panel-2) / 0.4);
-    padding: 1rem;
-  }
-  .read-lang-toggle {
-    display: inline-flex;
-    overflow: hidden;
-    border-radius: 9999px;
-    border: 1px solid rgb(var(--c-edge) / 0.8);
-  }
-  .read-lang-btn {
-    padding: 0.15rem 0.6rem;
-    font-size: 0.68rem;
-    font-weight: 700;
-    color: rgb(var(--c-muted));
-    transition: background 0.2s ease, color 0.2s ease;
-  }
-  .read-lang-btn.is-active {
-    background: rgb(var(--c-read) / 0.16);
-    color: rgb(var(--c-read));
-  }
-
-  .video-studio {
-    position: relative;
-    overflow: hidden;
-    max-width: 100vw;
-    margin-inline: calc(50% - 50vw);
-    padding-inline: max(1rem, calc((100vw - 1440px) / 2 + 2rem));
-    border-block: 1px solid rgb(var(--c-edge) / 0.6);
-    background:
-      radial-gradient(90% 80% at 8% 0%, rgb(var(--c-danger) / 0.1), transparent 52%),
-      radial-gradient(80% 80% at 100% 20%, rgb(var(--c-accent) / 0.1), transparent 50%),
-      radial-gradient(72% 82% at 60% 120%, rgb(var(--c-mint) / 0.08), transparent 54%),
-      rgb(var(--c-panel-2) / calc(var(--card-a) + 0.12));
-  }
-  .video-studio::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background-image:
-      radial-gradient(circle at center, rgb(127 140 160 / 0.22) 1px, transparent 1.5px),
-      linear-gradient(110deg, transparent 12%, rgb(var(--c-danger) / 0.14) 44%, transparent 72%);
-    background-size: 20px 20px, 100% 100%;
-    -webkit-mask-image: linear-gradient(90deg, #000 0%, rgb(0 0 0 / 0.85) 28%, transparent 72%);
-    mask-image: linear-gradient(90deg, #000 0%, rgb(0 0 0 / 0.85) 28%, transparent 72%);
-    pointer-events: none;
-  }
-  .video-studio::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background:
-      linear-gradient(100deg, transparent 0 18%, rgb(var(--c-edge) / 0.5) 18% 18.12%, transparent 18.12% 100%),
-      linear-gradient(100deg, transparent 0 66%, rgb(var(--c-accent) / 0.2) 66% 66.1%, transparent 66.1% 100%);
-    opacity: 0.6;
-    pointer-events: none;
-  }
-  .video-studio-grid {
-    position: absolute;
-    inset: 0;
-    background-image:
-      linear-gradient(rgb(127 140 160 / 0.08) 1px, transparent 1px),
-      linear-gradient(90deg, rgb(127 140 160 / 0.08) 1px, transparent 1px);
-    background-size: 72px 72px;
-    -webkit-mask-image: linear-gradient(180deg, transparent, #000 16%, #000 72%, transparent);
-    mask-image: linear-gradient(180deg, transparent, #000 16%, #000 72%, transparent);
-    pointer-events: none;
-  }
-  .video-youtube-link {
-    display: inline-flex;
+  /* Content measure: the layout's container is 1440px; the landing reads at 1200. */
+  .lp-wrap {
     width: 100%;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.75rem;
-    border-radius: 0.5rem;
-    border: 1px solid rgb(var(--c-danger) / 0.35);
-    background: rgb(var(--c-danger) / 0.13);
-    padding: 0.9rem 1rem;
-    color: rgb(var(--c-danger));
-    font-weight: 700;
-    transition:
-      border-color 180ms ease,
-      background-color 180ms ease,
-      color 180ms ease;
+    max-width: 75rem;
+    margin-inline: auto;
   }
-  .video-youtube-link:hover {
-    border-color: rgb(var(--c-danger) / 0.55);
-    background: rgb(var(--c-danger) / 0.2);
-    color: rgb(var(--c-danger));
-  }
-  @media (max-width: 640px) {
-    .video-studio {
-      padding-inline: 1rem;
-    }
-  }
-
-  .feature-map {
-    position: relative;
-    overflow: hidden;
-    border-radius: 2rem;
-    border: 1px solid rgb(var(--glass-brd) / var(--glass-brd-a));
-    background:
-      radial-gradient(90% 80% at 10% 0%, rgb(var(--c-mint) / 0.14), transparent 52%),
-      radial-gradient(80% 80% at 100% 20%, rgb(var(--c-accent) / 0.12), transparent 48%),
-      radial-gradient(70% 70% at 78% 100%, rgb(var(--c-warn) / 0.08), transparent 54%),
-      rgb(var(--c-panel) / calc(var(--card-a) + 0.08));
-    box-shadow: var(--glass-sh);
-    padding: 1.5rem;
-  }
-  @supports ((backdrop-filter: blur(2px)) or (-webkit-backdrop-filter: blur(2px))) {
-    .feature-map {
-      backdrop-filter: blur(22px) saturate(165%);
-      -webkit-backdrop-filter: blur(22px) saturate(165%);
-    }
-  }
-  .feature-map::after {
-    content: '';
-    position: absolute;
-    inset: 0 0 auto 0;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, rgb(var(--c-mint) / 0.5), rgb(var(--c-accent) / 0.35), transparent);
-    pointer-events: none;
-  }
-  .feature-map-grid {
-    position: absolute;
-    inset: 0;
-    background-image:
-      linear-gradient(rgb(127 140 160 / 0.08) 1px, transparent 1px),
-      linear-gradient(90deg, rgb(127 140 160 / 0.08) 1px, transparent 1px);
-    background-size: 36px 36px;
-    -webkit-mask-image: radial-gradient(72% 78% at 50% 38%, #000, transparent 78%);
-    mask-image: radial-gradient(72% 78% at 50% 38%, #000, transparent 78%);
-    pointer-events: none;
-  }
-  .feature-top {
-    display: grid;
-    gap: 1.15rem;
-    align-items: end;
-  }
-  .feature-command-strip {
-    position: relative;
-    overflow: hidden;
-    border-radius: 1.35rem;
-    border: 1px solid rgb(var(--c-edge) / 0.72);
-    background:
-      radial-gradient(80% 120% at 0% 0%, rgb(var(--c-mint) / 0.1), transparent 52%),
-      rgb(var(--c-panel) / calc(var(--card-a) + 0.14));
-    padding: 1rem;
-  }
-  .feature-command-head {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 1rem;
-  }
-  .feature-command-metrics {
-    display: grid;
-    margin-top: 0.85rem;
-    border-top: 1px solid rgb(var(--c-edge) / 0.62);
-  }
-  .feature-command-metric {
-    min-width: 0;
-    padding: 0.75rem 0 0;
-  }
-  .feature-meter {
-    height: 0.35rem;
-    width: min(8.5rem, 38%);
-    flex: 0 0 auto;
-    overflow: hidden;
-    border-radius: 9999px;
-    background: rgb(var(--c-panel-2) / 0.85);
-  }
-  .feature-meter span {
-    display: block;
-    height: 100%;
-    width: var(--level);
-    border-radius: inherit;
-    background: linear-gradient(90deg, rgb(var(--signal) / 0.45), rgb(var(--signal)));
-  }
-  .feature-board {
-    display: grid;
-    overflow: hidden;
-    border-radius: 1.5rem;
-    border: 1px solid rgb(var(--c-edge) / 0.72);
-    background:
-      linear-gradient(180deg, rgb(var(--c-panel) / calc(var(--card-a) + 0.18)), rgb(var(--c-panel) / calc(var(--card-a) + 0.08))),
-      rgb(var(--c-panel));
-  }
-  .feature-column {
-    min-width: 0;
-    border-top: 1px solid rgb(var(--c-edge) / 0.62);
-    padding: 1rem;
-  }
-  .feature-column:first-child {
-    border-top: 0;
-  }
-  .feature-column-head {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 1rem;
-    border-bottom: 1px solid rgb(var(--group) / 0.24);
-    padding-bottom: 0.8rem;
-  }
-  .feature-list {
-    margin-top: 0.35rem;
-  }
-  .feature-list-row {
-    display: grid;
-    grid-template-columns: 2rem minmax(0, 1fr);
-    gap: 0.7rem;
-    align-items: center;
-    border-top: 1px solid rgb(var(--c-edge) / 0.55);
-    padding: 0.72rem 0;
-  }
-  .feature-list-row:first-child {
-    border-top: 0;
-  }
-  .signal-icon {
-    display: inline-flex;
-    height: 2.1rem;
-    width: 2.1rem;
-    flex: 0 0 auto;
-    align-items: center;
-    justify-content: center;
-    border-radius: 0.85rem;
-    color: rgb(var(--signal));
-    background: rgb(var(--signal) / 0.13);
-  }
-  .feature-list-copy {
-    min-width: 0;
-  }
-  .feature-list-copy h4 {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-size: 0.9rem;
-    font-weight: 650;
-    color: rgb(var(--c-strong));
-  }
-  .feature-list-copy p {
-    margin-top: 0.15rem;
-    display: -webkit-box;
-    overflow: hidden;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 1;
-    line-clamp: 1;
-    font-size: 0.78rem;
-    line-height: 1.45;
-    color: rgb(var(--c-muted));
-  }
-  .feature-row-meter {
-    height: 0.35rem;
-    overflow: hidden;
-    border-radius: 9999px;
-    background: rgb(var(--c-panel-2) / 0.9);
-  }
-  .feature-row-meter span {
-    display: block;
-    height: 100%;
-    width: var(--level);
-    border-radius: inherit;
-    background: rgb(var(--signal));
-  }
-  .feature-list-row-delivery {
-    grid-template-columns: 2rem minmax(0, 1fr);
+  .lp-section {
+    border-top: 1px solid rgb(var(--c-edge) / 0.6);
+    padding-block: 4rem;
   }
   @media (min-width: 640px) {
-    .feature-map {
-      padding: 2rem;
-    }
-    .feature-command-metrics {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-    .feature-command-metric {
-      border-left: 1px solid rgb(var(--c-edge) / 0.56);
-      padding: 0.15rem 0.85rem 0;
-    }
-    .feature-command-metric:first-child {
-      border-left: 0;
-      padding-left: 0;
-    }
-    .feature-list-row {
-      grid-template-columns: 2rem minmax(0, 1fr) minmax(4.5rem, 6.5rem);
-      gap: 0.8rem;
+    .lp-section {
+      padding-block: 5.5rem;
     }
   }
   @media (min-width: 1024px) {
-    .feature-map {
-      padding: 2.5rem;
-    }
-    .feature-top {
-      grid-template-columns: minmax(0, 0.78fr) minmax(520px, 1fr);
-    }
-    .feature-board {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-    .feature-column {
-      border-top: 0;
-      border-left: 1px solid rgb(var(--c-edge) / 0.58);
-      padding: 1.1rem;
-    }
-    .feature-column:nth-child(odd) {
-      border-left: 0;
-    }
-    .feature-column:nth-child(n + 3) {
-      border-top: 1px solid rgb(var(--c-edge) / 0.58);
-    }
-  }
-  @media (min-width: 1280px) {
-    .feature-board {
-      grid-template-columns: 1.05fr 1.12fr 1fr 0.95fr;
-    }
-    .feature-column,
-    .feature-column:nth-child(odd) {
-      border-left: 1px solid rgb(var(--c-edge) / 0.58);
-      border-top: 0;
-    }
-    .feature-column:first-child {
-      border-left: 0;
-    }
-  }
-  @media (max-width: 520px) {
-    .feature-map {
-      border-radius: 1.45rem;
-      padding: 1rem;
-    }
-    .feature-command-strip,
-    .feature-board {
-      border-radius: 1.1rem;
-    }
-    .feature-command-head {
-      display: grid;
-    }
-    .feature-column {
-      padding: 0.85rem;
-    }
-    .feature-row-meter,
-    .feature-meter {
-      display: none;
+    .lp-section {
+      padding-block: 6.5rem;
     }
   }
 
-  .pricing-studio {
-    position: relative;
-  }
-  .pricing-story {
-    position: relative;
-    overflow: hidden;
-    border-radius: 1.5rem;
-    border: 1px solid rgb(var(--c-edge) / 0.72);
-    background:
-      radial-gradient(90% 90% at 0% 0%, rgb(var(--c-accent) / 0.12), transparent 54%),
-      radial-gradient(80% 80% at 100% 100%, rgb(var(--c-mint) / 0.08), transparent 58%),
-      rgb(var(--c-panel) / calc(var(--card-a) + 0.16));
-    box-shadow: var(--glass-sh);
-    padding: 1.25rem;
-  }
-  .pricing-story::after {
-    content: '';
-    position: absolute;
-    inset: 0 0 auto 0;
-    height: 1px;
-    background: linear-gradient(90deg, rgb(var(--c-accent) / 0.55), transparent 72%);
-    pointer-events: none;
-  }
-  .pricing-route {
-    display: flex;
-    gap: 0.85rem;
-    border-radius: 1.1rem;
-    border: 1px solid rgb(var(--c-accent) / 0.18);
-    background: rgb(var(--c-accent) / 0.08);
-    padding: 0.9rem;
-  }
-  .pricing-mini-stat {
-    display: flex;
-    min-width: 0;
-    flex-direction: column;
-    gap: 0.15rem;
-    border-radius: 1rem;
-    border: 1px solid rgb(var(--c-edge) / 0.7);
-    background: rgb(var(--c-panel) / 0.58);
-    padding: 0.75rem;
-  }
-  .pricing-mini-stat span:last-child {
+  /* ── Type ── */
+  .lp-kicker {
+    font-size: 0.8125rem;
+    font-weight: 500;
     color: rgb(var(--c-muted));
-    font-size: 0.72rem;
-    line-height: 1.25;
   }
-  .pricing-plan-grid {
-    display: grid;
-    gap: 1rem;
+  .lp-h1 {
+    margin-top: 1rem;
+    font-size: clamp(2.375rem, 5.4vw, 4.25rem);
+    font-weight: 700;
+    line-height: 1.03;
+    letter-spacing: -0.035em;
+    color: rgb(var(--c-strong));
+    text-wrap: balance;
   }
-  .pricing-plan {
-    position: relative;
-    overflow: hidden;
-    border-radius: 1.35rem;
-    border: 1px solid rgb(var(--c-edge) / 0.78);
-    background:
-      linear-gradient(180deg, rgb(var(--c-panel) / calc(var(--card-a) + 0.2)), rgb(var(--c-panel-2) / calc(var(--card-a) + 0.08))),
-      rgb(var(--c-panel));
-    box-shadow: 0 14px 34px rgb(0 0 0 / 0.08);
-    padding: 1.15rem;
-    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  .lp-lead {
+    margin-top: 1.5rem;
+    max-width: 36rem;
+    font-size: 1.0625rem;
+    line-height: 1.65;
+    color: rgb(var(--c-muted));
   }
-  .pricing-plan::after {
-    content: '';
-    position: absolute;
-    inset: 0 0 auto 0;
-    height: 2px;
-    background: linear-gradient(90deg, transparent, rgb(var(--signal) / 0.7), transparent);
-    pointer-events: none;
-  }
-  .pricing-plan:hover {
-    transform: translateY(-2px);
-    border-color: rgb(var(--signal) / 0.32);
-    box-shadow: 0 18px 42px rgb(0 0 0 / 0.14);
-  }
-  .pricing-plan-featured {
-    border-color: rgb(var(--c-accent) / 0.45);
-    box-shadow: 0 20px 48px rgb(var(--c-accent) / 0.12);
-  }
-  @supports ((backdrop-filter: blur(2px)) or (-webkit-backdrop-filter: blur(2px))) {
-    .pricing-story,
-    .pricing-plan {
-      backdrop-filter: blur(20px) saturate(165%);
-      -webkit-backdrop-filter: blur(20px) saturate(165%);
+  @media (min-width: 640px) {
+    .lp-lead {
+      font-size: 1.1875rem;
     }
   }
-  @media (min-width: 768px) {
-    .pricing-plan-grid {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-    .pricing-plan-featured {
-      transform: translateY(-0.5rem);
-    }
-    .pricing-plan-featured:hover {
-      transform: translateY(-0.7rem);
-    }
-  }
-  @media (min-width: 1024px) {
-    .pricing-story {
-      position: sticky;
-      top: 6rem;
-      padding: 1.45rem;
-    }
-  }
-  @media (max-width: 520px) {
-    .pricing-story,
-    .pricing-plan {
-      border-radius: 1.15rem;
-      padding: 1rem;
-    }
-    .pricing-mini-stat {
-      padding: 0.65rem;
-    }
-  }
-
-  .faq-center {
-    display: grid;
-    gap: 1rem;
-    align-items: start;
-  }
-  .faq-intro,
-  .faq-board {
-    position: relative;
-    overflow: hidden;
-    border: 1px solid rgb(var(--glass-brd) / var(--glass-brd-a));
-    background: rgb(var(--c-panel) / calc(var(--card-a) + 0.16));
-    box-shadow: var(--glass-sh);
-  }
-  .faq-intro {
-    border-radius: 1.5rem;
-    padding: 1.2rem;
-    background:
-      radial-gradient(90% 90% at 0% 0%, rgb(var(--c-mint) / 0.13), transparent 55%),
-      radial-gradient(85% 90% at 100% 100%, rgb(var(--c-accent) / 0.08), transparent 55%),
-      rgb(var(--c-panel) / calc(var(--card-a) + 0.16));
-  }
-  .faq-intro::after {
-    content: '';
-    position: absolute;
-    inset: 0 0 auto 0;
-    height: 1px;
-    background: linear-gradient(90deg, rgb(var(--c-mint) / 0.5), transparent 72%);
-    pointer-events: none;
-  }
-  .faq-highlight {
-    display: flex;
-    gap: 0.85rem;
-    border-radius: 1rem;
-    border: 1px solid rgb(var(--signal) / 0.16);
-    background: rgb(var(--signal) / 0.07);
-    padding: 0.85rem;
-  }
-  .faq-board {
-    border-radius: 1.65rem;
-    padding: 0.85rem;
-    background:
-      radial-gradient(75% 70% at 100% 0%, rgb(var(--c-accent) / 0.1), transparent 52%),
-      rgb(var(--c-panel) / calc(var(--card-a) + 0.2));
-  }
-  .faq-board-head {
+  .lp-eyebrow {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    border-bottom: 1px solid rgb(var(--c-edge) / 0.65);
-    padding: 0.45rem 0.5rem 1rem;
+    gap: 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgb(var(--c-mint));
   }
-  .faq-item {
-    border-radius: 1rem;
-    border: 1px solid transparent;
-    transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  .lp-eyebrow-n {
+    font-variant-numeric: tabular-nums;
+    color: rgb(var(--c-muted));
   }
-  .faq-item summary {
+  .lp-eyebrow-n::after {
+    content: '';
+    display: inline-block;
+    width: 1.5rem;
+    height: 1px;
+    margin-left: 0.75rem;
+    vertical-align: middle;
+    background: rgb(var(--c-edge));
+  }
+  .lp-h2 {
+    margin-top: 1rem;
+    font-size: clamp(1.875rem, 3.6vw, 2.875rem);
+    font-weight: 650;
+    line-height: 1.08;
+    letter-spacing: -0.028em;
+    color: rgb(var(--c-strong));
+    text-wrap: balance;
+  }
+  .lp-sub {
+    margin-top: 1.125rem;
+    max-width: 40rem;
+    font-size: 1.0625rem;
+    line-height: 1.65;
+    color: rgb(var(--c-muted));
+  }
+  .lp-h3 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    line-height: 1.3;
+    color: rgb(var(--c-strong));
+  }
+  .lp-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgb(var(--c-muted));
+  }
+  .lp-num {
+    display: block;
+    font-size: 2.75rem;
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: -0.04em;
+    font-variant-numeric: tabular-nums;
+    color: rgb(var(--c-mint));
+  }
+  .lp-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: rgb(var(--c-mint));
+  }
+  .lp-link:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  /* ── Plain-read language toggle ── */
+  .lp-toggle {
+    display: inline-flex;
+    gap: 2px;
+    border-radius: 0.375rem;
+    border: 1px solid rgb(var(--c-edge));
+    padding: 2px;
+  }
+  .lp-toggle button {
+    border-radius: 0.25rem;
+    padding: 0.125rem 0.5rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: rgb(var(--c-muted));
+  }
+  .lp-toggle button.is-active {
+    background: rgb(var(--c-mint) / 0.15);
+    color: rgb(var(--c-mint));
+  }
+
+  /* ── Pricing plan: the only boxed item besides the plain-read card ── */
+  .lp-plan {
+    display: flex;
+    flex-direction: column;
+    border-radius: 0.5rem;
+    border: 1px solid rgb(var(--c-edge));
+    background: rgb(var(--c-panel) / 0.45);
+    padding: 1.5rem;
+  }
+  .lp-plan.is-featured {
+    border-color: rgb(var(--c-mint) / 0.5);
+    background: rgb(var(--c-mint) / 0.04);
+  }
+
+  /* ── FAQ: rows separated by hairlines, no boxes ── */
+  .lp-faq {
+    border-bottom: 1px solid rgb(var(--c-edge) / 0.6);
+  }
+  .lp-faq summary {
     display: flex;
     cursor: pointer;
     list-style: none;
-    align-items: center;
-    gap: 0.85rem;
-    padding: 0.95rem;
+    align-items: flex-start;
+    gap: 1.5rem;
+    padding-block: 1.25rem;
   }
-  .faq-item summary::-webkit-details-marker {
+  .lp-faq summary::-webkit-details-marker {
     display: none;
   }
-  .faq-item:hover {
-    background: rgb(var(--c-panel-2) / 0.42);
+  .lp-faq summary:hover :global(.lp-faq-icon) {
+    color: rgb(var(--c-strong));
   }
-  .faq-item[open] {
-    border-color: rgb(var(--c-mint) / 0.28);
-    background:
-      radial-gradient(95% 110% at 0% 0%, rgb(var(--c-mint) / 0.1), transparent 52%),
-      rgb(var(--c-panel-2) / 0.52);
-    box-shadow: 0 16px 35px rgb(0 0 0 / 0.08);
+  .lp-faq :global(.lp-faq-icon) {
+    transition: transform 200ms ease;
   }
-  .faq-index {
-    display: inline-flex;
-    height: 2.1rem;
-    width: 2.1rem;
-    flex: 0 0 auto;
-    align-items: center;
-    justify-content: center;
-    border-radius: 0.85rem;
-    background: rgb(var(--c-panel-2) / 0.92);
-    color: rgb(var(--c-muted));
-    font-size: 0.72rem;
-    font-weight: 700;
-  }
-  .faq-item[open] .faq-index {
-    background: rgb(var(--c-mint) / 0.14);
-    color: rgb(var(--c-mint));
-  }
-  .faq-group-label {
-    display: inline-flex;
-    max-width: 100%;
-    border-radius: 9999px;
-    background: rgb(var(--c-panel-2) / 0.78);
-    padding: 0.18rem 0.5rem;
-    color: rgb(var(--c-muted));
-    font-size: 0.68rem;
-    font-weight: 700;
-    text-transform: uppercase;
-  }
-  .faq-toggle {
-    display: inline-flex;
-    height: 2rem;
-    width: 2rem;
-    flex: 0 0 auto;
-    align-items: center;
-    justify-content: center;
-    border-radius: 9999px;
-    border: 1px solid rgb(var(--c-edge));
-    color: rgb(var(--c-muted));
-    transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
-  }
-  .faq-item[open] .faq-toggle {
+  .lp-faq[open] :global(.lp-faq-icon) {
     transform: rotate(45deg);
-    border-color: rgb(var(--c-mint) / 0.35);
-    background: rgb(var(--c-mint) / 0.1);
     color: rgb(var(--c-mint));
-  }
-  .faq-answer {
-    margin: 0;
-    padding: 0 0.95rem 1rem 3.95rem;
-    color: rgb(var(--c-muted));
-    font-size: 0.9rem;
-    line-height: 1.75;
-  }
-  @media (min-width: 1024px) {
-    .faq-center {
-      grid-template-columns: minmax(0, 0.82fr) minmax(0, 1.18fr);
-      gap: 1.25rem;
-    }
-    .faq-intro {
-      position: sticky;
-      top: 6rem;
-      padding: 1.45rem;
-    }
-    .faq-board {
-      padding: 1rem;
-    }
-  }
-  @media (max-width: 520px) {
-    .faq-intro,
-    .faq-board {
-      border-radius: 1.2rem;
-    }
-    .faq-item summary {
-      align-items: flex-start;
-      gap: 0.7rem;
-      padding: 0.8rem;
-    }
-    .faq-index,
-    .faq-toggle {
-      height: 1.85rem;
-      width: 1.85rem;
-    }
-    .faq-answer {
-      padding: 0 0.8rem 0.9rem 3.35rem;
-      font-size: 0.84rem;
-    }
-  }
-
-  .final-cta {
-    position: relative;
-    overflow: hidden;
-    border-radius: 2rem;
-    border: 1px solid rgb(var(--glass-brd) / var(--glass-brd-a));
-    background:
-      linear-gradient(135deg, rgb(var(--c-panel) / calc(var(--card-a) + 0.24)), rgb(var(--c-panel-2) / calc(var(--card-a) + 0.14))),
-      rgb(var(--c-panel));
-    box-shadow: var(--glass-sh);
-    padding: 1.25rem;
-  }
-  .final-cta::after {
-    content: '';
-    position: absolute;
-    inset: 0 0 auto 0;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, rgb(var(--c-mint) / 0.52), rgb(var(--c-accent) / 0.3), transparent);
-    pointer-events: none;
-  }
-  .final-cta-grid {
-    position: absolute;
-    inset: 0;
-    background-image: radial-gradient(rgb(127 140 160 / 0.12) 1px, transparent 1.4px);
-    background-size: 18px 18px;
-    -webkit-mask-image: linear-gradient(120deg, rgba(0, 0, 0, 0.72), transparent 68%);
-    mask-image: linear-gradient(120deg, rgba(0, 0, 0, 0.72), transparent 68%);
-    pointer-events: none;
-  }
-  .final-trust-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.45rem;
-    border-radius: 9999px;
-    border: 1px solid rgb(var(--c-edge) / 0.72);
-    background: rgb(var(--c-panel) / 0.62);
-    padding: 0.45rem 0.7rem;
-    color: rgb(var(--c-muted));
-    font-size: 0.78rem;
-    font-weight: 600;
-  }
-  .final-proof {
-    overflow: hidden;
-    border-radius: 1.35rem;
-    border: 1px solid rgb(var(--c-edge) / 0.78);
-    background:
-      linear-gradient(180deg, rgb(var(--c-panel) / calc(var(--card-a) + 0.2)), rgb(var(--c-panel-2) / calc(var(--card-a) + 0.1))),
-      rgb(var(--c-panel));
-    padding: 1rem;
-    box-shadow: 0 18px 44px rgb(0 0 0 / 0.12);
-  }
-  .final-proof-row {
-    display: flex;
-    min-width: 0;
-    align-items: center;
-    gap: 0.85rem;
-    border-radius: 1rem;
-    border: 1px solid rgb(var(--signal) / 0.16);
-    background: rgb(var(--signal) / 0.06);
-    padding: 0.85rem;
-  }
-  @supports ((backdrop-filter: blur(2px)) or (-webkit-backdrop-filter: blur(2px))) {
-    .final-cta,
-    .final-proof {
-      backdrop-filter: blur(22px) saturate(165%);
-      -webkit-backdrop-filter: blur(22px) saturate(165%);
-    }
-  }
-  @media (min-width: 640px) {
-    .final-cta {
-      padding: 1.65rem;
-    }
-    .final-proof {
-      padding: 1.2rem;
-    }
-  }
-  @media (min-width: 1024px) {
-    .final-cta {
-      padding: 2rem;
-    }
-  }
-  @media (max-width: 520px) {
-    .final-cta {
-      border-radius: 1.35rem;
-      padding: 1rem;
-    }
-    .final-proof {
-      border-radius: 1.1rem;
-    }
-    .final-proof-row {
-      align-items: flex-start;
-      gap: 0.7rem;
-      padding: 0.75rem;
-    }
-    .final-proof-row .flex.items-center.justify-between {
-      align-items: flex-start;
-      flex-direction: column;
-      gap: 0.15rem;
-    }
-  }
-
-  /* Faint market-grid behind the hero, fading outward */
-  .hero-grid {
-    position: absolute;
-    inset: -2rem -2rem auto -2rem;
-    height: 130%;
-    background-image:
-      linear-gradient(rgb(127 140 160 / 0.06) 1px, transparent 1px),
-      linear-gradient(90deg, rgb(127 140 160 / 0.06) 1px, transparent 1px);
-    background-size: 44px 44px;
-    -webkit-mask-image: radial-gradient(80% 60% at 70% 30%, #000, transparent 75%);
-    mask-image: radial-gradient(80% 60% at 70% 30%, #000, transparent 75%);
-    pointer-events: none;
-    z-index: 0;
-  }
-  /* Soft green glow behind the dashboard preview */
-  .hero-glow {
-    position: absolute;
-    inset: -12% -8% -12% -8%;
-    background: radial-gradient(60% 60% at 60% 40%, rgb(var(--c-mint) / 0.18), transparent 70%);
-    filter: blur(36px);
-    pointer-events: none;
-    z-index: 0;
   }
 </style>
