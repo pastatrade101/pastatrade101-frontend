@@ -111,17 +111,30 @@
       : []
   );
 
+  const DAY_MS = 86_400_000;
+  const dayLabel = (t: number) => new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' });
+
   const chartOption = $derived.by(() => {
     const s = view?.series ?? [];
     if (s.length < 2) return {};
+    // Early on the three lines sit within a point of each other, so whole numbers
+    // would print "100" on every gridline: show as many decimals as the spread needs.
+    const values = s.flatMap((p) => [p.nav, p.btc, p.top10]);
+    const spread = Math.max(...values) - Math.min(...values);
+    const digits = spread < 1 ? 2 : spread < 10 ? 1 : 0;
     return {
       backgroundColor: 'transparent',
-      grid: grid({ top: 30, right: 16 }),
+      // One value per day at 00:00 UTC: lay the date axis out in UTC so ticks land on the days.
+      useUTC: true,
+      grid: grid({ top: 30, right: 28 }),
       legend: { data: lines.map((l) => l.name), top: 0 },
-      tooltip: axisTooltip({ valueFormatter: (v: number) => v.toFixed(2) }),
+      tooltip: axisTooltip({
+        valueFormatter: (v: number) => v.toFixed(2),
+        axisPointer: { label: { formatter: ({ value }: { value: number }) => dayLabel(value) } }
+      }),
       dataZoom: [zoomInside()],
-      xAxis: timeAxis({ splitLine: { show: false } }),
-      yAxis: valueAxis({ scale: true, axisLabel: { formatter: (v: number) => v.toFixed(0) } }),
+      xAxis: timeAxis({ splitLine: { show: false }, minInterval: DAY_MS, axisLabel: { formatter: dayLabel, hideOverlap: true, showMinLabel: true, showMaxLabel: true } }),
+      yAxis: valueAxis({ scale: true, axisLabel: { formatter: (v: number) => v.toFixed(digits) } }),
       series: [
         lineSeries({ name: lines[0].name, color: colors.rot, width: 2, data: s.map((p) => [ts(p.date), p.nav]) }),
         lineSeries({ name: lines[1].name, color: colors.btc, width: 1.6, data: s.map((p) => [ts(p.date), p.btc]) }),
