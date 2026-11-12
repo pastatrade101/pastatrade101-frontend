@@ -581,49 +581,37 @@
           <p class="mt-3 max-w-2xl text-sm leading-relaxed text-muted sm:text-base">{$t('landing.videos.sub')}</p>
         </div>
 
-        <div class="video-channel-panel">
+        <div>
           <p class="text-xs font-semibold uppercase tracking-wider text-muted">{$t('landing.videos.channel')}</p>
-          <div class="mt-3 grid grid-cols-3 gap-2">
+          <ul class="mt-3 flex flex-wrap gap-x-5 gap-y-2">
             {#each videoSignals as signal}
-              <div class="video-signal" style="--signal: var({signal.color});">
-                <signal.icon class="h-4 w-4" />
-                <span>{$t(signal.tKey)}</span>
-              </div>
+              <li class="flex items-center gap-2 text-sm font-semibold text-strong">
+                <signal.icon class="h-4 w-4" style="color: rgb(var({signal.color}));" />
+                {$t(signal.tKey)}
+              </li>
             {/each}
-          </div>
+          </ul>
         </div>
       </div>
 
-      <div class="mt-8 grid items-stretch gap-5 lg:grid-cols-[minmax(0,1.3fr)_minmax(320px,0.72fr)]">
-        <div class="video-hero-card">
-          <div class="mb-3 flex items-center justify-between gap-3">
-            <span class="text-xs font-semibold uppercase tracking-wider text-muted">{$t('landing.videos.featured')}</span>
-            <span class="rounded-full border border-edge bg-panel-2/60 px-2.5 py-1 text-xs font-medium text-muted">{$t('landing.videos.signal.1.b')}</span>
-          </div>
-          <LiteYouTube id={videos[0].id} title={videos[0].title} duration={videos[0].duration} featured />
+      <!-- Flat layout: videos sit straight on the section, titles under each video -->
+      <div class="mt-10 grid gap-8 lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)] lg:gap-10">
+        <div class="min-w-0">
+          <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-muted">{$t('landing.videos.featured')}</p>
+          <LiteYouTube id={videos[0].id} title={videos[0].title} duration={videos[0].duration} featured caption={false} />
+          <h3 class="mt-3 text-lg font-semibold leading-snug text-strong sm:text-xl">{videos[0].title}</h3>
         </div>
 
-        <div class="video-queue">
-          <div class="flex items-center justify-between gap-3">
-            <div>
-              <p class="text-xs font-semibold uppercase tracking-wider text-muted">{$t('landing.videos.watchNext')}</p>
-              <h3 class="mt-1 text-lg font-semibold text-strong">{$t('landing.videos.playlist')}</h3>
+        <div class="flex min-w-0 flex-col">
+          <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-muted">{$t('landing.videos.playlist')}</p>
+          {#each videos.slice(1, 3) as v}
+            <div class="mb-5">
+              <LiteYouTube id={v.id} title={v.title} duration={v.duration} compact caption={false} />
+              <h3 class="mt-2.5 text-sm font-semibold leading-snug text-strong sm:text-base">{v.title}</h3>
             </div>
-            <span class="flex h-10 w-10 items-center justify-center rounded-2xl border border-edge bg-panel-2/60 text-danger">
-              <Flame class="h-5 w-5" />
-            </span>
-          </div>
+          {/each}
 
-          <div class="mt-4 space-y-3">
-            {#each videos.slice(1, 3) as v, i}
-              <div class="video-queue-item">
-                <span class="video-queue-index">0{i + 2}</span>
-                <LiteYouTube id={v.id} title={v.title} duration={v.duration} compact />
-              </div>
-            {/each}
-          </div>
-
-          <div class="mt-auto pt-4">
+          <div class="mt-auto">
             <p class="mb-3 text-sm leading-relaxed text-muted">{$t('landing.videos.note')}</p>
             <a href="https://www.youtube.com/@pastatrade101" target="_blank" rel="noopener noreferrer" class="video-youtube-link">
               <span>{$t('landing.videos.cta')}</span>
@@ -1080,81 +1068,13 @@
     mask-image: linear-gradient(180deg, transparent, #000 16%, #000 72%, transparent);
     pointer-events: none;
   }
-  .video-channel-panel,
-  .video-hero-card,
-  .video-queue {
-    border: 1px solid rgb(var(--glass-brd) / var(--glass-brd-a));
-    background: rgb(var(--c-panel) / var(--card-a));
-    backdrop-filter: blur(18px) saturate(150%);
-    -webkit-backdrop-filter: blur(18px) saturate(150%);
-  }
-  .video-channel-panel {
-    border-radius: 1.5rem;
-    padding: 1rem;
-  }
-  .video-signal {
-    display: flex;
-    min-height: 5.25rem;
-    flex-direction: column;
-    justify-content: space-between;
-    gap: 0.7rem;
-    border-radius: 1rem;
-    border: 1px solid rgb(var(--c-edge) / 0.7);
-    background: linear-gradient(180deg, rgb(var(--c-panel-2) / 0.7), rgb(var(--c-panel-2) / 0.4));
-    padding: 0.8rem;
-    color: rgb(var(--signal));
-  }
-  .video-signal span {
-    color: rgb(var(--c-strong));
-    font-size: 0.72rem;
-    font-weight: 700;
-    line-height: 1.2;
-  }
-  .video-hero-card,
-  .video-queue {
-    border-radius: 1.75rem;
-    padding: 1rem;
-  }
-  .video-hero-card {
-    display: flex;
-    min-height: 100%;
-    flex-direction: column;
-  }
-  .video-queue {
-    display: flex;
-    min-height: 100%;
-    flex-direction: column;
-  }
-  .video-queue-item {
-    display: grid;
-    grid-template-columns: 2.4rem minmax(0, 1fr);
-    gap: 0.8rem;
-    align-items: start;
-    border-radius: 1.25rem;
-    border: 1px solid rgb(var(--c-edge) / 0.6);
-    background: rgb(var(--c-panel-2) / 0.5);
-    padding: 0.65rem;
-  }
-  .video-queue-index {
-    display: flex;
-    height: 2rem;
-    width: 2rem;
-    align-items: center;
-    justify-content: center;
-    border-radius: 999px;
-    border: 1px solid rgb(var(--c-edge) / 0.7);
-    background: rgb(var(--c-panel-2) / 0.8);
-    color: rgb(var(--c-muted));
-    font-size: 0.7rem;
-    font-weight: 800;
-  }
   .video-youtube-link {
     display: inline-flex;
     width: 100%;
     align-items: center;
     justify-content: space-between;
     gap: 0.75rem;
-    border-radius: 1rem;
+    border-radius: 0.5rem;
     border: 1px solid rgb(var(--c-danger) / 0.35);
     background: rgb(var(--c-danger) / 0.13);
     padding: 0.9rem 1rem;
@@ -1173,12 +1093,6 @@
   @media (max-width: 640px) {
     .video-studio {
       padding-inline: 1rem;
-    }
-    .video-signal {
-      min-height: auto;
-    }
-    .video-queue-item {
-      grid-template-columns: 1fr;
     }
   }
 
