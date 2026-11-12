@@ -44,6 +44,8 @@
     description: string | null;
     raw_value: number | null;
     risk: number | null;
+    /** The day this reading was taken — earlier than the page date when a feed lags (it still counts for up to 7 days). */
+    as_of?: string | null;
   }
   interface Summary {
     as_of: string;
@@ -255,6 +257,30 @@
     social: summary?.categories.social != null || social?.social_risk_score != null
   });
 
+  // ── How the total is built ──
+  // The backend averages every active metric equally (a reading that misses a
+  // day keeps counting for up to 7), so each category weighs as much as the
+  // metrics behind it. Counted from the same rows the metric tables show, so
+  // the weights, the category values and the total always agree.
+  const modelParts = $derived.by(() => {
+    if (!metrics || !summary) return [];
+    const parts = [
+      { key: 'price', label: 'Price', rows: metrics.price, val: summary.categories.price, locked: false },
+      { key: 'onchain', label: 'On-chain', rows: metrics.onchain, val: summary.categories.onchain, locked: !canOnchain },
+      { key: 'social', label: 'Social', rows: metrics.social, val: summary.categories.social, locked: false }
+    ].map((p) => ({ ...p, count: p.rows.filter((m) => m.risk != null).length }));
+    const n = parts.reduce((a, p) => a + (p.val != null ? p.count : 0), 0);
+    return parts.map((p) => ({ ...p, weightPct: n && p.val != null ? Math.round((p.count / n) * 100) : 0 }));
+  });
+  const metricCount = $derived(modelParts.reduce((a, p) => a + (p.val != null ? p.count : 0), 0));
+  const mixText = $derived(
+    modelParts
+      .filter((p) => p.val != null && p.count)
+      .map((p) => `${p.count} ${p.label.toLowerCase()}`)
+      .join(', ')
+      .replace(/, ([^,]*)$/, ' and $1')
+  );
+
   // ── Category row + radar ────────────────────────────────────────────────
   // The three category tiles were built inline in the markup; hoisted here so
   // the radar ABOVE the row and the gauges INSIDE it read the same array and
@@ -456,7 +482,7 @@
     const r = displayRisk;
     const band = r < 0.4 ? 'low-to-moderate' : r < 0.6 ? 'moderate' : r < 0.8 ? 'elevated' : 'high';
     const stance = r < 0.4 ? 'The model supports disciplined DCA' : r < 0.6 ? 'The model supports normal DCA' : 'The model favours caution over accumulation';
-    return `BTC risk is currently ${band}. ${stance}, ${r < 0.4 ? 'though it does not yet show an extreme bottom zone' : r < 0.8 ? 'with risk building' : 'as conditions look historically stretched'}. Price metrics drive the score today; on-chain and social metrics would give a fuller picture once connected.`;
+    return `BTC risk is currently ${band}. ${stance}, ${r < 0.4 ? 'though it does not yet show an extreme bottom zone' : r < 0.8 ? 'with risk building' : 'as conditions look historically stretched'}. ${metricCount ? `The score averages ${metricCount} active metrics: ${mixText}.` : ''}`;
   });
 
   // Per-metric plain-language meaning.
@@ -647,6 +673,8 @@
     recovery: { pill: 'bg-mint/15 text-mint', bar: 'bg-mint', text: 'text-mint' }
   };
   const supplyTone = $derived(supplyPL ? TONE[supplyPL.tone] : TONE.neutral);
+  /** '5 Nov' — the day a lagging metric was last read. */
+  const fmtDay = (d: string) => new Date(`${d}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' });
   const fmtBtcAmt = (v: number | null) => (v == null ? '—' : `${new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 2 }).format(v)} BTC`);
 
   const RANGE_DAYS: Record<'30D' | '90D' | '1Y' | 'All', number> = { '30D': 30, '90D': 90, '1Y': 365, All: Infinity };
@@ -1135,7 +1163,7 @@
       <div class="flex flex-col items-center">
         <Gauge value={displayRisk} title="BTC Risk" size={220} />
         <span class="mt-1 rounded-full px-3 py-1 text-sm font-semibold" style="background: {zone.color}22; color: {zone.color}">{zone.action}</span>
-        <span class="mt-1 text-[10px] text-muted">{SMOOTH_DAYS}-day smoothed · raw {(summary.summary_risk ?? 0).toFixed(3)}</span>
+        <span class="mt-1 text-[10px] text-muted">{SMOOTH_DAYS}-day smoothed · today {(summary.summary_risk ?? 0).toFixed(3)}</span>
       </div>
       <div>
         <p class="stat-label">BTC Risk Summary</p>
@@ -1185,7 +1213,7 @@
     <div class="relative mb-4">
       <div class="card border border-mint/30 bg-mint/5 blur-[3px]" aria-hidden="true">
         <ReadLabel />
-        <p class="mt-1 text-sm leading-relaxed text-soft">BTC risk is currently low-to-moderate. The model supports disciplined DCA, though it does not yet show an extreme bottom zone. On-chain and social metrics would give a fuller picture once connected.</p>
+        <p class="mt-1 text-sm leading-relaxed text-soft">BTC risk is currently low-to-moderate. The model supports disciplined DCA, though it does not yet show an extreme bottom zone.</p>
       </div>
       <div class="absolute inset-0 flex flex-col items-center justify-center gap-1.5 px-4 text-center">
         <span class="mb-2 flex h-11 w-11 items-center justify-center rounded-full bg-mint/15"><Activity class="h-5 w-5 text-mint" /></span>
@@ -1276,15 +1304,6 @@
 
   <!-- Social risk summary + model integration -->
   {#if social}
-    {@const priceRisk = summary.categories.price}
-    {@const socialRisk = social.social_risk_score}
-    {@const onAvail = summary.categories.onchain != null}
-    {@const total =
-      onAvail && priceRisk != null && socialRisk != null
-        ? priceRisk * 0.5 + (summary.categories.onchain ?? 0) * 0.3 + socialRisk * 0.2
-        : socialRisk != null && priceRisk != null
-          ? priceRisk * 0.75 + socialRisk * 0.25
-          : priceRisk}
     <div class="card mb-4">
       <div class="mb-2 flex items-center justify-between">
         <h2 class="text-sm font-semibold text-strong">Social Risk</h2>
@@ -1307,23 +1326,42 @@
       </div>
     </div>
 
-    <!-- Total BTC Risk — category contributions -->
+  {/if}
+
+  <!-- Total BTC Risk — how the categories add up -->
+  {#if modelParts.length && displayRisk != null}
     <div class="card mb-4">
-      <h2 class="text-sm font-semibold text-strong">Total BTC Risk — category contributions</h2>
-      <p class="mb-2 text-xs text-muted">Integrated model: Price × {onAvail ? '50' : '75'}% {onAvail ? '· On-chain × 30%' : ''} · Social × {onAvail ? '20' : '25'}%.</p>
+      <h2 class="text-sm font-semibold text-strong">Total BTC Risk — how the categories add up</h2>
+      <p class="mb-2 text-xs text-muted">
+        Every active metric counts equally, so each category weighs as much as the metrics behind it:
+        {modelParts.filter((p) => p.val != null).map((p) => `${p.label} × ${p.weightPct}%`).join(' · ')}.
+      </p>
       <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div><p class="stat-label">Price Metrics</p><p class="stat-value text-lg">{priceRisk != null ? priceRisk.toFixed(3) : '—'}</p></div>
-        <div><p class="stat-label">On-Chain</p><p class="mt-1 text-sm text-muted">unavailable / premium</p></div>
-        <div><p class="stat-label">Social Metrics</p><p class="stat-value text-lg">{socialRisk != null ? socialRisk.toFixed(3) : '—'}</p></div>
-        <div><p class="stat-label">Total BTC Risk</p><p class="stat-value text-lg" style="color: {riskColor(total ?? null)}">{total != null ? total.toFixed(3) : '—'}</p></div>
+        {#each modelParts as p}
+          <div>
+            <p class="stat-label">{p.label}</p>
+            {#if p.locked}
+              <p class="mt-1 flex items-center gap-1 text-sm text-muted"><Lock class="h-3 w-3" /> Premium</p>
+            {:else if p.val != null}
+              <p class="stat-value text-lg" style="color: {riskColor(p.val)}">{p.val.toFixed(3)}</p>
+            {:else}
+              <p class="mt-1 text-sm text-muted">No data</p>
+            {/if}
+            <p class="text-[11px] text-muted">{p.count} metric{p.count === 1 ? '' : 's'}{p.val != null ? ` · ${p.weightPct}%` : ''}</p>
+          </div>
+        {/each}
+        <div>
+          <p class="stat-label">Total BTC Risk</p>
+          <p class="stat-value text-lg" style="color: {riskColor(displayRisk)}">{displayRisk.toFixed(3)}</p>
+          <p class="text-[11px] text-muted">{SMOOTH_DAYS}-day smoothed · today {(summary.summary_risk ?? 0).toFixed(3)}</p>
+        </div>
       </div>
       <p class="mt-2 rounded-lg border border-edge bg-panel-2 px-3 py-2 text-xs leading-relaxed text-muted">
-        Current model coverage: price metrics active; social metrics {socialRisk != null ? 'active' : 'unavailable'}; on-chain metrics unavailable / premium.
-        {socialRisk != null && socialRisk < 0.4
-          ? 'Social risk is low — public attention remains quiet, supporting a balanced-to-lower risk reading.'
-          : socialRisk != null && socialRisk >= 0.6
-            ? 'Social risk is elevated — if price metrics are also high, total risk moves toward caution / distribution.'
-            : 'Social risk is moderate — retail attention is rising but not euphoric.'}
+        Model coverage: price {coverage.price ? 'active' : 'no data'}; on-chain {coverage.onchain ? 'active' : 'no data'}; social {coverage.social ? 'active' : 'no data'}.
+        Today's categories average to {(summary.summary_risk ?? 0).toFixed(3)}; the headline total is the mean of the last {SMOOTH_DAYS} days, the same value as the gauge.
+        {#if social?.social_risk_score != null}
+          Social in the total is Wikipedia page views; the Social Risk card above is the wider social score ({social.social_risk_score.toFixed(3)}), shown for context.
+        {/if}
       </p>
     </div>
   {/if}
@@ -1348,8 +1386,8 @@
           Current BTC Risk: {(displayRisk ?? 0).toFixed(3)} — {zone.label}
         </span>
         <span class="pill {coverage.price ? 'bg-mint/15 text-mint' : 'bg-edge text-muted'}">Price {coverage.price ? 'active' : '—'}</span>
-        <span class="pill {coverage.onchain ? 'bg-mint/15 text-mint' : 'bg-edge text-muted'}">On-chain {coverage.onchain ? 'active' : 'premium / unavailable'}</span>
-        <span class="pill {coverage.social ? 'bg-mint/15 text-mint' : 'bg-edge text-muted'}">Social {coverage.social ? 'active' : 'pending'}</span>
+        <span class="pill {coverage.onchain ? 'bg-mint/15 text-mint' : 'bg-edge text-muted'}">On-chain {coverage.onchain ? 'active' : 'no data'}</span>
+        <span class="pill {coverage.social ? 'bg-mint/15 text-mint' : 'bg-edge text-muted'}">Social {coverage.social ? 'active' : 'no data'}</span>
       </div>
 
       <!-- Visibility toggles -->
@@ -1372,11 +1410,9 @@
         {/if}
       </p>
       <p class="mt-2 text-xs leading-relaxed text-muted">
-        Current model coverage: price metrics {coverage.price ? 'active' : 'inactive'}; on-chain
-        {coverage.onchain ? 'active' : 'unavailable / premium'}; social {coverage.social ? 'active' : 'pending'}. The score is
-        primarily price-based until full on-chain and social metrics are connected, so it may under- or over-state some cycle
-        conditions. This model is not a price prediction — it shows whether conditions are closer to historical accumulation or
-        distribution zones.
+        Model coverage: price {coverage.price ? 'active' : 'no data'}; on-chain {coverage.onchain ? 'active' : 'no data'}; social
+        {coverage.social ? 'active' : 'no data'}.{metricCount ? ` The score averages ${metricCount} active metrics (${mixText}); a metric whose feed misses a day keeps its last reading for up to 7 days.` : ''}
+        This model is not a price prediction — it shows whether conditions are closer to historical accumulation or distribution zones.
       </p>
     </div>
   {/if}
@@ -1732,9 +1768,12 @@
               {#if m.is_premium && !canOnchain}
                 <span class="pill bg-edge text-muted"><Lock class="h-3 w-3" /> Premium</span>
               {:else if m.risk == null}
-                <span class="text-xs text-muted">—</span>
+                <span class="text-xs text-muted" title="No reading in the last 7 days — not in the score">no data</span>
               {:else}
-                <span class="rounded px-2 py-0.5 font-mono text-xs font-semibold" style="background: {riskColor(m.risk)}22; color: {riskColor(m.risk)}">{m.risk.toFixed(3)}</span>
+                <span class="flex items-center gap-1.5">
+                  {#if m.as_of && metrics && m.as_of !== metrics.as_of}<span class="text-[10px] text-muted" title="Last reading — its feed lags; it still counts in the score for up to 7 days">{fmtDay(m.as_of)}</span>{/if}
+                  <span class="rounded px-2 py-0.5 font-mono text-xs font-semibold" style="background: {riskColor(m.risk)}22; color: {riskColor(m.risk)}">{m.risk.toFixed(3)}</span>
+                </span>
               {/if}
             </div>
           {:else}
