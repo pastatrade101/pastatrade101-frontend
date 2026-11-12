@@ -53,17 +53,18 @@
   };
   let pricingVisible = $state(false); // gates the staggered fly-in for pricing cards
   let userCount = $state<number | null>(null); // real registered users (from /stats)
-  let videos = $state<{ id: string; title: string; views: number | null }[]>([]); // latest YouTube uploads
+  // Videos about the platform itself, from the Pastatrade101 channel. Hand-picked
+  // (not the latest uploads) — update the ids when a new walkthrough goes up.
+  const HERO_VIDEO = { id: '3Oujv9Xp7UM', title: 'Pastatrade101.com — stop reacting, start reading the crypto market', duration: '1:13' };
+  const videos = [
+    { id: 'dnbd2-k-5Io', title: 'Is Bitcoin cheap or expensive right now? The risk score explained', duration: '5:23' },
+    { id: 'dcvpZab_tX4', title: 'One dashboard, every crypto signal — 19 tools in 72 seconds', duration: '1:12' }
+  ];
   onMount(async () => {
     try {
       plans = (await api<{ items: Plan[] }>('/plans')).items;
     } catch {
       /* pricing teaser is optional on the landing page */
-    }
-    try {
-      videos = (await api<{ items: { id: string; title: string; views: number | null }[] }>('/youtube/videos?limit=3')).items ?? [];
-    } catch {
-      /* video section is optional */
     }
     try {
       userCount = (await api<{ users: number }>('/stats')).users;
@@ -210,8 +211,8 @@
 />
 
 <svelte:head>
-  <!-- Preload the LCP hero image (AVIF for modern browsers). -->
-  <link rel="preload" as="image" href="/hero-img.avif" type="image/avif" />
+  <!-- Preload the LCP hero video thumbnail. -->
+  <link rel="preload" as="image" href="https://i.ytimg.com/vi_webp/{HERO_VIDEO.id}/maxresdefault.webp" type="image/webp" fetchpriority="high" />
 </svelte:head>
 
 <!-- ── 1 · HERO ───────────────────────────────────────────────────────────── -->
@@ -240,46 +241,11 @@
       </div>
     </div>
 
-    <!-- Founder portrait on a branded platform, with floating product proof -->
+    <!-- Platform tour video (thumbnail until clicked, then plays in place) -->
     <div class="relative min-w-0 lg:order-1">
       <div class="hero-glow"></div>
-      <div class="relative mx-auto w-full max-w-md lg:ml-0 lg:mr-auto">
-        <!-- Soft branded backdrop the cutout stands on -->
-        <div class="absolute inset-x-2 bottom-0 top-10 rounded-[2rem] border border-edge/60 bg-gradient-to-b from-mint/12 via-accent/[0.08] to-transparent"></div>
-
-        <picture class="contents">
-          <source srcset="/hero-img.avif" type="image/avif" />
-          <img
-            src="/hero-img.png"
-            alt="Pastatrade founder"
-            width="900"
-            height="900"
-            fetchpriority="high"
-            class="relative z-[1] mx-auto block w-full max-w-[26rem] object-contain"
-            style="filter: drop-shadow(0 22px 45px rgb(0 0 0 / 0.4));"
-          />
-        </picture>
-
-        <!-- Floating: live BTC risk proof (bottom-left) -->
-        <div class="absolute bottom-5 left-3 z-[2] w-44 rounded-xl border border-edge bg-panel/90 p-3 shadow-xl backdrop-blur">
-          <div class="flex items-center justify-between text-[11px]"><span class="text-muted">{$t('landing.preview.btcrisk')}</span><span class="font-semibold text-mint">{$t('landing.preview.gooddca')}</span></div>
-          <div class="mt-2 h-2 w-full overflow-hidden rounded-full" style="background: linear-gradient(90deg,#22c55e,#f59e0b,#ef4444)">
-            <div class="h-full w-[32%] border-r-2 border-strong bg-transparent"></div>
-          </div>
-          <div class="mt-1 text-xl font-bold text-strong">0.32</div>
-        </div>
-
-        <!-- Floating: live status + ecosystem signal (top-right) -->
-        <div class="absolute right-0 top-8 z-[2] rounded-xl border border-edge bg-panel/90 px-3 py-2 shadow-xl backdrop-blur sm:-right-3">
-          <div class="flex items-center gap-1.5">
-            <span class="relative flex h-1.5 w-1.5">
-              <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-mint opacity-75"></span>
-              <span class="relative inline-flex h-1.5 w-1.5 rounded-full bg-mint"></span>
-            </span>
-            <span class="text-[10px] uppercase tracking-wide text-muted">{$t('landing.preview.synced')}</span>
-          </div>
-          <span class="mt-1.5 inline-flex items-center rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-medium text-accent">NEAR · {$t('landing.preview.improving')}</span>
-        </div>
+      <div class="relative w-full shadow-[0_24px_60px_-12px_rgb(0_0_0/0.55)]">
+        <LiteYouTube id={HERO_VIDEO.id} title={HERO_VIDEO.title} duration={HERO_VIDEO.duration} cta={$t('landing.hero.watchTour')} eager />
       </div>
 
       <!-- Discover my journey CTA -->
@@ -634,7 +600,7 @@
             <span class="text-xs font-semibold uppercase tracking-wider text-muted">{$t('landing.videos.featured')}</span>
             <span class="rounded-full border border-edge bg-panel-2/60 px-2.5 py-1 text-xs font-medium text-muted">{$t('landing.videos.signal.1.b')}</span>
           </div>
-          <LiteYouTube id={videos[0].id} title={videos[0].title} views={videos[0].views} featured fill />
+          <LiteYouTube id={videos[0].id} title={videos[0].title} duration={videos[0].duration} featured />
         </div>
 
         <div class="video-queue">
@@ -652,7 +618,7 @@
             {#each videos.slice(1, 3) as v, i}
               <div class="video-queue-item">
                 <span class="video-queue-index">0{i + 2}</span>
-                <LiteYouTube id={v.id} title={v.title} views={v.views} compact />
+                <LiteYouTube id={v.id} title={v.title} duration={v.duration} compact />
               </div>
             {/each}
           </div>
