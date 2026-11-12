@@ -29,9 +29,10 @@
     x_label: string;
     series: CycleSeries[];
   }
+  // The platform's BTC risk (7-day smoothed, Risk Dashboard zones) plus cycle context.
   interface RiskScore {
     btc_price: number;
-    risk_score: number;
+    risk_score: number | null;
     risk_label: string;
     reason: string;
     distance_from_200ma: number | null;
@@ -298,12 +299,13 @@
   const readSignals = $derived.by(() => {
     const out: import('$lib/plain-read').ReadSignal[] = [];
     if (risk) {
-      out.push({
-        name: 'Cycle risk',
-        label: risk.risk_label,
-        value: `${risk.risk_score}/100`,
-        tone: risk.risk_score >= 70 ? 'danger' : risk.risk_score <= 40 ? 'good' : 'neutral'
-      });
+      if (risk.risk_score != null)
+        out.push({
+          name: 'BTC risk',
+          label: risk.risk_label,
+          value: `${risk.risk_score}/100`,
+          tone: risk.risk_score >= 80 ? 'danger' : risk.risk_score >= 60 ? 'warn' : risk.risk_score < 40 ? 'good' : 'neutral'
+        });
       out.push({ name: 'DCA window', label: risk.dca_window, meaning: risk.reason });
       if (risk.rsi != null) out.push({ name: 'RSI', label: 'RSI', value: risk.rsi, tone: risk.rsi >= 70 ? 'warn' : risk.rsi <= 30 ? 'good' : 'neutral' });
       out.push({ name: 'From ATH', label: 'Drawdown from ATH', value: `${risk.drawdown_from_ath.toFixed(0)}%` });
@@ -332,7 +334,7 @@
   <LockedFeature
     title="BTC Cycle Lab is a Premium feature"
     plan="premium"
-    bullets={['ROI overlays vs previous cycles & halvings', 'Year-over-year and cycle-low comparisons', 'Cycle risk gauge & DCA framing']}
+    bullets={['ROI overlays vs previous cycles & halvings', 'Year-over-year and cycle-low comparisons', 'BTC risk gauge & DCA framing']}
   />
 {:else if allowed === null}
   <div class="card text-center text-muted">Loading…</div>
@@ -341,10 +343,10 @@
 {#if risk}
   <div class="mb-4 grid gap-4 md:grid-cols-2">
     <div class="card flex items-center gap-4">
-      <Gauge value={risk.risk_score / 100} title="Cycle Risk" size={150} />
+      {#if risk.risk_score != null}<Gauge value={risk.risk_score / 100} title="BTC Risk" size={150} />{/if}
       <div class="min-w-0">
         <p class="text-sm font-semibold text-strong">{risk.risk_label}</p>
-        <p class="mt-0.5 text-xs text-muted">{risk.reason}</p>
+        <p class="mt-0.5 text-xs text-muted">{risk.reason} <a href="/app/risk" class="text-mint hover:underline">Risk Dashboard →</a></p>
         <div class="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
           <span class="text-muted">RSI <span class="text-body">{risk.rsi ?? '—'}</span></span>
           <span class="text-muted">vs 200D MA <span class="text-body">{fmtPct(risk.distance_from_200ma)}</span></span>
@@ -357,15 +359,17 @@
     <div class="card">
       <p class="stat-label">DCA / Accumulation</p>
       <p class="mt-1 text-2xl font-semibold text-strong">{risk.dca_window}</p>
-      <p class="mt-2 text-sm text-muted">
-        With cycle risk at <span class="text-body">{risk.risk_score}/100</span> ({risk.risk_label.toLowerCase()}),
-        BTC at {fmtUsd(risk.btc_price)} sits {risk.drawdown_from_ath.toFixed(0)}% from its ATH —
-        {risk.risk_score <= 40
-          ? 'historically a more favourable accumulation zone.'
-          : risk.risk_score >= 70
-            ? 'a higher-risk zone where adding aggressively has historically carried more downside.'
-            : 'a neutral zone — neither cheap nor stretched.'}
-      </p>
+      {#if risk.risk_score != null}
+        <p class="mt-2 text-sm text-muted">
+          With BTC risk at <span class="text-body">{risk.risk_score}/100</span> ({risk.risk_label}),
+          BTC at {fmtUsd(risk.btc_price)} sits {risk.drawdown_from_ath.toFixed(0)}% from its ATH —
+          {risk.risk_score < 40
+            ? 'historically a more favourable accumulation zone.'
+            : risk.risk_score >= 60
+              ? 'a higher-risk zone where adding aggressively has historically carried more downside.'
+              : 'a neutral zone — neither cheap nor stretched.'}
+        </p>
+      {/if}
     </div>
   </div>
 {/if}
