@@ -4,7 +4,7 @@
   import Gauge from '$lib/components/Gauge.svelte';
   import Disclaimer from '$lib/components/Disclaimer.svelte';
   import LockedFeature from '$lib/components/LockedFeature.svelte';
-  import AiInterpret from '$lib/components/AiInterpret.svelte';
+  import PlainRead from '$lib/components/PlainRead.svelte';
   import { membership, membershipReady, hasFeature } from '$lib/stores/membership';
   import { fmtPct, fmtUsd } from '$lib/format';
   import { grid, valueAxis, logAxis, categoryAxis, axisTooltip, lineSeries, rankedBars, adaptHue, zoomInside } from '$lib/charts/presets';
@@ -294,9 +294,9 @@
     };
   });
 
-  // Signals for the AI interpretation — built from values the page already computes.
-  const aiSignals = $derived.by(() => {
-    const out: import('$lib/components/AiInterpret.svelte').Signal[] = [];
+  // Signals for the plain read — built from values the page already computes.
+  const readSignals = $derived.by(() => {
+    const out: import('$lib/plain-read').ReadSignal[] = [];
     if (risk) {
       out.push({
         name: 'Cycle risk',
@@ -418,7 +418,7 @@
   {/if}
 
   <div class="mb-4">
-    <AiInterpret module="btc_cycle" title="Bitcoin Cycle Lab" signals={aiSignals} />
+    <PlainRead signals={readSignals} />
   </div>
 
   <!-- Toggle chips -->

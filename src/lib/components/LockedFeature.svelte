@@ -1,5 +1,5 @@
 <script lang="ts">
-  import AiLottie from './AiLottie.svelte';
+  import PremiumIcon from './PremiumIcon.svelte';
 
   interface Props {
     title?: string;
@@ -11,7 +11,7 @@
 </script>
 
 <div class="hero-card mx-auto max-w-xl text-center">
-  <AiLottie size={64} class="mx-auto mb-3" />
+  <PremiumIcon size={64} class="mx-auto mb-3" />
   <h2 class="text-lg font-semibold text-strong">{title}</h2>
   <p class="mt-1 text-sm text-muted">Available on <span class="font-medium text-body">{planLabel}</span>. Upgrade to unlock:</p>
   {#if bullets.length}

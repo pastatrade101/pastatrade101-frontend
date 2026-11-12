@@ -3,8 +3,8 @@
   import { api } from '$lib/api';
   import { membership, membershipReady, hasFeature } from '$lib/stores/membership';
   import LockedFeature from '$lib/components/LockedFeature.svelte';
-  import AiInterpret from '$lib/components/AiInterpret.svelte';
-  import AiLabel from '$lib/components/AiLabel.svelte';
+  import PlainRead from '$lib/components/PlainRead.svelte';
+  import ReadLabel from '$lib/components/ReadLabel.svelte';
   import EChart from '$lib/components/EChart.svelte';
   import { adaptHue, categoryAxis, grid, itemTooltip, rankedBars, tipBody, tipRow, valueAxis } from '$lib/charts/presets';
 
@@ -257,8 +257,8 @@
   const staleSources = $derived((data?.source_status ?? []).filter((s: any) => s.status === 'Stale').map((s: any) => s.source));
   const downSources = $derived((data?.source_status ?? []).filter((s: any) => s.status === 'Unavailable' || s.status === 'Partial').map((s: any) => s.source));
 
-  // AI interpretation signals — built from the page's own already-computed summary.
-  const aiSignals = $derived(
+  // Plain read signals — built from the page's own already-computed summary.
+  const readSignals = $derived(
     data?.summary
       ? [
           { name: 'Candidates', label: 'Research candidates surfaced', value: data.summary.total_candidates, tone: 'neutral' },
@@ -298,7 +298,7 @@
   <!-- Takeaway -->
   {#if data?.takeaway}
     <div class="hero-card mb-3">
-      <AiLabel />
+      <ReadLabel />
       <p class="mt-1 text-sm leading-relaxed text-soft">{data.takeaway}</p>
     </div>
   {/if}
@@ -336,8 +336,8 @@
   {:else if error}
     <div class="card border-danger/30 bg-danger/5 text-danger">{error}</div>
   {:else if data}
-    <!-- AI interpretation of the radar summary -->
-    <AiInterpret module="opportunity_radar" title="Opportunity Radar" signals={aiSignals} />
+    <!-- Plain read of the radar summary -->
+    <PlainRead signals={readSignals} />
     <div class="mb-4"></div>
 
     <!-- Summary cards -->

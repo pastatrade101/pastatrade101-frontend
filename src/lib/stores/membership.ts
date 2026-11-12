@@ -14,7 +14,7 @@ export interface Membership {
   days_left: number | null;
   features: Record<string, boolean>;
   limits: Record<string, number | null>;
-  usage: { watchlist_items: number; alerts: number; ai_interpretations?: number };
+  usage: { watchlist_items: number; alerts: number };
 }
 
 export const membership = writable<Membership | null>(null);

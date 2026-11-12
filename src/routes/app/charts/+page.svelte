@@ -9,7 +9,7 @@
   import EChart from '$lib/components/EChart.svelte';
   import { adaptHue, axisTooltip, grid, lineSeries, timeAxis, valueAxis, zoomInside } from '$lib/charts/presets';
   import Disclaimer from '$lib/components/Disclaimer.svelte';
-  import AiLabel from '$lib/components/AiLabel.svelte';
+  import ReadLabel from '$lib/components/ReadLabel.svelte';
 
   interface ChartDef { key: string; title: string; category: string; render: string; asset: string; description: string }
 
@@ -393,7 +393,7 @@
         <!-- Takeaway -->
         {#if hasIntel && takeaway}
           <div class="mt-3 rounded-lg border border-mint/30 bg-mint/5 px-3 py-2">
-            <AiLabel />
+            <ReadLabel />
             <p class="mt-1 text-sm leading-relaxed text-soft">{takeaway}</p>
           </div>
         {/if}

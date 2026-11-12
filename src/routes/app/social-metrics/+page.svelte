@@ -4,8 +4,8 @@
   import EChart from '$lib/components/EChart.svelte';
   import Disclaimer from '$lib/components/Disclaimer.svelte';
   import LockedFeature from '$lib/components/LockedFeature.svelte';
-  import AiInterpret from '$lib/components/AiInterpret.svelte';
-  import AiLabel from '$lib/components/AiLabel.svelte';
+  import PlainRead from '$lib/components/PlainRead.svelte';
+  import ReadLabel from '$lib/components/ReadLabel.svelte';
   import { membership, membershipReady, hasFeature } from '$lib/stores/membership';
   import {
     adaptHue,
@@ -89,11 +89,11 @@
         : 'Social risk is high. Retail attention and sentiment are elevated — if price metrics are also high, total risk should move closer to caution or distribution.';
   });
 
-  // Map a 0–1 risk value to an AI-signal tone, mirroring the page's riskColor thresholds.
+  // Map a 0–1 risk value to an signal tone, mirroring the page's riskColor thresholds.
   const riskTone = (r: number | null) => (r == null ? 'neutral' : r < 0.4 ? 'good' : r < 0.6 ? 'warn' : 'danger');
 
-  // Signals for the AI interpretation — built from values this page already computes/shows.
-  const aiSignals = $derived(
+  // Signals for the plain read — built from values this page already computes/shows.
+  const readSignals = $derived(
     data
       ? [
           { name: 'social_risk_score', label: data.label, value: data.social_risk_score, tone: riskTone(data.social_risk_score) },
@@ -290,15 +290,15 @@
     <div>
       <p class="text-sm leading-relaxed text-soft">{data.interpretation}</p>
       <div class="mt-2 rounded-lg border border-mint/30 bg-mint/5 px-3 py-2">
-        <AiLabel />
+        <ReadLabel />
         <p class="mt-1 text-xs leading-relaxed text-soft">{takeaway}</p>
       </div>
       <p class="mt-2 rounded-lg border border-edge bg-panel-2 px-3 py-1.5 text-xs text-muted">{data.coverage_status}</p>
     </div>
   </div>
 
-  <!-- AI interpretation (self-gating: Premium button / free upsell) -->
-  <div class="mb-4"><AiInterpret module="social" title="Social Signals" signals={aiSignals} /></div>
+  <!-- Plain read -->
+  <div class="mb-4"><PlainRead signals={readSignals} /></div>
 
   <!-- Source status -->
   <div class="card mb-4">

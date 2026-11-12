@@ -6,8 +6,8 @@
   import Gauge from '$lib/components/Gauge.svelte';
   import EChart from '$lib/components/EChart.svelte';
   import Disclaimer from '$lib/components/Disclaimer.svelte';
-  import AiInterpret from '$lib/components/AiInterpret.svelte';
-  import AiLabel from '$lib/components/AiLabel.svelte';
+  import PlainRead from '$lib/components/PlainRead.svelte';
+  import ReadLabel from '$lib/components/ReadLabel.svelte';
   import { fmtPct, fmtUsd } from '$lib/format';
   import {
     adaptHue,
@@ -419,12 +419,12 @@
     return `${active.slice(0, -1).join(', ')} and ${active[active.length - 1]}`;
   });
 
-  // Map a 0–1 risk value to an AiInterpret tone (low risk is favourable for DCA).
+  // Map a 0–1 risk value to a plain-read tone (low risk is favourable for DCA).
   const riskTone = (r: number | null): 'good' | 'neutral' | 'warn' | 'danger' =>
     r == null ? 'neutral' : r < 0.4 ? 'good' : r < 0.6 ? 'neutral' : r < 0.8 ? 'warn' : 'danger';
 
-  // Signals for the AI interpretation — built from the page's own computed values.
-  const aiSignals = $derived(
+  // Signals for the plain read — built from the page's own computed values.
+  const readSignals = $derived(
     displayRisk != null && zone
       ? [
           { name: 'Overall risk verdict', label: humanVerdict.head, value: `${Math.round(displayRisk * 100)}/100`, meaning: humanVerdict.action || humanVerdict.sub, tone: riskTone(displayRisk) },
@@ -1171,20 +1171,20 @@
     </div>
   </div>
 
-  <!-- AI interpretation of the verdict + key risk signals -->
-  <div class="mb-4"><AiInterpret module="risk" title="BTC Risk Dashboard" signals={aiSignals} /></div>
+  <!-- Plain read of the verdict + key risk signals -->
+  <div class="mb-4"><PlainRead signals={readSignals} /></div>
 
   <!-- Premium takeaway -->
   {#if canInterp}
     <div class="card mb-4 border border-mint/30 bg-mint/5">
-      <AiLabel />
+      <ReadLabel />
       <p class="mt-1 text-sm leading-relaxed text-soft {expandedTakeaway ? '' : 'line-clamp-3 lg:line-clamp-none'}">{premiumTakeaway}</p>
       <button type="button" class="mt-2 text-xs font-medium text-accent lg:hidden" onclick={() => (expandedTakeaway = !expandedTakeaway)}>{expandedTakeaway ? 'Show less' : 'Read more'}</button>
     </div>
   {:else}
     <div class="relative mb-4">
       <div class="card border border-mint/30 bg-mint/5 blur-[3px]" aria-hidden="true">
-        <AiLabel />
+        <ReadLabel />
         <p class="mt-1 text-sm leading-relaxed text-soft">BTC risk is currently low-to-moderate. The model supports disciplined DCA, though it does not yet show an extreme bottom zone. On-chain and social metrics would give a fuller picture once connected.</p>
       </div>
       <div class="absolute inset-0 flex flex-col items-center justify-center gap-1.5 px-4 text-center">
@@ -1366,7 +1366,7 @@
       <!-- Takeaway + coverage note below chart -->
       <p class="mt-3 rounded-lg border border-edge bg-panel-2 px-3 py-2 text-xs leading-relaxed text-soft">
         {#if canInterp}
-          <AiLabel /><br /> {premiumTakeaway}
+          <ReadLabel /><br /> {premiumTakeaway}
         {:else}
           <Lock class="mr-1 inline h-3 w-3 text-accent" /><span class="font-medium text-strong">Signal read</span> — the plain-language interpretation is a Mid &amp; Premium feature. <a href="/pricing" class="font-medium text-accent hover:underline">Upgrade</a>
         {/if}
@@ -1457,7 +1457,7 @@
 
       <!-- Premium takeaway -->
       <div class="mt-3 card border border-mint/30 bg-mint/5">
-        <AiLabel />
+        <ReadLabel />
         <p class="mt-1 text-sm leading-relaxed text-soft">{onchainPremiumTakeaway}</p>
       </div>
 
@@ -1616,7 +1616,7 @@
 
       <!-- Premium takeaway -->
       <div class="mt-3 card border border-mint/30 bg-mint/5">
-        <AiLabel />
+        <ReadLabel />
         <p class="mt-1 text-sm leading-relaxed text-soft">{supplyPL.premium_takeaway}</p>
       </div>
 

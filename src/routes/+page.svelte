@@ -4,7 +4,7 @@
     ArrowRight, Radar, Layers, Waves, Gauge, Star, ShieldCheck, Check, Zap, TrendingUp,
     Coins, Database, RefreshCw, Clock, LayoutGrid, HeartCrack, UserPlus, LineChart, Rocket,
     PiggyBank, Repeat, Quote, Plus, Activity, BarChart3, User, Compass, Download, FileText,
-    DoorOpen, Spline, Flame, Languages, Sparkles
+    DoorOpen, Spline, Flame, Languages, ListChecks, MessageSquareText
   } from '@lucide/svelte';
   import { api } from '$lib/api';
   import { user } from '$lib/stores/auth';
@@ -20,7 +20,9 @@
   import CountUp from '$lib/components/CountUp.svelte';
   import LiteYouTube from '$lib/components/LiteYouTube.svelte';
   import Seo from '$lib/components/Seo.svelte';
-  import AiLottie from '$lib/components/AiLottie.svelte';
+  import { buildPlainRead, plainReadFooter } from '$lib/plain-read';
+  import { en } from '$lib/i18n/locales/en';
+  import { sw } from '$lib/i18n/locales/sw';
   import { inview, whenInView } from '$lib/actions/inview';
 
   const SITE_URL = 'https://pastatrade101.com';
@@ -165,28 +167,29 @@
   ];
   const finalTrust = ['landing.trust.free', 'landing.trust.noexchange', 'landing.trust.readonly'];
 
-  // ── Live AI section ──────────────────────────────────────────────────────
-  const aiPoints = [
-    { icon: ShieldCheck, tKey: 'landing.ai.b1.t', bKey: 'landing.ai.b1.b' },
-    { icon: Languages, tKey: 'landing.ai.b2.t', bKey: 'landing.ai.b2.b' },
-    { icon: Sparkles, tKey: 'landing.ai.b3.t', bKey: 'landing.ai.b3.b' }
+  // ── Plain read section ───────────────────────────────────────────────────
+  const readPoints = [
+    { icon: ShieldCheck, tKey: 'landing.read.b1.t', bKey: 'landing.read.b1.b' },
+    { icon: Languages, tKey: 'landing.read.b2.t', bKey: 'landing.read.b2.b' },
+    { icon: LayoutGrid, tKey: 'landing.read.b3.t', bKey: 'landing.read.b3.b' }
   ];
-  // Modules the same AI read is available on (proof of breadth in the demo panel).
-  const aiModules = ['BTC Risk', 'Alt/BTC Strength', 'Exit Strategy', 'Ecosystems', 'Derivatives', 'Social Risk', 'Log Regression', 'Token Radar'];
-  // Self-contained bilingual demo of a real AI read (independent of the site
-  // locale) so a visitor can watch the same interpretation switch to Kiswahili.
-  const AI_LANGS = ['en', 'sw'] as const;
-  let aiDemoLang = $state<(typeof AI_LANGS)[number]>('en');
-  const aiDemo = {
-    en: {
-      headline: 'Patience beats chasing right now',
-      body: 'Bitcoin sits in a healthy zone without overheating, and altcoins look selective rather than broad. The calm backdrop favours steady accumulation over chasing a crowded rush.'
-    },
-    sw: {
-      headline: 'Subira ni bora kuliko kukimbiza sasa',
-      body: 'Bitcoin iko katika eneo zuri bila kuzidi joto, na altcoins zinaonekana za kuchagua badala ya kwa wingi. Mazingira tulivu yanapendelea kukusanya taratibu kuliko kukimbiza msongamano.'
-    }
-  } as const;
+  // Modules that show the same plain read (proof of breadth in the demo panel).
+  const readModules = ['BTC Risk', 'Alt/BTC Strength', 'Exit Strategy', 'Ecosystems', 'Derivatives', 'Social Risk', 'Log Regression', 'Token Radar'];
+  // The demo runs the app's real read rules ($lib/plain-read) on the three sample
+  // signals above. It has its own language switch, independent of the site
+  // language, so a visitor can see the same read in Kiswahili.
+  const READ_LANGS = ['en', 'sw'] as const;
+  type ReadDemoLang = (typeof READ_LANGS)[number];
+  let readDemoLang = $state<ReadDemoLang>('en');
+  const DICTS: Record<ReadDemoLang, Record<string, string>> = { en, sw };
+  const tr = (lang: ReadDemoLang, key: string) => DICTS[lang][key] ?? DICTS.en[key] ?? key;
+  const demoTone: Record<string, string> = { 'landing.preview.btcrisk': 'good' };
+  const readDemo = $derived(
+    buildPlainRead(
+      featurePreviewStats.map((s) => ({ name: tr(readDemoLang, s.labelKey), label: tr(readDemoLang, s.valueKey), tone: demoTone[s.labelKey] ?? 'neutral' })),
+      readDemoLang
+    )
+  );
 
   // Base structured data + a FAQPage built from the FAQ section (rich-result eligible).
   const seoJsonLd = $derived([
@@ -483,29 +486,25 @@
   </div>
 </section>
 
-<!-- ── 4b · LIVE AI ────────────────────────────────────────────────────────── -->
-<section id="ai" class="scroll-mt-24 py-10 sm:py-14">
-  <div class="ai-studio" style="--c-ai: 248 125 127;" use:inview>
-    <div class="ai-studio-grid"></div>
+<!-- ── 4b · PLAIN READS ──────────────────────────────────────────────────── -->
+<section id="plain-read" class="scroll-mt-24 py-10 sm:py-14">
+  <div class="read-studio" style="--c-read: var(--c-mint);" use:inview>
+    <div class="read-studio-grid"></div>
     <div class="relative z-[1]">
       <!-- Header spans full width so the two body columns stay balanced -->
       <div class="max-w-2xl">
-        <span class="pill ai-pill"><AiLottie size={22} /> {$t('landing.ai.eyebrow')}</span>
-        <h2 class="mt-4 text-2xl font-semibold leading-tight text-strong sm:text-3xl lg:text-4xl">{$t('landing.ai.title')}</h2>
-        <p class="mt-3 text-sm leading-relaxed text-muted sm:text-base">{$t('landing.ai.sub')}</p>
+        <span class="pill read-pill"><MessageSquareText class="h-3.5 w-3.5" /> {$t('landing.read.eyebrow')}</span>
+        <h2 class="mt-4 text-2xl font-semibold leading-tight text-strong sm:text-3xl lg:text-4xl">{$t('landing.read.title')}</h2>
+        <p class="mt-3 text-sm leading-relaxed text-muted sm:text-base">{$t('landing.read.sub')}</p>
       </div>
 
       <div class="mt-8 grid gap-6 lg:grid-cols-2 lg:items-stretch lg:gap-8">
-        <!-- Visual + benefits + CTA (CTA pinned to the bottom to fill the column) -->
+        <!-- Benefits + CTA (CTA pinned to the bottom to fill the column) -->
         <div class="flex flex-col">
-          <div class="ai-hero-visual" use:inview>
-            <img src="/88.jpg" alt="An AI that reads live crypto signals and explains them in plain language" loading="lazy" decoding="async" width="1000" height="563" />
-            <span class="ai-hero-cap"><AiLottie size={18} /> {$t('landing.ai.hero.cap')}</span>
-          </div>
-          <ul class="mt-6 space-y-3.5">
-            {#each aiPoints as p, i}
+          <ul class="space-y-3.5">
+            {#each readPoints as p, i}
               <li class="flex items-start gap-3" use:inview={{ delay: 60 + i * 70 }}>
-                <span class="ai-point-icon"><p.icon class="h-4 w-4" /></span>
+                <span class="read-point-icon"><p.icon class="h-4 w-4" /></span>
                 <div class="min-w-0">
                   <h3 class="text-sm font-semibold text-strong">{$t(p.tKey)}</h3>
                   <p class="mt-0.5 text-sm leading-relaxed text-muted">{$t(p.bKey)}</p>
@@ -514,52 +513,51 @@
             {/each}
           </ul>
           <div class="mt-auto flex flex-wrap items-center gap-3 pt-7">
-            <a href={$user ? '/app' : '/register'} class="btn-primary">{$t('landing.ai.cta.primary')} <ArrowRight class="h-4 w-4" /></a>
-            <a href="/pricing" class="btn-ghost">{$t('landing.ai.cta.secondary')}</a>
+            <a href={$user ? '/app' : '/register'} class="btn-primary">{$t('landing.read.cta.primary')} <ArrowRight class="h-4 w-4" /></a>
+            <a href="/pricing" class="btn-ghost">{$t('landing.read.cta.secondary')}</a>
           </div>
         </div>
 
-        <!-- Live AI demo: your signals → one plain-language read, in either language -->
-        <div class="ai-demo" use:inview={{ delay: 120 }}>
-          <p class="ai-demo-label">{$t('landing.ai.demo.from')}</p>
-          <div class="ai-demo-signals">
+        <!-- Demo: three sample signals → the plain read the rules write, in either language -->
+        <div class="read-demo" use:inview={{ delay: 120 }}>
+          <p class="read-demo-label">{$t('landing.read.demo.from')}</p>
+          <div class="read-demo-signals">
             {#each featurePreviewStats as stat}
-              <span class="ai-chip" style="--signal: var({stat.color});">
-                <span class="ai-chip-dot"></span>
-                <span class="truncate text-muted">{$t(stat.labelKey)}</span>
-                <span class="ai-chip-val truncate">{$t(stat.valueKey)}</span>
+              <span class="read-chip" style="--signal: var({stat.color});">
+                <span class="read-chip-dot"></span>
+                <span class="truncate text-muted">{tr(readDemoLang, stat.labelKey)}</span>
+                <span class="read-chip-val truncate">{tr(readDemoLang, stat.valueKey)}</span>
               </span>
             {/each}
           </div>
 
-          <div class="ai-demo-flow" aria-hidden="true">
-            <span class="ai-demo-line"></span>
-            <span class="ai-demo-flow-label"><AiLottie size={28} /> {$t('landing.ai.demo.reads')}</span>
-            <span class="ai-demo-line"></span>
+          <div class="read-demo-flow" aria-hidden="true">
+            <span class="read-demo-line"></span>
+            <span class="read-demo-flow-label"><ListChecks class="h-4 w-4" /> {$t('landing.read.demo.reads')}</span>
+            <span class="read-demo-line"></span>
           </div>
 
-          <div class="ai-glow ai-read-card">
-            <div class="flex items-center justify-between gap-2">
-              <span class="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide ai-read-brand"><AiLottie size={22} /> AI interpretation</span>
-              <div class="ai-lang-toggle" role="group" aria-label="Language">
-                {#each AI_LANGS as lng}
-                  <button type="button" class="ai-lang-btn {aiDemoLang === lng ? 'is-active' : ''}" aria-pressed={aiDemoLang === lng} onclick={() => (aiDemoLang = lng)}>{lng === 'en' ? 'EN' : 'SW'}</button>
-                {/each}
+          {#if readDemo}
+            <div class="read-card">
+              <div class="flex items-center justify-between gap-2">
+                <span class="read-brand inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide"><MessageSquareText class="h-3.5 w-3.5" /> {readDemoLang === 'sw' ? 'Kwa lugha rahisi' : 'Plain read'}</span>
+                <div class="read-lang-toggle" role="group" aria-label="Language">
+                  {#each READ_LANGS as lng}
+                    <button type="button" class="read-lang-btn {readDemoLang === lng ? 'is-active' : ''}" aria-pressed={readDemoLang === lng} onclick={() => (readDemoLang = lng)}>{lng === 'en' ? 'EN' : 'SW'}</button>
+                  {/each}
+                </div>
               </div>
+              <p class="read-brand mt-2 text-[15px] font-semibold leading-snug">{readDemo.headline}</p>
+              <p class="mt-1 text-sm leading-relaxed text-soft">{readDemo.body}</p>
+              <p class="mt-3 border-t border-edge/60 pt-2.5 text-[11px] text-muted">{plainReadFooter(readDemoLang)}</p>
             </div>
-            <p class="mt-2 text-[15px] font-semibold leading-snug ai-read-brand">{aiDemo[aiDemoLang].headline}</p>
-            <p class="mt-1 text-sm leading-relaxed text-soft">{aiDemo[aiDemoLang].body}</p>
-            <div class="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-edge/60 pt-2.5">
-              <span class="pill bg-mint/12 text-mint"><Check class="h-3.5 w-3.5" /> {$t('landing.ai.demo.stance')}</span>
-              <span class="text-[11px] text-muted">{$t('landing.ai.demo.notice')}</span>
-            </div>
-          </div>
+          {/if}
 
-          <!-- Same AI on every module — fills the column + reinforces breadth -->
-          <div class="ai-modules">
-            <span class="ai-modules-label">{$t('landing.ai.demo.everywhere')}</span>
-            <div class="ai-modules-chips">
-              {#each aiModules as m}<span class="ai-module-chip">{m}</span>{/each}
+          <!-- Same read on every module — fills the column + reinforces breadth -->
+          <div class="read-modules">
+            <span class="read-modules-label">{$t('landing.read.demo.everywhere')}</span>
+            <div class="read-modules-chips">
+              {#each readModules as m}<span class="read-module-chip">{m}</span>{/each}
             </div>
           </div>
         </div>
@@ -892,99 +890,58 @@
 </section>
 
 <style>
-  /* ── Live AI section (coral --c-ai accent, set inline on .ai-studio) ────── */
-  .ai-studio {
+  /* ── Plain read section (mint --c-read accent, set inline on .read-studio) ── */
+  .read-studio {
     position: relative;
     overflow: hidden;
     border-radius: 2rem;
     border: 1px solid rgb(var(--glass-brd) / var(--glass-brd-a));
     background:
-      radial-gradient(85% 80% at 6% 0%, rgb(var(--c-ai) / 0.16), transparent 52%),
-      radial-gradient(75% 85% at 100% 100%, rgb(var(--c-ai) / 0.1), transparent 50%),
+      radial-gradient(85% 80% at 6% 0%, rgb(var(--c-read) / 0.16), transparent 52%),
+      radial-gradient(75% 85% at 100% 100%, rgb(var(--c-read) / 0.1), transparent 50%),
       rgb(var(--c-panel) / calc(var(--card-a) + 0.08));
     box-shadow: var(--glass-sh);
     padding: 1.5rem;
   }
   @supports ((backdrop-filter: blur(2px)) or (-webkit-backdrop-filter: blur(2px))) {
-    .ai-studio {
+    .read-studio {
       backdrop-filter: blur(22px) saturate(165%);
       -webkit-backdrop-filter: blur(22px) saturate(165%);
     }
   }
   @media (min-width: 640px) {
-    .ai-studio { padding: 2rem; }
+    .read-studio { padding: 2rem; }
   }
   @media (min-width: 1024px) {
-    .ai-studio { padding: 2.5rem; }
+    .read-studio { padding: 2.5rem; }
   }
-  .ai-studio::after {
+  .read-studio::after {
     content: '';
     position: absolute;
     inset: 0 0 auto 0;
     height: 1px;
-    background: linear-gradient(90deg, transparent, rgb(var(--c-ai) / 0.6), transparent);
+    background: linear-gradient(90deg, transparent, rgb(var(--c-read) / 0.6), transparent);
     pointer-events: none;
   }
-  .ai-studio-grid {
+  .read-studio-grid {
     position: absolute;
     inset: 0;
-    background-image: radial-gradient(rgb(var(--c-ai) / 0.14) 1px, transparent 1.5px);
+    background-image: radial-gradient(rgb(var(--c-read) / 0.14) 1px, transparent 1.5px);
     background-size: 22px 22px;
     -webkit-mask-image: radial-gradient(70% 75% at 50% 25%, #000, transparent 78%);
     mask-image: radial-gradient(70% 75% at 50% 25%, #000, transparent 78%);
     pointer-events: none;
   }
-  .ai-pill {
-    border: 1px solid rgb(var(--c-ai) / 0.3);
-    background: rgb(var(--c-ai) / 0.1);
-    color: rgb(var(--c-ai));
+  .read-pill {
+    border: 1px solid rgb(var(--c-read) / 0.3);
+    background: rgb(var(--c-read) / 0.1);
+    color: rgb(var(--c-read));
     padding-left: 0.5rem;
   }
-  .ai-read-brand {
-    color: rgb(var(--c-ai));
+  .read-brand {
+    color: rgb(var(--c-read));
   }
-  .ai-hero-visual {
-    position: relative;
-    overflow: hidden;
-    aspect-ratio: 16 / 9;
-    border-radius: 1.25rem;
-    border: 1px solid rgb(var(--c-ai) / 0.4);
-    box-shadow: 0 0 0 1px rgb(var(--c-ai) / 0.14), 0 20px 55px -20px rgb(var(--c-ai) / 0.55);
-  }
-  .ai-hero-visual img {
-    display: block;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-  /* Bottom scrim so the caption stays legible over the artwork. */
-  .ai-hero-visual::after {
-    content: '';
-    position: absolute;
-    inset: auto 0 0 0;
-    height: 55%;
-    background: linear-gradient(180deg, transparent, rgb(8 8 20 / 0.72));
-    pointer-events: none;
-  }
-  .ai-hero-cap {
-    position: absolute;
-    bottom: 0.7rem;
-    left: 0.7rem;
-    z-index: 1;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    border-radius: 9999px;
-    border: 1px solid rgb(255 255 255 / 0.18);
-    background: rgb(10 12 22 / 0.55);
-    padding: 0.28rem 0.7rem;
-    font-size: 0.72rem;
-    font-weight: 600;
-    color: #fff;
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-  }
-  .ai-point-icon {
+  .read-point-icon {
     display: inline-flex;
     height: 2rem;
     width: 2rem;
@@ -992,11 +949,11 @@
     align-items: center;
     justify-content: center;
     border-radius: 0.75rem;
-    border: 1px solid rgb(var(--c-ai) / 0.28);
-    background: rgb(var(--c-ai) / 0.1);
-    color: rgb(var(--c-ai));
+    border: 1px solid rgb(var(--c-read) / 0.28);
+    background: rgb(var(--c-read) / 0.1);
+    color: rgb(var(--c-read));
   }
-  .ai-demo {
+  .read-demo {
     position: relative;
     display: flex;
     flex-direction: column;
@@ -1006,24 +963,24 @@
     padding: 1.1rem;
   }
   /* Module-coverage footer — pinned to the bottom so the demo fills its column. */
-  .ai-modules {
+  .read-modules {
     margin-top: auto;
     padding-top: 1rem;
   }
-  .ai-modules-label {
+  .read-modules-label {
     font-size: 0.68rem;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.08em;
     color: rgb(var(--c-muted));
   }
-  .ai-modules-chips {
+  .read-modules-chips {
     margin-top: 0.55rem;
     display: flex;
     flex-wrap: wrap;
     gap: 0.4rem;
   }
-  .ai-module-chip {
+  .read-module-chip {
     border-radius: 9999px;
     border: 1px solid rgb(var(--c-edge) / 0.7);
     background: rgb(var(--c-panel-2) / 0.45);
@@ -1031,20 +988,20 @@
     font-size: 0.7rem;
     color: rgb(var(--c-soft));
   }
-  .ai-demo-label {
+  .read-demo-label {
     font-size: 0.68rem;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.09em;
     color: rgb(var(--c-muted));
   }
-  .ai-demo-signals {
+  .read-demo-signals {
     margin-top: 0.6rem;
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
   }
-  .ai-chip {
+  .read-chip {
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
@@ -1056,59 +1013,59 @@
     padding: 0.3rem 0.7rem;
     font-size: 0.72rem;
   }
-  .ai-chip-dot {
+  .read-chip-dot {
     height: 0.45rem;
     width: 0.45rem;
     flex: 0 0 auto;
     border-radius: 9999px;
     background: rgb(var(--signal));
   }
-  .ai-chip-val {
+  .read-chip-val {
     font-weight: 600;
     color: rgb(var(--c-strong));
   }
-  .ai-demo-flow {
+  .read-demo-flow {
     display: flex;
     align-items: center;
     gap: 0.6rem;
     margin: 0.9rem 0;
   }
-  .ai-demo-line {
+  .read-demo-line {
     height: 1px;
     flex: 1;
-    background: linear-gradient(90deg, transparent, rgb(var(--c-ai) / 0.45), transparent);
+    background: linear-gradient(90deg, transparent, rgb(var(--c-read) / 0.45), transparent);
   }
-  .ai-demo-flow-label {
+  .read-demo-flow-label {
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
     white-space: nowrap;
     font-size: 0.72rem;
     font-weight: 600;
-    color: rgb(var(--c-ai));
+    color: rgb(var(--c-read));
   }
-  .ai-read-card {
+  .read-card {
     border-radius: 1.25rem;
-    border: 1px solid;
+    border: 1px solid rgb(var(--c-read) / 0.35);
     background: rgb(var(--c-panel-2) / 0.4);
     padding: 1rem;
   }
-  .ai-lang-toggle {
+  .read-lang-toggle {
     display: inline-flex;
     overflow: hidden;
     border-radius: 9999px;
     border: 1px solid rgb(var(--c-edge) / 0.8);
   }
-  .ai-lang-btn {
+  .read-lang-btn {
     padding: 0.15rem 0.6rem;
     font-size: 0.68rem;
     font-weight: 700;
     color: rgb(var(--c-muted));
     transition: background 0.2s ease, color 0.2s ease;
   }
-  .ai-lang-btn.is-active {
-    background: rgb(var(--c-ai) / 0.16);
-    color: rgb(var(--c-ai));
+  .read-lang-btn.is-active {
+    background: rgb(var(--c-read) / 0.16);
+    color: rgb(var(--c-read));
   }
 
   .video-studio {

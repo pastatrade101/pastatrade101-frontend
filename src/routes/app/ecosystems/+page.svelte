@@ -3,9 +3,9 @@
   import { api } from '$lib/api';
   import { fmtPct, fmtUsd } from '$lib/format';
   import Disclaimer from '$lib/components/Disclaimer.svelte';
-  import AiInterpret from '$lib/components/AiInterpret.svelte';
-  import AiLabel from '$lib/components/AiLabel.svelte';
-  import AiLottie from '$lib/components/AiLottie.svelte';
+  import PlainRead from '$lib/components/PlainRead.svelte';
+  import ReadLabel from '$lib/components/ReadLabel.svelte';
+  import PremiumIcon from '$lib/components/PremiumIcon.svelte';
   import EChart from '$lib/components/EChart.svelte';
   import { adaptHue, categoryAxis, grid, itemTooltip, rankedBars, tipBody, tipRow, valueAxis } from '$lib/charts/presets';
   import { Lock, ExternalLink, ChevronRight } from '@lucide/svelte';
@@ -69,9 +69,9 @@
     return { head: 'Rotation is selective right now', sub: `Only ${imp} ecosystem${imp === 1 ? '' : 's'} improving — most are neutral or weak.`, action: 'Be selective — back only the strongest chains, not the whole sector.', tone: 'neutral' };
   });
 
-  // Signals for the AI interpretation — built from the page's own computed verdict,
-  // regime and breadth counts (no new data). Tones mapped to the AiInterpret vocab.
-  const aiSignals = $derived(
+  // Signals for the plain read — built from the page's own computed verdict,
+  // regime and breadth counts (no new data). Tones use the plain-read words.
+  const readSignals = $derived(
     all.length
       ? [
           {
@@ -275,7 +275,7 @@
         </p>
 
         <div class="mb-1.5 mt-3 flex flex-wrap items-center gap-2 border-t border-edge/60 pt-3">
-          <AiLabel />
+          <ReadLabel />
           <span class="pill {tonePill(regime.tone)}">{regime.label}</span>
         </div>
         {#if canInterp}
@@ -284,7 +284,7 @@
           <div class="relative">
             <p class="text-[15px] leading-relaxed text-body blur-[3px]" aria-hidden="true">Ecosystem rotation is selective — a few chains are improving while most remain neutral or weak. This favours disciplined, selective exposure rather than broad ecosystem bets until breadth improves.</p>
             <div class="absolute inset-0 flex flex-col items-center justify-center">
-              <AiLottie size={44} class="mb-2" />
+              <PremiumIcon size={44} class="mb-2" />
               <a href="/pricing" class="btn-primary text-xs shadow-lg"><Lock class="h-3.5 w-3.5" /> Unlock with Premium</a>
             </div>
           </div>
@@ -294,9 +294,9 @@
         </p>
   </section>
 
-  <!-- AI interpretation — plain-language read of the rotation verdict + breadth -->
+  <!-- Plain read — plain-language read of the rotation verdict + breadth -->
   <div class="mb-4">
-    <AiInterpret module="ecosystems" title="Ecosystem Rankings" signals={aiSignals} />
+    <PlainRead signals={readSignals} />
   </div>
 
   <!-- 2 · Strongest / Weakest cards -->

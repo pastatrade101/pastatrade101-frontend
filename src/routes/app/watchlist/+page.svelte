@@ -4,7 +4,7 @@
   import { api } from '$lib/api';
   import { signalTone, tonePill } from '$lib/ecosystem-insight';
   import Sparkline from '$lib/components/Sparkline.svelte';
-  import AiLabel from '$lib/components/AiLabel.svelte';
+  import ReadLabel from '$lib/components/ReadLabel.svelte';
   import { membership, hasFeature, limitOf } from '$lib/stores/membership';
 
   // Watchlist alerts are a Mid+ feature (backend enforces on create too).
@@ -281,7 +281,7 @@
   <section class="hero-card mb-4">
     <div class="flex items-start gap-3.5">
       <div class="min-w-0 flex-1">
-        <AiLabel />
+        <ReadLabel />
         <p class="mt-1 text-[15px] leading-relaxed text-body">{s.takeaway}</p>
         {#if s.mostImportantChange}
           <p class="mt-2 flex items-start gap-1.5 text-xs text-soft">

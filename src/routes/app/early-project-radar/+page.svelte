@@ -2,8 +2,8 @@
   import { Rocket, ExternalLink, Info, Search, AlertTriangle, Lock } from '@lucide/svelte';
   import { api } from '$lib/api';
   import { membershipReady } from '$lib/stores/membership';
-  import AiInterpret from '$lib/components/AiInterpret.svelte';
-  import AiLottie from '$lib/components/AiLottie.svelte';
+  import PlainRead from '$lib/components/PlainRead.svelte';
+  import PremiumIcon from '$lib/components/PremiumIcon.svelte';
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   type Project = any;
@@ -72,8 +72,8 @@
     return { s, n, h, line };
   });
 
-  // Signals for the AI interpretation — built from the same counts the radar already shows.
-  const aiSignals = $derived(
+  // Signals for the plain read — built from the same counts the radar already shows.
+  const readSignals = $derived(
     !locked && shown.length
       ? [
           { name: 'Worth researching', label: 'Strong watchlist', value: radarSummary.s, tone: radarSummary.s > 0 ? 'good' : 'neutral' },
@@ -110,7 +110,7 @@
     </div>
 
     <div class="mb-3">
-      <AiInterpret module="early_project" title="Early Project Radar" signals={aiSignals} />
+      <PlainRead signals={readSignals} />
     </div>
   {/if}
 
@@ -215,7 +215,7 @@
 
   {#if locked}
     <div class="mt-3 flex flex-col items-center gap-2 rounded-xl border border-accent/30 bg-accent/[0.06] px-4 py-6 text-center">
-      <AiLottie size={44} class="mb-2" />
+      <PremiumIcon size={44} class="mb-2" />
       <Lock class="h-6 w-6 text-accent" />
       <p class="text-sm font-semibold text-strong">{total > 1 ? `${total - 1}+ more early projects are locked` : 'Unlock the full Early Project Radar'}</p>
       <p class="max-w-md text-xs text-muted">Upgrade to <span class="font-medium text-soft">{requiredPlan}</span> to see every scored project with backers, raise, tokenomics, vesting, rounds and red-flag screening — plus filters and search.</p>

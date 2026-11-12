@@ -3,8 +3,8 @@
   import { fly } from 'svelte/transition';
   import { Crosshair, Search, ExternalLink, AlertTriangle, Info, ShieldCheck, Loader, TrendingUp, Activity, Wallet, Landmark, BarChart3, Globe, Timer, Coins, Users, Sparkles, Gauge, Zap, Lock, Network } from '@lucide/svelte';
   import { api } from '$lib/api';
-  import AiLottie from '$lib/components/AiLottie.svelte';
-  import AiInterpret from '$lib/components/AiInterpret.svelte';
+  import PremiumIcon from '$lib/components/PremiumIcon.svelte';
+  import PlainRead from '$lib/components/PlainRead.svelte';
   import EChart from '$lib/components/EChart.svelte';
   import { axisTooltip, barSeries, categorical, categoryAxis, grid, itemTooltip, radarOption, tipBody, tipRow, valueAxis } from '$lib/charts/presets';
   import { readChartTokens } from '$lib/charts/theme';
@@ -277,8 +277,8 @@
     return d;
   });
 
-  // Signals for the AI interpretation of the current token scan.
-  const aiSignals = $derived.by(() => {
+  // Signals for the plain read of the current token scan.
+  const readSignals = $derived.by(() => {
     const r = report;
     if (!r?.rating) return [] as Any[];
     const toneOf = (st: string) => (st === 'good' ? 'good' : st === 'bad' ? 'danger' : 'warn');
@@ -574,7 +574,7 @@
   {#if limitInfo}
     <div class="relative overflow-hidden rounded-2xl p-[1px] shadow-[0_18px_40px_-20px_rgba(2,6,23,0.4)]" style="background: linear-gradient(135deg, rgba(55,224,166,0.55), rgba(91,140,255,0.55))">
       <div class="rounded-2xl bg-panel px-5 py-6">
-        <AiLottie size={44} class="mx-auto mb-2" />
+        <PremiumIcon size={44} class="mx-auto mb-2" />
         <div class="flex flex-col items-center gap-4 text-center sm:flex-row sm:text-left">
           <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-mint/20 to-accent/20 ring-1 ring-mint/30">
             <Lock class="h-6 w-6 text-mint" />
@@ -673,8 +673,8 @@
       </div>
     </div>
 
-    <!-- AI interpretation of this scan -->
-    <div in:fly={{ y: 18, duration: 450, delay: 100 }}><AiInterpret module="token_radar" title="{report.token?.symbol ?? 'Token'} scan" signals={aiSignals} /></div>
+    <!-- Plain read of this scan -->
+    <div in:fly={{ y: 18, duration: 450, delay: 100 }}><PlainRead signals={readSignals} /></div>
 
     <!-- Data quality warning -->
     {#if report.data_quality_warnings?.length}

@@ -3,11 +3,10 @@
   import { BarChart3, Bitcoin, CircleDollarSign, Gem, Globe, PieChart, TrendingDown, TrendingUp, Gauge, Users, DoorOpen, Layers, FileText, Spline, ArrowRight, AlertTriangle, Zap, Activity, Lock, Flame, ChevronDown, Minus, Compass } from '@lucide/svelte';
   import { slide } from 'svelte/transition';
   import { api } from '$lib/api';
-  import { locale } from '$lib/i18n';
   import { changeColor, fmtPct, fmtUsd } from '$lib/format';
   import Disclaimer from '$lib/components/Disclaimer.svelte';
-  import AiLottie from '$lib/components/AiLottie.svelte';
-  import AiLabel from '$lib/components/AiLabel.svelte';
+  import PremiumIcon from '$lib/components/PremiumIcon.svelte';
+  import ReadLabel from '$lib/components/ReadLabel.svelte';
   import EChart from '$lib/components/EChart.svelte';
   import { adaptHue, categoryAxis, grid, itemTooltip, rankedBars, tipBody, tipRow, valueAxis } from '$lib/charts/presets';
 
@@ -18,31 +17,6 @@
   let universe = $state<'clean' | 'all'>('clean');
   let freshnessOpen = $state(false); // mobile "Data freshness" disclosure
   let mobileFull = $state(false); // mobile "See full analysis / Pro view" reveal
-
-  // Premium AI synthesis of the same signals (interprets, never computes). Null →
-  // deterministic rule-based verdict is shown instead, so this never regresses.
-  interface MarketRead {
-    headline: string;
-    body: string;
-    stance: 'risk_on' | 'neutral' | 'cautious' | 'risk_off';
-    confidence: string;
-  }
-  let marketRead = $state<MarketRead | null>(null);
-  const stanceTone: Record<string, string> = { risk_on: 'good', neutral: 'neutral', cautious: 'warn', risk_off: 'danger' };
-
-  // Self-contained: the endpoint computes its own signals, so this runs in parallel
-  // with the main overview load and re-fetches when the language changes.
-  const loadMarketRead = async (lang: 'en' | 'sw') => {
-    try {
-      const res = await api<{ read: MarketRead | null }>(`/overview/market-read?lang=${lang}`, { auth: true });
-      marketRead = res.read ?? null;
-    } catch {
-      marketRead = null;
-    }
-  };
-  $effect(() => {
-    loadMarketRead($locale === 'sw' ? 'sw' : 'en');
-  });
 
   const load = async () => {
     loading = true;
@@ -372,9 +346,9 @@
   <!-- ═══ MOBILE: "Just Tell Me" advisor experience ═══ -->
   <section class="mb-4 space-y-3 lg:hidden">
     <!-- 1 · Market Today — one clear verdict -->
-    <div class="rounded-2xl border border-edge bg-gradient-to-br from-panel to-panel-2/60 p-4" class:ai-glow={!!marketRead}>
+    <div class="rounded-2xl border border-edge bg-gradient-to-br from-panel to-panel-2/60 p-4">
       <div class="flex items-center justify-between gap-2">
-        <AiLabel ai={!!marketRead} />
+        <ReadLabel />
         {#if data.data_freshness?.market}
           <button type="button" class="inline-flex items-center gap-1 rounded-full bg-panel-2 px-2.5 py-1 text-[11px] text-muted" aria-expanded={freshnessOpen} onclick={() => (freshnessOpen = !freshnessOpen)}>
             <span class="h-1.5 w-1.5 rounded-full {anyStale ? 'bg-warn' : 'bg-mint'}"></span>
@@ -383,8 +357,8 @@
           </button>
         {/if}
       </div>
-      <p class="mt-1.5 text-xl font-bold leading-tight {textTone[marketRead ? stanceTone[marketRead.stance] : postureTone]}">{marketRead ? marketRead.headline : data.market_posture.label}</p>
-      <p class="mt-1.5 text-sm leading-relaxed text-soft">{marketRead ? marketRead.body : data.market_posture.interpretation}</p>
+      <p class="mt-1.5 text-xl font-bold leading-tight {textTone[postureTone]}">{data.market_posture.label}</p>
+      <p class="mt-1.5 text-sm leading-relaxed text-soft">{data.market_posture.interpretation}</p>
       {#if freshnessOpen}
         <div class="mt-3 border-t border-edge/60 pt-2.5" transition:slide={{ duration: 180 }}>
           <p class="mb-1.5 text-[10px] uppercase tracking-wide text-muted">Data freshness</p>
@@ -431,7 +405,7 @@
         {/if}
       </div>
     {:else if !data.has_interpretation}
-      <a href="/pricing" class="flex items-center justify-center gap-1.5 rounded-2xl border border-mint/30 bg-mint/[0.05] p-3.5 text-sm font-medium text-mint"><AiLottie size={26} /> Unlock the strongest signal &amp; biggest warning</a>
+      <a href="/pricing" class="flex items-center justify-center gap-1.5 rounded-2xl border border-mint/30 bg-mint/[0.05] p-3.5 text-sm font-medium text-mint"><PremiumIcon size={26} /> Unlock the strongest signal &amp; biggest warning</a>
     {/if}
 
     <!-- 6 · Quick read — horizontal human-labelled signal cards -->
@@ -450,7 +424,7 @@
         </div>
       </div>
     {:else}
-      <a href="/pricing" class="flex items-center justify-center gap-1.5 rounded-2xl border border-edge bg-panel-2/40 p-3.5 text-sm font-medium text-accent"><AiLottie size={26} /> Unlock the full market read</a>
+      <a href="/pricing" class="flex items-center justify-center gap-1.5 rounded-2xl border border-edge bg-panel-2/40 p-3.5 text-sm font-medium text-accent"><PremiumIcon size={26} /> Unlock the full market read</a>
     {/if}
 
     <!-- See why — reveals the full analysis / Pro view -->
@@ -463,17 +437,12 @@
   <!-- ═══ Full analysis / Pro view — always on desktop, revealed on mobile ═══ -->
   <div class="{mobileFull ? '' : 'hidden'} lg:block">
   <!-- ── Hero: Daily Market Read ── -->
-  <div class="hero-card mb-4" class:ai-glow={!!marketRead}>
+  <div class="hero-card mb-4">
     <div class="flex flex-wrap items-center gap-2">
-      <AiLabel ai={!!marketRead} />
+      <ReadLabel />
       <span class="pill {toneClass[data.signals?.btc_risk?.tone ?? 'neutral']}">{data.market_posture.label}</span>
     </div>
-    {#if marketRead}
-      <p class="mt-2 text-base font-semibold {textTone[stanceTone[marketRead.stance]]}">{marketRead.headline}</p>
-      <p class="mt-1 max-w-4xl text-[15px] leading-relaxed text-soft">{marketRead.body}</p>
-    {:else}
-      <p class="mt-2 max-w-4xl text-[15px] leading-relaxed text-soft">{data.daily_market_read}</p>
-    {/if}
+    <p class="mt-2 max-w-4xl text-[15px] leading-relaxed text-soft">{data.daily_market_read}</p>
     <p class="mt-1.5 text-xs text-muted">{data.market_posture.interpretation}</p>
 
     {#if data.strongest_signal_today || data.biggest_warning_today}
@@ -496,7 +465,7 @@
           <div class="flex items-start gap-2 rounded-lg border border-warn/30 bg-warn/5 px-3 py-2 text-sm"><AlertTriangle class="mt-0.5 h-4 w-4 shrink-0 text-warn" /><span><span class="font-medium text-warn">Biggest warning today:</span> <span class="text-soft">Altcoin strength is still selective — do not assume full altcoin season yet.</span></span></div>
         </div>
         <div class="absolute inset-0 flex flex-col items-center justify-center">
-          <AiLottie size={44} class="mb-2" />
+          <PremiumIcon size={44} class="mb-2" />
           <a href="/pricing" class="btn-primary text-sm shadow-lg"><Lock class="h-4 w-4" /> Unlock with Premium</a>
         </div>
       </div>
@@ -535,7 +504,7 @@
         {/each}
       </div>
       <div class="absolute inset-0 flex flex-col items-center justify-center gap-2 px-4 text-center">
-        <AiLottie size={44} class="mb-2" />
+        <PremiumIcon size={44} class="mb-2" />
         <a href="/pricing" class="btn-primary text-sm shadow-lg"><Lock class="h-4 w-4" /> Unlock signal cards</a>
         <p class="text-xs text-muted">BTC risk · altcoin breadth · social · exit · ecosystem · liquidity — on Mid & Premium</p>
       </div>

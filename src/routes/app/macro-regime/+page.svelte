@@ -4,8 +4,8 @@
   import { membership, membershipReady, hasFeature } from '$lib/stores/membership';
   import Gauge from '$lib/components/Gauge.svelte';
   import LockedFeature from '$lib/components/LockedFeature.svelte';
-  import AiInterpret from '$lib/components/AiInterpret.svelte';
-  import AiLabel from '$lib/components/AiLabel.svelte';
+  import PlainRead from '$lib/components/PlainRead.svelte';
+  import ReadLabel from '$lib/components/ReadLabel.svelte';
 
   const canUse = $derived(hasFeature($membership, 'access_macro_regime'));
 
@@ -105,14 +105,14 @@
     { name: 'Gold', symbol: 'XAU/USD', icon: Coins, weight: '10%', signal: 'Context — safe-haven vs debasement' }
   ];
 
-  // Signals for the AI interpretation — built from the page's own computed reads.
+  // Signals for the plain read — built from the page's own computed reads.
   const regimeTone = (s: number) => (s >= 60 ? 'good' : s >= 40 ? 'neutral' : 'danger');
-  const aiSignals = $derived(
+  const readSignals = $derived(
     r && r.available
       ? [
           { name: 'Regime score', label: r.regime_label, value: r.regime_score, tone: regimeTone(r.regime_score) },
           { name: 'Macro read', label: macroVerdict.head, meaning: macroVerdict.sub, tone: regimeTone(r.regime_score) },
-          { name: 'Confidence', label: r.confidence, tone: r.confidence === 'High' ? 'good' : r.confidence === 'Low' ? 'warn' : 'neutral' },
+          { name: 'Confidence', label: r.confidence, tone: 'neutral' },
           { name: 'Dollar trend', label: r.dollar_trend, tone: r.dollar_trend === 'weakening' ? 'good' : r.dollar_trend === 'strengthening' ? 'danger' : 'neutral' },
           { name: 'Input tally', label: `${tally.bullish} bullish · ${tally.bearish} bearish · ${tally.neutral} neutral`, tone: tally.bullish > tally.bearish ? 'good' : tally.bearish > tally.bullish ? 'warn' : 'neutral' }
         ]
@@ -146,7 +146,7 @@
     <div class="mx-auto"><Gauge value={r.regime_score / 100} title="Risk Appetite" /></div>
     <div class="min-w-0">
       <!-- Plain-language verdict first; the score + labels sit below as proof -->
-      <AiLabel />
+      <ReadLabel />
       <p class="mt-0.5 text-xl font-bold leading-tight {scoreTone(r.regime_score)}">{macroVerdict.head}</p>
       <p class="mb-3 mt-1 text-sm text-soft">{macroVerdict.sub}</p>
       <div class="flex flex-wrap items-center gap-2">
@@ -179,13 +179,13 @@
     </div>
   </div>
 
-  <!-- AI interpretation — premium sees a button, free/mid see the locked teaser -->
-  <AiInterpret module="macro_regime" title="Macro Regime" signals={aiSignals} />
+  <!-- Plain read -->
+  <PlainRead signals={readSignals} />
   <div class="mb-4"></div>
 
   <!-- Final Interpretation — the plain-English bottom line -->
   <div class="card mb-3 border-accent/25 bg-accent/[0.04]">
-    <AiLabel />
+    <ReadLabel />
     <div class="mt-2 space-y-2 text-sm leading-relaxed">
       <p class="flex flex-wrap items-center gap-2"><span class="text-muted">Current regime:</span><span class="pill {pill(r.regime_score)}">{r.regime_label}</span></p>
       <p class="text-soft"><span class="font-medium text-strong">What it means for crypto:</span> {r.interpretation}</p>

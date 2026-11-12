@@ -5,8 +5,8 @@
   import LockedFeature from '$lib/components/LockedFeature.svelte';
   import EChart from '$lib/components/EChart.svelte';
   import { axisTooltip, grid, valueAxis } from '$lib/charts/presets';
-  import AiInterpret from '$lib/components/AiInterpret.svelte';
-  import AiLabel from '$lib/components/AiLabel.svelte';
+  import PlainRead from '$lib/components/PlainRead.svelte';
+  import ReadLabel from '$lib/components/ReadLabel.svelte';
 
   const canUse = $derived(hasFeature($membership, 'access_alt_btc_bottom_radar'));
 
@@ -86,8 +86,8 @@
       return { head: 'Altcoins are still bleeding against Bitcoin', sub: `${bleed} still weak vs ${conf + early} recovering — most alts underperform BTC.`, action: 'Be patient — holding Bitcoin may still be the stronger position.', tone: 'warn' };
     return { head: 'Altcoins are trying to bottom vs Bitcoin', sub: `${bottom} attempting a bottom, ${early} early recovery — early and unconfirmed.`, action: 'Wait for confirmed higher lows before treating any as a leader.', tone: 'neutral' };
   });
-  // Signals fed to the AI interpretation — built from values this page already computes.
-  const aiSignals = $derived.by(() => {
+  // Signals for the plain read — built from values this page already computes.
+  const readSignals = $derived.by(() => {
     const s = data?.summary;
     if (!data || !s || !bottomVerdict) return [];
     const out = [
@@ -228,18 +228,18 @@
           {bottomVerdict.action}
         </p>
         <div class="mt-3 border-t border-edge/60 pt-3">
-          <AiLabel />
+          <ReadLabel />
           <p class="mt-1 text-sm leading-relaxed text-soft">{data.takeaway}</p>
         </div>
       {:else}
-        <AiLabel />
+        <ReadLabel />
         <p class="mt-1 text-sm leading-relaxed text-soft">{data.takeaway}</p>
       {/if}
     </div>
 
-    <!-- AI interpretation of the rotation read -->
+    <!-- Plain read of the rotation read -->
     <div class="mb-4">
-      <AiInterpret module="alt_btc_bottom" title="Alt/BTC Bottom Radar" signals={aiSignals} />
+      <PlainRead signals={readSignals} />
     </div>
 
     <!-- Stage progression guide -->

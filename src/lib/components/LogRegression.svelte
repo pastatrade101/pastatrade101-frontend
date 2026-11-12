@@ -5,8 +5,8 @@
   import { membership, membershipReady, hasFeature } from '$lib/stores/membership';
   import EChart from '$lib/components/EChart.svelte';
   import LockedFeature from '$lib/components/LockedFeature.svelte';
-  import AiInterpret from '$lib/components/AiInterpret.svelte';
-  import AiLabel from '$lib/components/AiLabel.svelte';
+  import PlainRead from '$lib/components/PlainRead.svelte';
+  import ReadLabel from '$lib/components/ReadLabel.svelte';
   import { fmtUsd } from '$lib/format';
   import { grid, timeAxis, valueAxis, logAxis, axisTooltip, lineSeries, tipRow, tipBody, riskRamp, zoomInside } from '$lib/charts/presets';
 
@@ -111,8 +111,8 @@
     };
   });
 
-  // Signals handed to the AI interpretation (labels/values already on the page).
-  const aiSignals = $derived.by(() => {
+  // Signals for the plain read (labels/values already on the page).
+  const readSignals = $derived.by(() => {
     const l = result?.latest;
     if (!l) return [];
     const z = l.zone_label;
@@ -338,7 +338,7 @@
     <!-- Current reading (the headline answer) -->
     {#if currentReading}
       <div class="card mb-4 border-l-4 {isValueZone(l.zone_label) ? 'border-l-mint' : isHighZone(l.zone_label) ? 'border-l-danger' : 'border-l-warn'}">
-        <AiLabel />
+        <ReadLabel />
         <p class="mt-1 text-lg font-semibold text-strong">{currentReading.headline}</p>
         <div class="mt-2 space-y-1.5 text-sm">
           <p class="text-soft"><span class="font-medium text-muted">Meaning:</span> {currentReading.meaning}</p>
@@ -346,7 +346,7 @@
           <p class="text-muted"><span class="font-medium">Important:</span> {currentReading.important}</p>
         </div>
       </div>
-      <div class="mb-4"><AiInterpret module="log_regression" title="{ASSET} Regression Bands" signals={aiSignals} /></div>
+      <div class="mb-4"><PlainRead signals={readSignals} /></div>
     {/if}
   {/if}
 
@@ -429,7 +429,7 @@
     <!-- Premium takeaway -->
     {#if result.takeaway}
       <div class="card mt-3">
-        <AiLabel />
+        <ReadLabel />
         <p class="mt-1 text-sm leading-relaxed text-soft">{result.takeaway}</p>
       </div>
     {/if}

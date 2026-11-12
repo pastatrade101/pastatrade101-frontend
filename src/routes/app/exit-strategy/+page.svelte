@@ -6,9 +6,9 @@
   import Gauge from '$lib/components/Gauge.svelte';
   import EChart from '$lib/components/EChart.svelte';
   import LockedFeature from '$lib/components/LockedFeature.svelte';
-  import AiInterpret from '$lib/components/AiInterpret.svelte';
-  import AiLottie from '$lib/components/AiLottie.svelte';
-  import AiLabel from '$lib/components/AiLabel.svelte';
+  import PlainRead from '$lib/components/PlainRead.svelte';
+  import PremiumIcon from '$lib/components/PremiumIcon.svelte';
+  import ReadLabel from '$lib/components/ReadLabel.svelte';
   import { fmtUsd } from '$lib/format';
 
   const canExit = $derived(hasFeature($membership, 'access_exit_strategy'));
@@ -51,10 +51,10 @@
   const fmt2 = (n: number | null) => (n == null ? 'n/a' : n.toFixed(2));
   const pct100 = (n: number | null) => (n == null ? 'n/a' : `${Math.round(n)}/100`);
 
-  // Signals for the AI interpretation — built from what the page already computes/shows.
+  // Signals for the plain read — built from what the page already computes/shows.
   const scoreTone = (s: number) => (s < 0.4 ? 'good' : s < 0.6 ? 'neutral' : s < 0.75 ? 'warn' : 'danger');
   const confTone = (c: string) => (c === 'High' ? 'good' : c === 'Low' ? 'danger' : 'neutral');
-  const aiSignals = $derived(
+  const readSignals = $derived(
     result
       ? [
           { name: 'Exit risk score', label: exitVerdict(result.exit_risk_score).head, value: result.exit_risk_score.toFixed(2), tone: scoreTone(result.exit_risk_score) },
@@ -335,9 +335,9 @@
     </div>
   </div>
 
-  <!-- AI interpretation — premium sees the button, free/mid see the locked teaser -->
+  <!-- Plain read -->
   <div class="mb-4">
-    <AiInterpret module="exit_strategy" title="Exit Strategy" signals={aiSignals} />
+    <PlainRead signals={readSignals} />
   </div>
 
   <!-- Category radar — the shape of the risk, read before the exact numbers -->
@@ -410,7 +410,7 @@
 
   <!-- What this means -->
   <div class="card mb-3">
-    <AiLabel />
+    <ReadLabel />
     <p class="mt-1 text-sm leading-relaxed text-soft">{r.interpretation}</p>
   </div>
 
@@ -523,7 +523,7 @@
   {:else}
     <!-- Mid plan: invite to premium for the full tooling -->
     <div class="card mb-3 border-accent/30 bg-accent/5">
-      <AiLottie size={44} class="mx-auto mb-2" />
+      <PremiumIcon size={44} class="mx-auto mb-2" />
       <p class="flex items-center gap-1.5 stat-label text-accent"><Lock class="h-3.5 w-3.5" /> Upgrade to Premium</p>
       <p class="mt-1 text-sm text-soft">You're seeing the current exit signal and a limited breakdown. Premium adds the configurable exit ladder, Conservative / Balanced / Aggressive profiles, the full Social Risk breakdown, “what would change the signal”, the historical exit-risk chart and past high-risk zones.</p>
       <a href="/pricing" class="btn-primary mt-3 inline-flex">See Premium</a>

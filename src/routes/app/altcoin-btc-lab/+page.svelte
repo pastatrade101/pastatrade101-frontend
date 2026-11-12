@@ -6,8 +6,8 @@
   import MultiAltCompare from '$lib/components/MultiAltCompare.svelte';
   import Disclaimer from '$lib/components/Disclaimer.svelte';
   import LockedFeature from '$lib/components/LockedFeature.svelte';
-  import AiInterpret from '$lib/components/AiInterpret.svelte';
-  import AiLabel from '$lib/components/AiLabel.svelte';
+  import PlainRead from '$lib/components/PlainRead.svelte';
+  import ReadLabel from '$lib/components/ReadLabel.svelte';
   import { membership, membershipReady, hasFeature } from '$lib/stores/membership';
   import { changeColor, fmtPct, signalColor } from '$lib/format';
   import { grid, timeAxis, valueAxis, logAxis, categoryAxis, axisTooltip, lineSeries, divergingBars, rankedBars, categorical, adaptHue } from '$lib/charts/presets';
@@ -206,12 +206,12 @@
   const verdictText: Record<'good' | 'warn' | 'neutral', string> = { good: 'text-mint', warn: 'text-danger', neutral: 'text-soft' };
   const hvVerdict = $derived(data?.coin ? coinVerdict(data.coin.symbol, data.strength_30d, data.strength_7d) : null);
 
-  // Signals for the AI interpretation — built from values this page already computes/shows.
+  // Signals for the plain read — built from values this page already computes/shows.
   const numTone = (n: number | null | undefined): 'good' | 'warn' | 'neutral' =>
     n == null ? 'neutral' : n > 5 ? 'good' : n < -5 ? 'warn' : 'neutral';
   const breakoutTone = (t: string): 'good' | 'warn' | 'neutral' =>
     t === 'breakout' ? 'good' : t === 'weakness' ? 'warn' : 'neutral';
-  const aiSignals = $derived(
+  const readSignals = $derived(
     data
       ? [
           { name: 'Verdict', label: hvVerdict?.head ?? data.analysis.verdict_label, value: null, tone: hvVerdict?.tone ?? 'neutral' },
@@ -720,7 +720,7 @@
 {:else if data}
   <!-- Premium Takeaway -->
   <div class="card mb-4 border border-mint/30 bg-mint/5">
-    <AiLabel />
+    <ReadLabel />
     <p class="mt-1 text-sm leading-relaxed text-body">{premiumTakeaway}</p>
   </div>
 
@@ -751,9 +751,9 @@
     </p>
   </div>
 
-  <!-- AI interpretation -->
+  <!-- Plain read -->
   <div class="mb-4">
-    <AiInterpret module="altcoin_btc" title="Altcoin vs BTC Lab" signals={aiSignals} />
+    <PlainRead signals={readSignals} />
   </div>
 
   <!-- Signal / reaction card -->
@@ -802,7 +802,7 @@
 
   <!-- What this means -->
   <div class="card mt-4">
-    <AiLabel />
+    <ReadLabel />
     <p class="mt-1 text-sm leading-relaxed text-soft">{data.analysis.what_this_means}</p>
   </div>
 
