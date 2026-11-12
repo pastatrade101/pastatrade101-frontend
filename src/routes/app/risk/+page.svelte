@@ -272,6 +272,10 @@
     const n = parts.reduce((a, p) => a + (p.val != null ? p.count : 0), 0);
     return parts.map((p) => ({ ...p, weightPct: n && p.val != null ? Math.round((p.count / n) * 100) : 0 }));
   });
+  // On-chain readings older than the page date (e.g. a delayed feed), by label.
+  const onchainLagging = $derived(
+    metrics && canOnchain ? metrics.onchain.filter((m) => m.risk != null && m.as_of && m.as_of !== metrics!.as_of).map((m) => m.label) : []
+  );
   const metricCount = $derived(modelParts.reduce((a, p) => a + (p.val != null ? p.count : 0), 0));
   const mixText = $derived(
     modelParts
@@ -1277,7 +1281,7 @@
   </p>
   <p class="mb-4 text-[11px] text-muted">
     On-chain metrics by <a href="https://bitcoin-data.com" target="_blank" rel="noopener" class="hover:text-soft hover:underline">BGeometrics · bitcoin-data.com</a>.
-    MVRV Z-Score, Puell Multiple and NUPL are published 7 days after the fact, so they show an earlier date than the rest.
+    {#if onchainLagging.length}{onchainLagging.join(', ')} {onchainLagging.length === 1 ? 'is' : 'are'} a few days behind the rest, so {onchainLagging.length === 1 ? 'it shows' : 'they show'} an earlier date; a reading counts in the score for up to 7 days.{/if}
   </p>
 
   <!-- Why the score is here -->
@@ -1774,7 +1778,7 @@
                 <span class="text-xs text-muted" title="No reading in the last 7 days — not in the score">no data</span>
               {:else}
                 <span class="flex items-center gap-1.5">
-                  {#if m.as_of && metrics && m.as_of !== metrics.as_of}<span class="text-[10px] text-muted" title="Date of the latest published reading. Some on-chain metrics are published 7 days after the fact; a reading counts in the score for up to 7 days.">{fmtDay(m.as_of)}</span>{/if}
+                  {#if m.as_of && metrics && m.as_of !== metrics.as_of}<span class="text-[10px] text-muted" title="Date of the latest reading — this feed is behind the others; a reading counts in the score for up to 7 days">{fmtDay(m.as_of)}</span>{/if}
                   <span class="rounded px-2 py-0.5 font-mono text-xs font-semibold" style="background: {riskColor(m.risk)}22; color: {riskColor(m.risk)}">{m.risk.toFixed(3)}</span>
                 </span>
               {/if}

@@ -23,7 +23,9 @@
     last_synced: string | null;
     days_covered: number;
     metrics: string[];
-    latest: Record<string, { raw: number | null; risk: number | null }>;
+    latest: Record<string, { raw: number | null; risk: number | null; date?: string | null }>;
+    lag_days?: number | null;
+    realtime?: boolean;
     last_job: { status: string; error: string | null; records_processed: number; finished_at: string | null } | null;
     supply_profit_loss: { last_synced: string | null; days_covered: number; profit_percent: number | null; loss_percent: number | null } | null;
   }
@@ -38,7 +40,8 @@
     mvrv_zscore: 'MVRV Z-Score',
     puell_multiple: 'Puell Multiple',
     nupl: 'NUPL',
-    reserve_risk: 'Reserve Risk'
+    reserve_risk: 'Reserve Risk',
+    rhodl_ratio: 'RHODL Ratio'
   };
 
   // Admin-only guard.
@@ -166,6 +169,13 @@
       <h2 class="text-sm font-semibold text-strong">On-chain source · {onchain.provider}</h2>
       <div class="flex items-center gap-2 text-xs">
         <span class="pill bg-edge text-muted">{onchain.key_mode} mode</span>
+        {#if onchain.lag_days != null}
+          {#if onchain.realtime}
+            <span class="pill bg-mint/15 text-mint">real-time</span>
+          {:else}
+            <span class="pill bg-warn/15 text-warn" title="Some metrics trail the rest — a key on the free plan gets MVRV, NUPL and Puell 7 days late">{onchain.lag_days} days behind</span>
+          {/if}
+        {/if}
         {#if onchain.last_job}
           <span class="pill {statusColor(onchain.last_job.status)}">last run: {onchain.last_job.status}</span>
         {/if}
@@ -183,7 +193,7 @@
         <div class="rounded-lg border border-edge bg-panel-2/40 p-2.5">
           <div class="text-[11px] text-muted">{ONCHAIN_LABELS[key] ?? key}</div>
           <div class="text-base font-semibold text-strong">{v?.raw != null ? Number(v.raw).toLocaleString(undefined, { maximumSignificantDigits: 4 }) : '—'}</div>
-          <div class="text-[11px] text-muted">risk {v?.risk != null ? Number(v.risk).toFixed(3) : '—'}</div>
+          <div class="text-[11px] text-muted">risk {v?.risk != null ? Number(v.risk).toFixed(3) : '—'}{v?.date && v.date !== onchain.last_synced ? ` · ${v.date}` : ''}</div>
         </div>
       {/each}
     </div>
@@ -217,7 +227,8 @@
     {/if}
     <p class="mt-3 text-[11px] text-muted">
       On-chain data by <a href="https://bitcoin-data.com" target="_blank" rel="noopener" class="hover:underline">BGeometrics · bitcoin-data.com</a>.
-      Auto-syncs daily via the scheduler. Free tier: ~10 req/hour, 15 req/day — one sync uses 6 (4 risk metrics + supply profit/loss). Requests-used-today isn't reported by the provider API.
+      Fetched once a day after the provider's 03:00 UTC update — 7 calls (5 risk metrics + supply profit/loss). Advanced plan: 300 calls/day,
+      at most 5 distinct IPs a day, full history, real-time. "Days behind" means the key is still getting free-plan data (MVRV, NUPL and Puell 7 days late).
     </p>
   </div>
 {/if}
