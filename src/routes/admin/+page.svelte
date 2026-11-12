@@ -117,7 +117,7 @@
     Sync ecosystems (DefiLlama)
   </button>
   <button class="btn-ghost" disabled={running} onclick={() => runSync('/admin/derivatives/sync', 'Derivatives sync')}>
-    Sync derivatives (Bitget)
+    Sync derivatives (BGeometrics)
   </button>
   <button class="btn-ghost" disabled={running} onclick={() => runSync('/admin/sync/social-metrics', 'Social metrics sync')}>
     Sync social metrics (Trends/Wiki/F&amp;G)

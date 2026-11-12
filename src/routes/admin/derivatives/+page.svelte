@@ -33,7 +33,7 @@
     error = '';
     try {
       const res: any = await api('/admin/derivatives/sync', { method: 'POST', auth: true });
-      message = res?.stored ? 'Synced — today’s row updated.' : 'Bitget data unavailable — nothing stored.';
+      message = res?.stored ? 'Synced — today’s row updated.' : 'Derivatives data unavailable — nothing stored.';
       await load();
     } catch (e) {
       error = e instanceof Error ? e.message : 'Sync failed.';
@@ -77,33 +77,32 @@
           <dt class="text-muted">Date</dt><dd class="text-right text-soft">{diag.latest.date}</dd>
           <dt class="text-muted">Leverage</dt><dd class="text-right font-medium text-strong">{diag.latest.leverage_percent}/100 · {diag.latest.label}</dd>
           <dt class="text-muted">Confidence</dt><dd class="text-right text-soft">{diag.latest.confidence}</dd>
-          <dt class="text-muted">BTC funding</dt><dd class="text-right text-soft">{fundPct(diag.latest.btc_funding_rate)}</dd>
+          <dt class="text-muted">BTC funding (stored)</dt><dd class="text-right text-soft">{fundPct(diag.latest.btc_funding_rate)}</dd>
           <dt class="text-muted">BTC long/short</dt><dd class="text-right text-soft">{diag.latest.btc_long_short ?? 'n/a'}</dd>
           <dt class="text-muted">BTC open interest</dt><dd class="text-right text-soft">{num(diag.latest.btc_open_interest, ' BTC')}</dd>
-          <dt class="text-muted">Hot-funding breadth</dt><dd class="text-right text-soft">{diag.latest.hot_funding_breadth ?? 'n/a'}%</dd>
+          <dt class="text-muted">Source</dt><dd class="text-right text-soft">{diag.latest.components?.source === 'bgeometrics' ? 'BGeometrics' : 'Earlier provider'}</dd>
         </dl>
       {:else}
-        <p class="text-sm text-muted">No stored row yet. Click “Sync now” (requires the derivatives migration + Bitget reachable).</p>
+        <p class="text-sm text-muted">No stored row yet. Click “Sync now” (requires the derivatives migration and BITCOIN_DATA_API_KEY).</p>
       {/if}
     </div>
 
     <!-- Live read -->
     <div class="card">
-      <p class="stat-label mb-2">Live Bitget read (right now)</p>
+      <p class="stat-label mb-2">Live BGeometrics read (right now)</p>
       {#if diag.live?.leverage_risk != null}
         <dl class="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
           <dt class="text-muted">Leverage</dt><dd class="text-right font-medium text-strong">{diag.live.leverage_percent}/100 · {diag.live.label}</dd>
           <dt class="text-muted">Confidence</dt><dd class="text-right text-soft">{diag.live.confidence}</dd>
-          <dt class="text-muted">BTC / ETH funding</dt><dd class="text-right text-soft">{fundPct(diag.live.btc_funding_rate)} / {fundPct(diag.live.eth_funding_rate)}</dd>
-          <dt class="text-muted">BTC / ETH long/short</dt><dd class="text-right text-soft">{diag.live.btc_long_short ?? 'n/a'} / {diag.live.eth_long_short ?? 'n/a'}</dd>
-          <dt class="text-muted">Hot-funding breadth</dt><dd class="text-right text-soft">{diag.live.hot_funding_breadth ?? 'n/a'}%</dd>
+          {#each diag.live.inputs ?? [] as i}
+            <dt class="text-muted">{i.input} · {Math.round(i.weight * 100)}%</dt><dd class="text-right text-soft">{i.reading}</dd>
+          {/each}
+          <dt class="text-muted">Funding (latest 8h)</dt><dd class="text-right text-soft">{fundPct(diag.live.btc_funding_rate)} · {diag.live.funding?.as_of ?? ''}</dd>
+          <dt class="text-muted">Open interest as of</dt><dd class="text-right text-soft">{diag.live.open_interest?.as_of ?? 'n/a'}</dd>
+          <dt class="text-muted">Positioning as of</dt><dd class="text-right text-soft">{diag.live.positioning?.as_of ?? 'n/a'}</dd>
         </dl>
-        {#if diag.live.top_funding?.length}
-          <p class="mt-3 text-[11px] uppercase tracking-wide text-muted">Hottest funding</p>
-          <p class="text-sm text-soft">{diag.live.top_funding.map((c: any) => `${c.symbol} ${(c.funding * 100).toFixed(2)}%`).join(' · ')}</p>
-        {/if}
       {:else}
-        <p class="text-sm text-warn">Live read unavailable — Bitget did not return data this moment.</p>
+        <p class="text-sm text-warn">Live read unavailable — BGeometrics did not return data this moment.</p>
       {/if}
     </div>
   </div>
@@ -113,11 +112,11 @@
     <p class="stat-label mb-2">Model thresholds (read-only)</p>
     <div class="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm sm:grid-cols-3">
       <div><span class="text-muted">Hot funding /8h:</span> <span class="text-soft">&gt; {fundPct(diag.thresholds?.funding_hot_per_8h)}</span></div>
-      <div><span class="text-muted">L/S extreme:</span> <span class="text-soft">&gt;{diag.thresholds?.long_short_extreme_high} / &lt;{diag.thresholds?.long_short_extreme_low}</span></div>
-      <div><span class="text-muted">OI rising:</span> <span class="text-soft">&gt; {diag.thresholds?.oi_rising_pct}%</span></div>
+      <div><span class="text-muted">Positioning extreme:</span> <span class="text-soft">≥ p{Math.round((diag.thresholds?.positioning_extreme_percentile?.high ?? 0) * 100)} / ≤ p{Math.round((diag.thresholds?.positioning_extreme_percentile?.low ?? 0) * 100)}</span></div>
+      <div><span class="text-muted">OI rising:</span> <span class="text-soft">&gt; {diag.thresholds?.oi_rising_7d_pct}% in 7 days</span></div>
       <div><span class="text-muted">Zones (L/N/E):</span> <span class="text-soft">{diag.thresholds?.leverage_zones?.low} / {diag.thresholds?.leverage_zones?.normal} / {diag.thresholds?.leverage_zones?.elevated}</span></div>
-      <div><span class="text-muted">Funding weight:</span> <span class="text-soft">{diag.thresholds?.funding_weight}</span></div>
-      <div><span class="text-muted">L/S weight:</span> <span class="text-soft">{diag.thresholds?.long_short_weight}</span></div>
+      <div><span class="text-muted">Weights (F/OI/L-S):</span> <span class="text-soft">{diag.thresholds?.weights?.funding} / {diag.thresholds?.weights?.open_interest} / {diag.thresholds?.weights?.positioning}</span></div>
+      <div><span class="text-muted">Source:</span> <span class="text-soft">{diag.thresholds?.source}</span></div>
     </div>
   </div>
 
