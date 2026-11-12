@@ -93,6 +93,7 @@
     date: string;
     mvrv_zscore: number | null;
     puell_multiple: number | null;
+    rhodl_ratio: number | null;
     nupl: number | null;
     reserve_risk: number | null;
     onchain_risk: number | null;
@@ -375,9 +376,9 @@
 
   // Per-metric cards — built from the latest synced on-chain snapshot (not the
   // slider date, since on-chain lags price by a day).
-  const ONCHAIN_LABELS: Record<string, string> = { mvrv_zscore: 'MVRV Z-Score', puell_multiple: 'Puell Multiple', nupl: 'NUPL', reserve_risk: 'Reserve Risk' };
+  const ONCHAIN_LABELS: Record<string, string> = { mvrv_zscore: 'MVRV Z-Score', puell_multiple: 'Puell Multiple', rhodl_ratio: 'RHODL Ratio', nupl: 'NUPL', reserve_risk: 'Reserve Risk' };
   const onchainCards = $derived(
-    ['mvrv_zscore', 'puell_multiple', 'nupl', 'reserve_risk']
+    ['mvrv_zscore', 'puell_multiple', 'rhodl_ratio', 'nupl', 'reserve_risk']
       .filter((k) => onchainLatest[k]?.risk != null)
       .map((k) => {
         const risk = onchainLatest[k].risk as number;
@@ -427,16 +428,17 @@
   const ONCHAIN_EXPLAIN: Record<string, string> = {
     mvrv_zscore: 'Compares Bitcoin’s market value to its realized value. High values can signal overheating; low values can signal undervaluation.',
     puell_multiple: 'Compares daily miner revenue to its yearly average. High values suggest unusually strong miner revenue (a hot market); low values can show miner stress / cycle lows.',
+    rhodl_ratio: 'Compares coins moved in the last week with coins held one to two years. High values mean new money dominates (late-cycle heat); low values mean long-term holders dominate.',
     nupl: 'Net Unrealized Profit/Loss across the network. High NUPL means holders sit on large paper profits, which can raise distribution risk.',
     reserve_risk: 'Long-term-holder conviction relative to price. Low values support accumulation conditions; high values suggest higher cycle risk.'
   };
 
   // Chart line visibility — Simple view shows only BTC + composite.
   let analystMode = $state(false);
-  let lines = $state({ btc: true, composite: true, mvrv: false, puell: false, nupl: false, reserve: false });
+  let lines = $state({ btc: true, composite: true, mvrv: false, puell: false, rhodl: false, nupl: false, reserve: false });
   const setView = (analyst: boolean) => {
     analystMode = analyst;
-    lines = { btc: true, composite: true, mvrv: analyst, puell: analyst, nupl: analyst, reserve: analyst };
+    lines = { btc: true, composite: true, mvrv: analyst, puell: analyst, rhodl: analyst, nupl: analyst, reserve: analyst };
   };
 
   // Human list of the categories actually contributing to today's score.
@@ -512,6 +514,8 @@
         return lo ? 'Miner revenue is low versus its yearly average — historically near cycle lows (lower risk).' : hi ? 'Miner revenue is high versus its yearly average — historically near cycle tops (higher risk).' : 'Miner revenue is moderate versus its yearly average.';
       case 'nupl':
         return lo ? 'Net unrealized profit is low — closer to capitulation/accumulation (lower risk).' : hi ? 'Net unrealized profit is high — closer to euphoria (higher risk).' : 'Net unrealized profit is moderate.';
+      case 'rhodl_ratio':
+        return lo ? 'RHODL Ratio is low — long-term holders dominate supply (lower risk).' : hi ? 'RHODL Ratio is high — new money dominates supply, typical of late-cycle heat (higher risk).' : 'RHODL Ratio is mid-range.';
       case 'reserve_risk':
         return lo ? 'Reserve Risk is low — strong long-term-holder conviction at low prices (attractive risk/reward).' : hi ? 'Reserve Risk is elevated — weaker conviction relative to price (higher risk).' : 'Reserve Risk is mid-range.';
       default:
@@ -641,7 +645,7 @@
           const btc = get('BTC price');
           if (btc != null) html += `<br/>BTC: $${Math.round(btc).toLocaleString()}`;
           if (oc != null) html += `<br/>On-chain risk: <b>${oc.toFixed(3)}</b>${band ? ` · ${band.label}` : ''}`;
-          for (const n of ['MVRV-Z', 'Puell', 'NUPL', 'Reserve Risk']) {
+          for (const n of ['MVRV-Z', 'Puell', 'RHODL', 'NUPL', 'Reserve Risk']) {
             const v = get(n);
             if (v != null) html += `<br/>${n}: ${v.toFixed(3)}`;
           }
@@ -649,7 +653,7 @@
           return `${html}</div>`;
         }
       }),
-      legend: { type: 'scroll', top: 0, data: ['BTC price', 'On-chain risk', 'MVRV-Z', 'Puell', 'NUPL', 'Reserve Risk'] },
+      legend: { type: 'scroll', top: 0, data: ['BTC price', 'On-chain risk', 'MVRV-Z', 'Puell', 'RHODL', 'NUPL', 'Reserve Risk'] },
       grid: grid({ top: 32 }),
       xAxis: timeAxis(),
       yAxis: [
@@ -661,6 +665,7 @@
         compositeSeries,
         line('MVRV-Z', $categorical[1], 'mvrv_zscore', lines.mvrv, 1, 0),
         line('Puell', '#A855F7', 'puell_multiple', lines.puell, 1, 0),
+        line('RHODL', '#F472B6', 'rhodl_ratio', lines.rhodl, 1, 0),
         line('NUPL', $categorical[0], 'nupl', lines.nupl, 1, 0),
         line('Reserve Risk', $categorical[2], 'reserve_risk', lines.reserve, 1, 0)
       ]
@@ -1491,6 +1496,7 @@
             <label class="flex items-center gap-1.5"><input type="checkbox" class="accent-mint" bind:checked={lines.composite} /> On-chain risk</label>
             <label class="flex items-center gap-1.5"><input type="checkbox" class="accent-mint" bind:checked={lines.mvrv} /> MVRV-Z</label>
             <label class="flex items-center gap-1.5"><input type="checkbox" class="accent-mint" bind:checked={lines.puell} /> Puell</label>
+            <label class="flex items-center gap-1.5"><input type="checkbox" class="accent-mint" bind:checked={lines.rhodl} /> RHODL</label>
             <label class="flex items-center gap-1.5"><input type="checkbox" class="accent-mint" bind:checked={lines.nupl} /> NUPL</label>
             <label class="flex items-center gap-1.5"><input type="checkbox" class="accent-mint" bind:checked={lines.reserve} /> Reserve Risk</label>
           </div>
@@ -1524,7 +1530,7 @@
           <a href="https://bitcoin-data.com" target="_blank" rel="noopener" class="hover:text-soft hover:underline">bitcoin-data.com</a>
           · <span class="text-mint">Active</span>{onchainLastSynced ? ` · last synced ${onchainLastSynced}` : ''}
         </span>
-        <span>Coverage 2022→present · MVRV-Z, Puell, NUPL, Reserve Risk. Earlier dates use price/social only.</span>
+        <span>Coverage 2012→present · MVRV-Z, Puell, RHODL, NUPL, Reserve Risk.</span>
       </div>
     </section>
   {/if}

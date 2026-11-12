@@ -74,6 +74,7 @@
     wikipedia: 'Wikipedia',
     fear_greed: 'Fear & Greed',
     youtube: 'YouTube',
+    leverage_euphoria: 'Leverage overlay',
     x_twitter: 'X / Twitter',
     reddit: 'Reddit',
     telegram_discord: 'Telegram / Discord'
@@ -96,11 +97,17 @@
   const readSignals = $derived(
     data
       ? [
-          { name: 'social_risk_score', label: data.label, value: data.social_risk_score, tone: riskTone(data.social_risk_score) },
+          { name: 'Social risk', label: data.label, value: data.social_risk_score, tone: riskTone(data.social_risk_score) },
           ...data.metrics
             .filter((m) => m.value != null || m.risk != null)
             .slice(0, 4)
-            .map((m) => ({ name: m.key, label: m.label, value: m.value ?? m.risk, meaning: m.meaning, tone: riskTone(m.risk) }))
+            .map((m) => ({
+              name: m.label,
+              label: m.risk == null ? 'No reading' : m.risk < 0.4 ? 'Quiet' : m.risk < 0.6 ? 'Normal attention' : 'Elevated attention',
+              value: m.value ?? m.risk,
+              meaning: m.meaning,
+              tone: riskTone(m.risk)
+            }))
         ]
       : []
   );

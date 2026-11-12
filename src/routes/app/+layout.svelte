@@ -203,7 +203,7 @@
           <p class="mt-0.5 truncate text-sm font-bold text-strong">{fmtBtc(snap.btc_price)}</p>
         </div>
         <div class="rounded-lg border border-edge/70 bg-panel px-2.5 py-2" title="Total crypto market cap, 24h change">
-          <p class="text-[9px] font-semibold uppercase tracking-[0.18em] text-muted">24H</p>
+          <p class="text-[9px] font-semibold uppercase tracking-[0.18em] text-muted">Mkt cap 24h</p>
           <p class="mt-0.5 truncate text-sm font-bold {(snap.market_cap_change_24h ?? 0) >= 0 ? 'text-mint' : 'text-danger'}">{fmt24(snap.market_cap_change_24h)}</p>
         </div>
       </div>
