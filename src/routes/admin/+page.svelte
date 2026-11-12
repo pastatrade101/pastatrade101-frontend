@@ -104,8 +104,8 @@
   <button class="btn-primary" disabled={running} title="Runs every stage in order: macro regime, coins, BTC + global, ecosystems, derivatives, social, on-chain (incl. supply P/L), risk model, Early Opportunity, Alt/BTC Bottom, Lab price series and Exit Strategy" onclick={() => runSync('/admin/sync', 'Full sync')}>
     <RefreshCw class="h-4 w-4 {running ? 'animate-spin' : ''}" /> Run full sync
   </button>
-  <button class="btn-ghost" disabled={running} onclick={() => runSync('/admin/sync/macro-regime', 'Macro regime sync')}>
-    Sync macro regime (Twelve Data)
+  <button class="btn-ghost" disabled={running} title="Stores today's macro regime score — SPY and VIXY from Twelve Data; global M2, stablecoins, dollar index and gold from BGeometrics" onclick={() => runSync('/admin/sync/macro-regime', 'Macro regime sync')}>
+    Sync macro regime
   </button>
   <button class="btn-ghost" disabled={running} onclick={() => runSync('/admin/sync/coingecko', 'CoinGecko sync')}>
     Sync coins (CoinGecko)
