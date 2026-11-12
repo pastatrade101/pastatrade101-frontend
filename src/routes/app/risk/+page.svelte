@@ -517,7 +517,7 @@
 
   const CATEGORY_EXPLAIN: Record<string, string> = {
     price: 'Calculated from price-based indicators: logarithmic regression, Mayer Multiple, ATH distance, RSI, and Fear & Greed.',
-    onchain: 'On-chain valuation signals — MVRV Z-Score, Puell Multiple, NUPL and Reserve Risk — normalized to 0–1 (Premium).',
+    onchain: 'On-chain valuation signals — MVRV Z-Score, Puell Multiple, RHODL Ratio, NUPL and Reserve Risk — normalized to 0–1 (Premium).',
     social: 'Measures public attention. High attention during high-price periods may increase risk; low attention during drawdowns may reduce risk.'
   };
 
@@ -1275,7 +1275,10 @@
     <span class="font-medium text-soft">Model coverage.</span>
     Current risk score includes active categories: {coverageList}. Historical dates before on-chain coverage may use price/social only.
   </p>
-  <p class="mb-4 text-[11px] text-muted">On-chain metrics by <a href="https://bitcoin-data.com" target="_blank" rel="noopener" class="hover:text-soft hover:underline">BGeometrics · bitcoin-data.com</a>.</p>
+  <p class="mb-4 text-[11px] text-muted">
+    On-chain metrics by <a href="https://bitcoin-data.com" target="_blank" rel="noopener" class="hover:text-soft hover:underline">BGeometrics · bitcoin-data.com</a>.
+    MVRV Z-Score, Puell Multiple and NUPL are published 7 days after the fact, so they show an earlier date than the rest.
+  </p>
 
   <!-- Why the score is here -->
   <div class="card mb-4">
@@ -1771,7 +1774,7 @@
                 <span class="text-xs text-muted" title="No reading in the last 7 days — not in the score">no data</span>
               {:else}
                 <span class="flex items-center gap-1.5">
-                  {#if m.as_of && metrics && m.as_of !== metrics.as_of}<span class="text-[10px] text-muted" title="Last reading — its feed lags; it still counts in the score for up to 7 days">{fmtDay(m.as_of)}</span>{/if}
+                  {#if m.as_of && metrics && m.as_of !== metrics.as_of}<span class="text-[10px] text-muted" title="Date of the latest published reading. Some on-chain metrics are published 7 days after the fact; a reading counts in the score for up to 7 days.">{fmtDay(m.as_of)}</span>{/if}
                   <span class="rounded px-2 py-0.5 font-mono text-xs font-semibold" style="background: {riskColor(m.risk)}22; color: {riskColor(m.risk)}">{m.risk.toFixed(3)}</span>
                 </span>
               {/if}
