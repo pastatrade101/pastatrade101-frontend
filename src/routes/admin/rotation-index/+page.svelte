@@ -145,6 +145,34 @@
   };
 
   const sleeve = $derived(bot?.[botMode] ?? null);
+  /** Coins worth less than this are grouped as small leftovers. */
+  const DUST_USDT = 1;
+  const botCoins = $derived(new Set(sleeve?.latest.positions.map((p) => p.asset) ?? []));
+  /** The Spot wallet as a portfolio: share of each coin, small leftovers grouped, a bar of the biggest. */
+  const wallet = $derived.by(() => {
+    const sp = sleeve?.latest.spot;
+    if (!sp) return null;
+    const total = sp.total_usdt;
+    const share = (v: number | null) => (v == null || !(total > 0) ? null : (v / total) * 100);
+    const main = sp.assets.filter((x) => (x.value_usdt ?? 0) >= DUST_USDT).map((x) => ({ ...x, share: share(x.value_usdt) }));
+    const small = sp.assets.filter((x) => (x.value_usdt ?? 0) < DUST_USDT);
+    const smallValue = small.reduce((sum, x) => sum + (x.value_usdt ?? 0), 0);
+    const palette = $categorical;
+    const top = main.slice(0, 6);
+    const segments = top.map((x, i) => ({ label: x.asset, share: x.share ?? 0, color: palette[i % palette.length] }));
+    const rest = 100 - segments.reduce((sum, g) => sum + g.share, 0);
+    if (total > 0 && rest >= 0.5) segments.push({ label: 'Other', share: rest, color: 'rgb(var(--c-edge))' });
+    return {
+      total,
+      usdtFree: sp.assets.find((x) => x.asset === 'USDT')?.free ?? 0,
+      main,
+      small,
+      smallValue,
+      more: sp.more,
+      // Only worth drawing when at least one coin is bigger than a leftover.
+      segments: total > 0 && main.length ? segments : []
+    };
+  });
   /** The index over the sleeve's own days, to compare like with like. */
   const indexSameDays = $derived.by(() => {
     const from = sleeve?.latest.started_on;
@@ -254,10 +282,10 @@
   {@const v = view}
   <div class="space-y-4">
     {#if bot}
-      <!-- The bot's real Binance sleeve, from the snapshot it saves after each real run. -->
+      <!-- The owner's Binance account, from the snapshot the bot saves after each run. -->
       <div class="card">
         <div class="flex flex-wrap items-center justify-between gap-2">
-          <h2 class="flex items-center gap-1.5 text-sm font-semibold text-strong"><Wallet class="h-4 w-4 text-accent" /> Your Binance sleeve</h2>
+          <h2 class="flex items-center gap-1.5 text-sm font-semibold text-strong"><Wallet class="h-4 w-4 text-accent" /> Your Binance portfolio</h2>
           <div class="flex gap-1 text-xs">
             {#each [['live', 'Live'], ['testnet', 'Testnet']] as [m, label] (m)}
               <button
@@ -270,103 +298,138 @@
 
         {#if bot.table_missing}
           <p class="mt-2 text-sm text-soft">
-            The snapshot table doesn't exist yet. Create it once by running <code class="rounded bg-panel-2 px-1.5 py-0.5 text-xs">backend/database/rotation-bot-snapshots.sql</code> in the Supabase SQL editor. After that the bot saves a snapshot on every real run.
+            The snapshot table doesn't exist yet. Create it once by running <code class="rounded bg-panel-2 px-1.5 py-0.5 text-xs">backend/database/rotation-bot-snapshots.sql</code> in the Supabase SQL editor.
           </p>
         {:else if !sleeve}
           <p class="mt-2 text-sm text-muted">
-            No {botMode} snapshot yet. The bot saves one after every real {botMode} run; dry runs save nothing.
+            No {botMode} snapshot yet. Save one with <code class="rounded bg-panel-2 px-1.5 py-0.5 text-xs">npm run bot:rotation -- --mode {botMode} --snapshot</code> (reads balances, places no orders); every real bot run saves one too.
           </p>
         {:else}
           {@const s = sleeve.latest}
-          <p class="mt-1 text-xs text-muted">
-            {s.follow ? 'Copies the Rotation Index' : `Runs the ${s.style} rule itself`} · updated {when(s.taken_at)} · {s.status}
-          </p>
+          <p class="mt-1 text-xs text-muted">Spot wallet as of {when(s.taken_at)} · {s.status}</p>
 
-          {#if s.started}
-            <div class="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">
+          {#if wallet}
+            <!-- 1. Everything in the Spot wallet -->
+            <div class="mt-3 flex flex-wrap items-end justify-between gap-3">
               <div>
-                <p class="text-[11px] text-muted">Value</p>
-                <p class="text-xl font-semibold text-strong">{usd(s.equity_usdt)} <span class="text-xs font-normal text-muted">USDT</span></p>
+                <p class="text-[11px] text-muted">Total value</p>
+                <p class="text-3xl font-semibold text-strong">{usd(wallet.total)} <span class="text-sm font-normal text-muted">USDT</span></p>
               </div>
-              <div>
-                <p class="text-[11px] text-muted">On the {usd(s.budget_usdt)} budget</p>
-                <p class="text-xl font-semibold {tone(s.return_pct)}">{pct(s.return_pct, 2)}</p>
-              </div>
-              <div>
-                <p class="text-[11px] text-muted">Index, same days{indexSameDays ? ` (to ${niceDate(indexSameDays.to)})` : ''}</p>
-                <p class="text-xl font-semibold {tone(indexSameDays?.pct)}">{pct(indexSameDays?.pct, 2)}</p>
-              </div>
-              <div>
-                <p class="text-[11px] text-muted">Cash in the sleeve</p>
-                <p class="text-xl font-semibold text-strong">{usd(s.cash_usdt)} <span class="text-xs font-normal text-muted">USDT</span></p>
+              <div class="text-right">
+                <p class="text-[11px] text-muted">USDT free to spend</p>
+                <p class="text-lg font-semibold text-strong">{usd(wallet.usdtFree)}</p>
               </div>
             </div>
 
-            {#if s.positions.length}
+            {#if wallet.segments.length}
+              <div class="mt-3 flex h-2.5 w-full overflow-hidden rounded-sm bg-panel-2">
+                {#each wallet.segments as g (g.label)}
+                  <span class="h-full" style="width:{g.share}%; background:{g.color}" title="{g.label} {g.share.toFixed(1)}%"></span>
+                {/each}
+              </div>
+              <div class="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-[11px]">
+                {#each wallet.segments as g (g.label)}
+                  <span class="flex items-center gap-1 text-soft"><span class="inline-block h-2 w-2 rounded-sm" style="background:{g.color}"></span>{g.label} {g.share.toFixed(1)}%</span>
+                {/each}
+              </div>
+            {/if}
+
+            {#if wallet.main.length}
               <table class="mt-3 w-full text-sm">
                 <thead>
-                  <tr class="text-left text-[11px] text-muted"><th class="py-1 font-medium">Coin</th><th class="py-1 text-right font-medium">Amount</th><th class="py-1 text-right font-medium">Value (USDT)</th><th class="py-1 text-right font-medium">Since entry</th><th class="hidden py-1 text-right font-medium sm:table-cell">Bought</th></tr>
+                  <tr class="text-left text-[11px] text-muted"><th class="py-1 font-medium">Coin</th><th class="py-1 text-right font-medium">Amount</th><th class="py-1 text-right font-medium">Value (USDT)</th><th class="py-1 text-right font-medium">Share</th></tr>
                 </thead>
                 <tbody>
-                  {#each s.positions as p (p.coin)}
+                  {#each showAllSpot ? wallet.main : wallet.main.slice(0, SPOT_SHOWN) as b (b.asset)}
                     <tr class="border-t border-edge/60">
-                      <td class="py-1.5 font-semibold text-strong">{p.asset}</td>
-                      <td class="py-1.5 text-right text-soft">{amount(p.qty)}</td>
-                      <td class="py-1.5 text-right text-soft">{usd(p.value_usdt)}</td>
-                      <td class="py-1.5 text-right {tone(p.return_pct)}">{pct(p.return_pct)}</td>
-                      <td class="hidden py-1.5 text-right text-xs text-muted sm:table-cell">{niceDate(p.entry_date)}</td>
+                      <td class="py-1.5 font-semibold text-strong">
+                        {b.asset}{#if botCoins.has(b.asset)}<span class="ml-1.5 rounded-sm bg-accent/15 px-1 py-px text-[10px] font-medium text-accent">bot</span>{/if}
+                        {#if b.locked > 0}<span class="ml-1 text-[11px] font-normal text-muted">({amount(b.locked)} in orders)</span>{/if}
+                      </td>
+                      <td class="py-1.5 text-right text-soft">{amount(b.free + b.locked)}</td>
+                      <td class="py-1.5 text-right text-strong">{usd(b.value_usdt)}</td>
+                      <td class="py-1.5 text-right text-soft">{b.share == null ? '—' : `${b.share.toFixed(1)}%`}</td>
                     </tr>
                   {/each}
                 </tbody>
               </table>
+              {#if wallet.main.length > SPOT_SHOWN}
+                <button class="mt-1 text-[11px] font-medium text-accent hover:underline" onclick={() => (showAllSpot = !showAllSpot)}>
+                  {showAllSpot ? 'Show fewer' : `Show all ${wallet.main.length}`}
+                </button>
+              {/if}
             {:else}
-              <p class="mt-3 text-xs text-muted">No coins held — the sleeve is all cash.</p>
+              <p class="mt-3 text-sm text-soft">No coin worth {DUST_USDT} USDT or more — the wallet holds only small leftovers.</p>
             {/if}
 
-            {#if sleeve.history.length >= 2}
-              <div class="mt-3"><EChart option={sleeveChart} height={180} /></div>
+            {#if wallet.small.length}
+              <details class="mt-2 text-xs">
+                <summary class="cursor-pointer text-muted">
+                  {wallet.small.length} small balance{wallet.small.length === 1 ? '' : 's'} under {DUST_USDT} USDT, about {usd(wallet.smallValue)} USDT in all{wallet.more ? ` (+ ${wallet.more} not listed)` : ''}
+                </summary>
+                <p class="mt-1 leading-relaxed text-soft">
+                  {#each wallet.small as b, i (b.asset)}{i ? ' · ' : ''}{b.asset} {amount(b.free + b.locked)}{b.value_usdt == null ? '' : ` (${usd(b.value_usdt)})`}{/each}
+                </p>
+              </details>
             {/if}
-          {:else}
-            <p class="mt-3 text-sm text-soft">The sleeve hasn't bought anything yet. Budget {usd(s.budget_usdt)} USDT.</p>
+            <p class="mt-2 text-[11px] text-muted">Spot wallet only — Funding and Earn are not included. Coins marked <span class="text-accent">bot</span> are the bot's; it never touches the rest.</p>
           {/if}
 
-          {#if s.spot}
-            <div class="mt-4 border-t border-edge/60 pt-3">
-              <div class="flex flex-wrap items-baseline justify-between gap-2">
-                <h3 class="text-xs font-semibold text-strong">Spot wallet — every coin in the account</h3>
-                <span class="text-xs text-muted">about <span class="font-semibold text-strong">{usd(s.spot.total_usdt)}</span> USDT</span>
+          <!-- 2. The bot's part of it -->
+          <div class="mt-4 border-t border-edge/60 pt-3">
+            <h3 class="text-xs font-semibold text-strong">Bot sleeve · {s.follow ? 'copies the Rotation Index' : `runs the ${s.style} rule`}</h3>
+            {#if s.started}
+              <div class="mt-2 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">
+                <div>
+                  <p class="text-[11px] text-muted">Sleeve value</p>
+                  <p class="text-lg font-semibold text-strong">{usd(s.equity_usdt)} <span class="text-xs font-normal text-muted">USDT</span></p>
+                </div>
+                <div>
+                  <p class="text-[11px] text-muted">On the {usd(s.budget_usdt)} budget</p>
+                  <p class="text-lg font-semibold {tone(s.return_pct)}">{pct(s.return_pct, 2)}</p>
+                </div>
+                <div>
+                  <p class="text-[11px] text-muted">Index, same days</p>
+                  <p class="text-lg font-semibold {tone(indexSameDays?.pct)}">{pct(indexSameDays?.pct, 2)}</p>
+                </div>
+                <div>
+                  <p class="text-[11px] text-muted">Cash in the sleeve</p>
+                  <p class="text-lg font-semibold text-strong">{usd(s.cash_usdt)} <span class="text-xs font-normal text-muted">USDT</span></p>
+                </div>
               </div>
-              {#if s.spot.assets.length}
-                <table class="mt-1 w-full text-xs">
+              {#if s.positions.length}
+                <table class="mt-3 w-full text-sm">
                   <thead>
-                    <tr class="text-left text-[11px] text-muted"><th class="py-1 font-medium">Asset</th><th class="py-1 text-right font-medium">Amount</th><th class="py-1 text-right font-medium">Value (USDT)</th></tr>
+                    <tr class="text-left text-[11px] text-muted"><th class="py-1 font-medium">Coin</th><th class="py-1 text-right font-medium">Amount</th><th class="py-1 text-right font-medium">Value (USDT)</th><th class="py-1 text-right font-medium">Since entry</th><th class="hidden py-1 text-right font-medium sm:table-cell">Bought</th></tr>
                   </thead>
                   <tbody>
-                    {#each showAllSpot ? s.spot.assets : s.spot.assets.slice(0, SPOT_SHOWN) as b (b.asset)}
+                    {#each s.positions as p (p.coin)}
                       <tr class="border-t border-edge/60">
-                        <td class="py-1 font-medium text-strong">{b.asset}{#if b.locked > 0}<span class="ml-1 text-muted">({amount(b.locked)} in orders)</span>{/if}</td>
-                        <td class="py-1 text-right text-soft">{amount(b.free + b.locked)}</td>
-                        <td class="py-1 text-right text-soft">{b.value_usdt == null ? 'no USDT price' : usd(b.value_usdt)}</td>
+                        <td class="py-1.5 font-semibold text-strong">{p.asset}</td>
+                        <td class="py-1.5 text-right text-soft">{amount(p.qty)}</td>
+                        <td class="py-1.5 text-right text-soft">{usd(p.value_usdt)}</td>
+                        <td class="py-1.5 text-right {tone(p.return_pct)}">{pct(p.return_pct)}</td>
+                        <td class="hidden py-1.5 text-right text-xs text-muted sm:table-cell">{niceDate(p.entry_date)}</td>
                       </tr>
                     {/each}
                   </tbody>
                 </table>
-                {#if s.spot.assets.length > SPOT_SHOWN}
-                  <button class="mt-1 text-[11px] font-medium text-accent hover:underline" onclick={() => (showAllSpot = !showAllSpot)}>
-                    {showAllSpot ? 'Show fewer' : `Show all ${s.spot.assets.length}`}
-                  </button>
-                {/if}
-                {#if s.spot.more && showAllSpot}<p class="mt-1 text-[11px] text-muted">+ {s.spot.more} smaller coins not listed.</p>{/if}
               {:else}
-                <p class="mt-1 text-xs text-muted">Empty — no USDT and no coins.</p>
+                <p class="mt-2 text-xs text-muted">No coins held — the sleeve is all cash.</p>
               {/if}
-              <p class="mt-1 text-[11px] text-muted">The bot only trades its own sleeve; other coins here are left alone. Funding and Earn wallets are not included.</p>
-            </div>
-          {/if}
+              {#if sleeve.history.length >= 2}
+                <div class="mt-3"><EChart option={sleeveChart} height={180} /></div>
+              {/if}
+            {:else}
+              <p class="mt-1 text-sm text-soft">
+                Not started. It will spend up to {usd(s.budget_usdt)} USDT on the index's coins{wallet && wallet.usdtFree < s.budget_usdt ? ` — add USDT to Spot first (${usd(wallet.usdtFree)} free now)` : ''}.
+              </p>
+            {/if}
+          </div>
 
           {#if s.trades.length}
             <div class="mt-4 border-t border-edge/60 pt-3">
-              <h3 class="text-xs font-semibold text-strong">Recent orders</h3>
+              <h3 class="text-xs font-semibold text-strong">Recent bot orders</h3>
               <div class="mt-1 space-y-0.5 text-xs">
                 {#each s.trades.slice(0, 8) as t (t.at + t.symbol + t.side)}
                   <p class="text-soft">
