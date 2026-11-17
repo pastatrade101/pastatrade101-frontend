@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
-  import { RefreshCw, Repeat, CalendarClock, ListChecks } from '@lucide/svelte';
+  import { RefreshCw, Repeat, CalendarClock, ListChecks, Wallet } from '@lucide/svelte';
   import { api } from '$lib/api';
   import { authReady, user } from '$lib/stores/auth';
   import EChart from '$lib/components/EChart.svelte';
@@ -55,7 +55,35 @@
     reviews?: Review[];
   }
 
+  // What the rotation bot's Binance sleeve holds — a snapshot the bot saves after
+  // every real run (the trading key never leaves the machine that runs the bot).
+  interface BotTrade { at: string; side: 'BUY' | 'SELL'; coin: string; symbol: string; qty: string; usdt: number; reason: string }
+  interface BotSnapshot {
+    mode: 'live' | 'testnet';
+    taken_at: string;
+    follow: string | null;
+    style: string;
+    started: boolean;
+    started_on: string | null;
+    budget_usdt: number;
+    cash_usdt: number;
+    equity_usdt: number | null;
+    return_pct: number | null;
+    positions: { coin: string; asset: string; qty: string; price: number | null; value_usdt: number | null; cost_usdt: number; return_pct: number | null; entry_date: string }[];
+    dust: Record<string, string>;
+    status: string;
+    index: { id: string; date: string } | null;
+    next_review: string | null;
+    spot: { total_usdt: number; assets: { asset: string; free: number; locked: number; value_usdt: number | null }[]; more: number } | null;
+    trades: BotTrade[];
+  }
+  interface BotMode { latest: BotSnapshot; history: { date: string; equity_usdt: number }[] }
+  interface BotView { table_missing: boolean; live: BotMode | null; testnet: BotMode | null }
+
   let view = $state<View | null>(null);
+  let bot = $state<BotView | null>(null);
+  let botMode = $state<'live' | 'testnet'>('live');
+  let botModePicked = false;
   let loading = $state(true);
   let updating = $state(false);
   let error = $state('');
@@ -67,7 +95,14 @@
 
   const load = async () => {
     try {
-      view = await api<View>('/admin/rotation-index', { auth: true });
+      const [v, b] = await Promise.all([
+        api<View>('/admin/rotation-index', { auth: true }),
+        // The card is optional: an older backend without the route just hides it.
+        api<BotView>('/admin/rotation-index/bot', { auth: true }).catch(() => null)
+      ]);
+      view = v;
+      bot = b;
+      if (b && !botModePicked) botMode = b.live || !b.testnet ? 'live' : 'testnet';
       error = '';
     } catch (e) {
       error = e instanceof Error ? e.message : 'Failed to load the index.';
@@ -98,6 +133,26 @@
   const ts = (d: string) => Date.parse(`${d}T00:00:00Z`);
   const price = (p: number) => (p >= 100 ? p.toLocaleString('en-US', { maximumFractionDigits: 0 }) : p >= 1 ? p.toFixed(2) : p.toPrecision(3));
 
+  const usd = (n: number | null | undefined) => (n == null ? '—' : n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+  const amount = (q: string | number) => Number(q).toLocaleString('en-US', { maximumFractionDigits: 8 });
+  const when = (iso: string) => new Date(iso).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  const pickMode = (m: 'live' | 'testnet') => {
+    botMode = m;
+    botModePicked = true;
+  };
+
+  const sleeve = $derived(bot?.[botMode] ?? null);
+  /** The index over the sleeve's own days, to compare like with like. */
+  const indexSameDays = $derived.by(() => {
+    const from = sleeve?.latest.started_on;
+    const s = view?.series ?? [];
+    if (!from || !s.length) return null;
+    const start = s.find((p) => p.date >= from);
+    const end = s[s.length - 1];
+    if (!start) return null;
+    return { pct: (end.nav / start.nav - 1) * 100, from: start.date, to: end.date };
+  });
+
   // Rotation in blue and BTC in amber, as in the Rotation Lab; the top-10 index in green.
   const colors = $derived({ rot: $categorical[1], btc: $categorical[0], top: $categorical[2] });
 
@@ -112,6 +167,23 @@
   );
 
   const DAY_MS = 86_400_000;
+
+  const sleeveChart = $derived.by(() => {
+    const h = sleeve?.history ?? [];
+    if (h.length < 2) return {};
+    return {
+      backgroundColor: 'transparent',
+      useUTC: true,
+      grid: grid({ top: 12, right: 20 }),
+      tooltip: axisTooltip({
+        valueFormatter: (v: number) => `${usd(v)} USDT`,
+        axisPointer: { label: { formatter: ({ value }: { value: number }) => dayLabel(value) } }
+      }),
+      xAxis: timeAxis({ splitLine: { show: false }, minInterval: DAY_MS, axisLabel: { formatter: dayLabel, hideOverlap: true } }),
+      yAxis: valueAxis({ scale: true, axisLabel: { formatter: (v: number) => v.toFixed(0) } }),
+      series: [lineSeries({ name: 'Sleeve value', color: colors.rot, width: 2, data: h.map((p) => [ts(p.date), p.equity_usdt]) })]
+    };
+  });
   const dayLabel = (t: number) => new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' });
 
   const chartOption = $derived.by(() => {
@@ -178,6 +250,130 @@
 {:else if view?.latest}
   {@const v = view}
   <div class="space-y-4">
+    {#if bot}
+      <!-- The bot's real Binance sleeve, from the snapshot it saves after each real run. -->
+      <div class="card">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <h2 class="flex items-center gap-1.5 text-sm font-semibold text-strong"><Wallet class="h-4 w-4 text-accent" /> Your Binance sleeve</h2>
+          <div class="flex gap-1 text-xs">
+            {#each [['live', 'Live'], ['testnet', 'Testnet']] as [m, label] (m)}
+              <button
+                class="pill {botMode === m ? (m === 'live' ? 'bg-danger/15 text-danger' : 'bg-accent/15 text-accent') : 'bg-edge text-soft'}"
+                onclick={() => pickMode(m as 'live' | 'testnet')}>{label}</button
+              >
+            {/each}
+          </div>
+        </div>
+
+        {#if bot.table_missing}
+          <p class="mt-2 text-sm text-soft">
+            The snapshot table doesn't exist yet. Create it once by running <code class="rounded bg-panel-2 px-1.5 py-0.5 text-xs">backend/database/rotation-bot-snapshots.sql</code> in the Supabase SQL editor. After that the bot saves a snapshot on every real run.
+          </p>
+        {:else if !sleeve}
+          <p class="mt-2 text-sm text-muted">
+            No {botMode} snapshot yet. The bot saves one after every real {botMode} run; dry runs save nothing.
+          </p>
+        {:else}
+          {@const s = sleeve.latest}
+          <p class="mt-1 text-xs text-muted">
+            {s.follow ? 'Copies the Rotation Index' : `Runs the ${s.style} rule itself`} · updated {when(s.taken_at)} · {s.status}
+          </p>
+
+          {#if s.started}
+            <div class="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">
+              <div>
+                <p class="text-[11px] text-muted">Value</p>
+                <p class="text-xl font-semibold text-strong">{usd(s.equity_usdt)} <span class="text-xs font-normal text-muted">USDT</span></p>
+              </div>
+              <div>
+                <p class="text-[11px] text-muted">On the {usd(s.budget_usdt)} budget</p>
+                <p class="text-xl font-semibold {tone(s.return_pct)}">{pct(s.return_pct, 2)}</p>
+              </div>
+              <div>
+                <p class="text-[11px] text-muted">Index, same days{indexSameDays ? ` (to ${niceDate(indexSameDays.to)})` : ''}</p>
+                <p class="text-xl font-semibold {tone(indexSameDays?.pct)}">{pct(indexSameDays?.pct, 2)}</p>
+              </div>
+              <div>
+                <p class="text-[11px] text-muted">Cash in the sleeve</p>
+                <p class="text-xl font-semibold text-strong">{usd(s.cash_usdt)} <span class="text-xs font-normal text-muted">USDT</span></p>
+              </div>
+            </div>
+
+            {#if s.positions.length}
+              <table class="mt-3 w-full text-sm">
+                <thead>
+                  <tr class="text-left text-[11px] text-muted"><th class="py-1 font-medium">Coin</th><th class="py-1 text-right font-medium">Amount</th><th class="py-1 text-right font-medium">Value (USDT)</th><th class="py-1 text-right font-medium">Since entry</th><th class="hidden py-1 text-right font-medium sm:table-cell">Bought</th></tr>
+                </thead>
+                <tbody>
+                  {#each s.positions as p (p.coin)}
+                    <tr class="border-t border-edge/60">
+                      <td class="py-1.5 font-semibold text-strong">{p.asset}</td>
+                      <td class="py-1.5 text-right text-soft">{amount(p.qty)}</td>
+                      <td class="py-1.5 text-right text-soft">{usd(p.value_usdt)}</td>
+                      <td class="py-1.5 text-right {tone(p.return_pct)}">{pct(p.return_pct)}</td>
+                      <td class="hidden py-1.5 text-right text-xs text-muted sm:table-cell">{niceDate(p.entry_date)}</td>
+                    </tr>
+                  {/each}
+                </tbody>
+              </table>
+            {:else}
+              <p class="mt-3 text-xs text-muted">No coins held — the sleeve is all cash.</p>
+            {/if}
+
+            {#if sleeve.history.length >= 2}
+              <div class="mt-3"><EChart option={sleeveChart} height={180} /></div>
+            {/if}
+          {:else}
+            <p class="mt-3 text-sm text-soft">The sleeve hasn't bought anything yet. Budget {usd(s.budget_usdt)} USDT.</p>
+          {/if}
+
+          {#if s.spot}
+            <div class="mt-4 border-t border-edge/60 pt-3">
+              <div class="flex flex-wrap items-baseline justify-between gap-2">
+                <h3 class="text-xs font-semibold text-strong">Spot wallet — every coin in the account</h3>
+                <span class="text-xs text-muted">about <span class="font-semibold text-strong">{usd(s.spot.total_usdt)}</span> USDT</span>
+              </div>
+              {#if s.spot.assets.length}
+                <table class="mt-1 w-full text-xs">
+                  <thead>
+                    <tr class="text-left text-[11px] text-muted"><th class="py-1 font-medium">Asset</th><th class="py-1 text-right font-medium">Amount</th><th class="py-1 text-right font-medium">Value (USDT)</th></tr>
+                  </thead>
+                  <tbody>
+                    {#each s.spot.assets as b (b.asset)}
+                      <tr class="border-t border-edge/60">
+                        <td class="py-1 font-medium text-strong">{b.asset}{#if b.locked > 0}<span class="ml-1 text-muted">({amount(b.locked)} in orders)</span>{/if}</td>
+                        <td class="py-1 text-right text-soft">{amount(b.free + b.locked)}</td>
+                        <td class="py-1 text-right text-soft">{b.value_usdt == null ? 'no USDT price' : usd(b.value_usdt)}</td>
+                      </tr>
+                    {/each}
+                  </tbody>
+                </table>
+                {#if s.spot.more}<p class="mt-1 text-[11px] text-muted">+ {s.spot.more} smaller coins not listed.</p>{/if}
+              {:else}
+                <p class="mt-1 text-xs text-muted">Empty — no USDT and no coins.</p>
+              {/if}
+              <p class="mt-1 text-[11px] text-muted">The bot only trades its own sleeve; other coins here are left alone. Funding and Earn wallets are not included.</p>
+            </div>
+          {/if}
+
+          {#if s.trades.length}
+            <div class="mt-4 border-t border-edge/60 pt-3">
+              <h3 class="text-xs font-semibold text-strong">Recent orders</h3>
+              <div class="mt-1 space-y-0.5 text-xs">
+                {#each s.trades.slice(0, 8) as t (t.at + t.symbol + t.side)}
+                  <p class="text-soft">
+                    <span class="text-muted">{when(t.at)}</span>
+                    <span class={t.side === 'BUY' ? 'text-mint' : 'text-danger'}>{t.side === 'BUY' ? 'Bought' : 'Sold'}</span>
+                    {amount(t.qty)} {t.symbol.replace(/USDT$/, '')} for {usd(t.usdt)} USDT · <span class="text-muted">{t.reason}</span>
+                  </p>
+                {/each}
+              </div>
+            </div>
+          {/if}
+        {/if}
+      </div>
+    {/if}
+
     <!-- The three lines side by side; all start at the same base on the first fill day. -->
     <div class="grid gap-3 sm:grid-cols-3">
       {#each lines as l (l.key)}
