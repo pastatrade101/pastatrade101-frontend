@@ -84,6 +84,9 @@
   let bot = $state<BotView | null>(null);
   let botMode = $state<'live' | 'testnet'>('live');
   let botModePicked = false;
+  /** The Spot list shows the biggest few until asked for the rest. */
+  const SPOT_SHOWN = 8;
+  let showAllSpot = $state(false);
   let loading = $state(true);
   let updating = $state(false);
   let error = $state('');
@@ -339,7 +342,7 @@
                     <tr class="text-left text-[11px] text-muted"><th class="py-1 font-medium">Asset</th><th class="py-1 text-right font-medium">Amount</th><th class="py-1 text-right font-medium">Value (USDT)</th></tr>
                   </thead>
                   <tbody>
-                    {#each s.spot.assets as b (b.asset)}
+                    {#each showAllSpot ? s.spot.assets : s.spot.assets.slice(0, SPOT_SHOWN) as b (b.asset)}
                       <tr class="border-t border-edge/60">
                         <td class="py-1 font-medium text-strong">{b.asset}{#if b.locked > 0}<span class="ml-1 text-muted">({amount(b.locked)} in orders)</span>{/if}</td>
                         <td class="py-1 text-right text-soft">{amount(b.free + b.locked)}</td>
@@ -348,7 +351,12 @@
                     {/each}
                   </tbody>
                 </table>
-                {#if s.spot.more}<p class="mt-1 text-[11px] text-muted">+ {s.spot.more} smaller coins not listed.</p>{/if}
+                {#if s.spot.assets.length > SPOT_SHOWN}
+                  <button class="mt-1 text-[11px] font-medium text-accent hover:underline" onclick={() => (showAllSpot = !showAllSpot)}>
+                    {showAllSpot ? 'Show fewer' : `Show all ${s.spot.assets.length}`}
+                  </button>
+                {/if}
+                {#if s.spot.more && showAllSpot}<p class="mt-1 text-[11px] text-muted">+ {s.spot.more} smaller coins not listed.</p>{/if}
               {:else}
                 <p class="mt-1 text-xs text-muted">Empty — no USDT and no coins.</p>
               {/if}
