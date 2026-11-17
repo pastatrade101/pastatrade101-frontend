@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
-  import { RefreshCw, Repeat, CalendarClock, ListChecks, Wallet } from '@lucide/svelte';
+  import { RefreshCw, Repeat, CalendarClock, ListChecks, Wallet, Eye, Play } from '@lucide/svelte';
   import { api } from '$lib/api';
   import { authReady, user } from '$lib/stores/auth';
   import EChart from '$lib/components/EChart.svelte';
@@ -55,8 +55,9 @@
     reviews?: Review[];
   }
 
-  // What the rotation bot's Binance sleeve holds — a snapshot the bot saves after
-  // every real run (the trading key never leaves the machine that runs the bot).
+  // What the rotation bot's Binance sleeve holds. Read live from Binance by the
+  // server (with its own key) while the page is open; the snapshot the bot saves
+  // after every run is the fallback when Binance can't be read.
   interface BotTrade { at: string; side: 'BUY' | 'SELL'; coin: string; symbol: string; qty: string; usdt: number; reason: string }
   interface BotSnapshot {
     mode: 'live' | 'testnet';
@@ -72,6 +73,7 @@
     positions: { coin: string; asset: string; qty: string; price: number | null; value_usdt: number | null; cost_usdt: number; return_pct: number | null; entry_date: string }[];
     dust: Record<string, string>;
     status: string;
+    last_run?: { at: string; summary: string; by: 'cli' | 'admin' } | null;
     index: { id: string; date: string } | null;
     next_review: string | null;
     spot: { total_usdt: number; assets: { asset: string; free: number; locked: number; value_usdt: number | null }[]; more: number } | null;
@@ -79,6 +81,24 @@
   }
   interface BotMode { latest: BotSnapshot; history: { date: string; equity_usdt: number }[] }
   interface BotView { table_missing: boolean; live: BotMode | null; testnet: BotMode | null }
+  type Mode = 'live' | 'testnet';
+  interface LiveWallet {
+    mode: Mode;
+    fetched_at: string;
+    keys: boolean;
+    error: string | null;
+    key: { withdrawals: boolean; ip_restricted: boolean; spot_trading: boolean } | null;
+    snapshot: BotSnapshot | null;
+    control: { can_trade: boolean; why_not: string | null; max_budget_usdt: number | null; running: boolean };
+  }
+  interface BotPlan { keep: string[]; sell: { asset: string; reason: string }[]; buy: { asset: string; usdt: number | null }[] }
+  interface BotResult {
+    ok: boolean;
+    message?: string;
+    outcome?: { kind: string; summary: string; plan: BotPlan | null };
+    log: string[];
+    wallet: LiveWallet | null;
+  }
 
   let view = $state<View | null>(null);
   let bot = $state<BotView | null>(null);
@@ -87,6 +107,19 @@
   /** The Spot list shows the biggest few until asked for the rest. */
   const SPOT_SHOWN = 8;
   let showAllSpot = $state(false);
+  /** The account as the server reads it from Binance right now, per mode. */
+  let liveWallets = $state<Record<Mode, LiveWallet | null>>({ live: null, testnet: null });
+  let liveFailed = $state<Record<Mode, string>>({ live: '', testnet: '' });
+  /** An older backend without the live route: keep showing saved snapshots only. */
+  let liveUnsupported = $state(false);
+  let liveLoading = $state(false);
+  let nowTick = $state(Date.now());
+  const POLL_MS = 10_000;
+  /** What the bot buttons are doing, and what the last preview / run said. */
+  let busy = $state<'preview' | 'check' | 'run' | null>(null);
+  let result = $state<(BotResult & { mode: Mode; kind: 'preview' | 'check' | 'run' }) | null>(null);
+  let budgetInput = $state('');
+  let budgetTouched = false;
   let loading = $state(true);
   let updating = $state(false);
   let error = $state('');
@@ -142,15 +175,99 @@
   const pickMode = (m: 'live' | 'testnet') => {
     botMode = m;
     botModePicked = true;
+    budgetTouched = false;
+    if (result?.mode !== m) result = null;
+  };
+
+  const refreshLive = async (mode: Mode, fresh = false) => {
+    if (liveUnsupported) return;
+    liveLoading = true;
+    try {
+      liveWallets[mode] = await api<LiveWallet>(`/admin/rotation-index/bot/${mode}/live${fresh ? '?fresh=1' : ''}`, { auth: true, timeoutMs: 20_000 });
+      liveFailed[mode] = '';
+    } catch (e) {
+      if (e instanceof Error && 'status' in e && (e as { status: number }).status === 404) liveUnsupported = true;
+      else liveFailed[mode] = e instanceof Error ? e.message : 'Could not reach the server.';
+    } finally {
+      liveLoading = false;
+    }
+  };
+
+  // Poll the account while the page is open and visible; switching tabs reads at once.
+  $effect(() => {
+    const mode = botMode;
+    refreshLive(mode);
+    const poll = setInterval(() => {
+      if (document.visibilityState === 'visible' && !busy) refreshLive(mode);
+    }, POLL_MS);
+    const onVisible = () => document.visibilityState === 'visible' && refreshLive(mode);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearInterval(poll);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  });
+  $effect(() => {
+    const tick = setInterval(() => (nowTick = Date.now()), 1000);
+    return () => clearInterval(tick);
+  });
+
+  /** Before the first run: the budget to start with — the cap, or the free USDT if that is less. */
+  $effect(() => {
+    if (budgetTouched || !shown || shown.started) return;
+    const free = Math.floor(wallet?.usdtFree ?? 0);
+    const cap = lw?.control.max_budget_usdt;
+    const pick = botMode === 'live' ? Math.min(cap ?? free, free) : 1000;
+    budgetInput = pick > 0 ? String(pick) : '';
+  });
+  const budgetBody = () => (shown && !shown.started && budgetInput ? { budget: Number(budgetInput) } : {});
+  const hasOrders = (r: BotResult | null) => !!r?.ok && r.outcome?.kind === 'preview' && !!(r.outcome.plan?.sell.length || r.outcome.plan?.buy.length);
+
+  /** Preview: what a run would do now. "check" is the same, as the first step of Run. */
+  const preview = async (kind: 'preview' | 'check') => {
+    const mode = botMode;
+    busy = kind;
+    result = null;
+    try {
+      const r = await api<BotResult>(`/admin/rotation-index/bot/${mode}/preview`, { auth: true, method: 'POST', body: budgetBody() });
+      result = { ...r, mode, kind };
+    } catch (e) {
+      result = { ok: false, message: e instanceof Error ? e.message : 'Preview failed.', log: [], wallet: null, mode, kind };
+    } finally {
+      busy = null;
+    }
+  };
+
+  /** Place the orders the check showed — only after the owner confirms them. */
+  const run = async () => {
+    const mode = botMode;
+    busy = 'run';
+    try {
+      const plan = result?.outcome?.plan;
+      const expect = { sell: plan?.sell.map((x) => x.asset) ?? [], buy: plan?.buy.map((x) => x.asset) ?? [] };
+      const r = await api<BotResult>(`/admin/rotation-index/bot/${mode}/run`, { auth: true, method: 'POST', body: { ...budgetBody(), confirm: true, expect } });
+      result = { ...r, mode, kind: 'run' };
+      if (r.wallet) liveWallets[mode] = r.wallet;
+    } catch (e) {
+      result = { ok: false, message: e instanceof Error ? e.message : 'The run failed.', log: [], wallet: null, mode, kind: 'run' };
+    } finally {
+      busy = null;
+      await Promise.all([load(), refreshLive(mode, true)]);
+    }
   };
 
   const sleeve = $derived(bot?.[botMode] ?? null);
+  const lw = $derived(liveWallets[botMode]);
+  /** Live from Binance when the server could read it, else the last saved snapshot. */
+  const shown = $derived(lw?.snapshot ?? sleeve?.latest ?? null);
+  const isLive = $derived(!!lw?.snapshot);
+  const secondsAgo = $derived(lw ? Math.max(0, Math.round((nowTick - Date.parse(lw.fetched_at)) / 1000)) : null);
   /** Coins worth less than this are grouped as small leftovers. */
   const DUST_USDT = 1;
-  const botCoins = $derived(new Set(sleeve?.latest.positions.map((p) => p.asset) ?? []));
+  const botCoins = $derived(new Set(shown?.positions.map((p) => p.asset) ?? []));
   /** The Spot wallet as a portfolio: share of each coin, small leftovers grouped, a bar of the biggest. */
   const wallet = $derived.by(() => {
-    const sp = sleeve?.latest.spot;
+    const sp = shown?.spot;
     if (!sp) return null;
     const total = sp.total_usdt;
     const share = (v: number | null) => (v == null || !(total > 0) ? null : (v / total) * 100);
@@ -175,7 +292,7 @@
   });
   /** The index over the sleeve's own days, to compare like with like. */
   const indexSameDays = $derived.by(() => {
-    const from = sleeve?.latest.started_on;
+    const from = shown?.started_on;
     const s = view?.series ?? [];
     if (!from || !s.length) return null;
     const start = s.find((p) => p.date >= from);
@@ -281,12 +398,15 @@
 {:else if view?.latest}
   {@const v = view}
   <div class="space-y-4">
-    {#if bot}
-      <!-- The owner's Binance account, from the snapshot the bot saves after each run. -->
+    {#if bot || liveWallets.live || liveWallets.testnet}
+      <!-- The owner's Binance account: live from Binance while the page is open, else the last saved snapshot. -->
       <div class="card">
         <div class="flex flex-wrap items-center justify-between gap-2">
           <h2 class="flex items-center gap-1.5 text-sm font-semibold text-strong"><Wallet class="h-4 w-4 text-accent" /> Your Binance portfolio</h2>
-          <div class="flex gap-1 text-xs">
+          <div class="flex items-center gap-1 text-xs">
+            <button class="mr-1 rounded p-1 text-muted hover:text-strong" title="Read Binance now" disabled={liveLoading || liveUnsupported} onclick={() => refreshLive(botMode, true)}>
+              <RefreshCw class="h-3.5 w-3.5 {liveLoading ? 'animate-spin' : ''}" />
+            </button>
             {#each [['live', 'Live'], ['testnet', 'Testnet']] as [m, label] (m)}
               <button
                 class="pill {botMode === m ? (m === 'live' ? 'bg-danger/15 text-danger' : 'bg-accent/15 text-accent') : 'bg-edge text-soft'}"
@@ -296,17 +416,26 @@
           </div>
         </div>
 
-        {#if bot.table_missing}
+        {#if isLive}
+          <p class="mt-1 flex flex-wrap items-center gap-x-1.5 text-xs text-muted">
+            <span class="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-mint"></span>
+            <span class="text-mint">Live from Binance</span> · updated {secondsAgo != null && secondsAgo < 60 ? `${secondsAgo}s` : `${Math.round((secondsAgo ?? 0) / 60)} min`} ago · refreshes every {POLL_MS / 1000}s
+          </p>
+        {:else if lw && !lw.keys}
+          <p class="mt-1 text-xs text-warn">This server has no {botMode} API key, so it can't read Binance live.{shown ? ` Showing the snapshot saved ${when(shown.taken_at)}.` : ''}</p>
+        {:else if lw?.error || liveFailed[botMode]}
+          <p class="mt-1 text-xs text-warn">Binance could not be read just now: {lw?.error || liveFailed[botMode]}{shown ? ` Showing the snapshot saved ${when(shown.taken_at)}.` : ''}</p>
+        {/if}
+
+        {#if !shown && bot?.table_missing}
           <p class="mt-2 text-sm text-soft">
             The snapshot table doesn't exist yet. Create it once by running <code class="rounded bg-panel-2 px-1.5 py-0.5 text-xs">backend/database/rotation-bot-snapshots.sql</code> in the Supabase SQL editor.
           </p>
-        {:else if !sleeve}
-          <p class="mt-2 text-sm text-muted">
-            No {botMode} snapshot yet. Save one with <code class="rounded bg-panel-2 px-1.5 py-0.5 text-xs">npm run bot:rotation -- --mode {botMode} --snapshot</code> (reads balances, places no orders); every real bot run saves one too.
-          </p>
+        {:else if !shown}
+          <p class="mt-2 text-sm text-muted">{liveLoading ? 'Reading Binance…' : `No ${botMode} balance yet.`}</p>
         {:else}
-          {@const s = sleeve.latest}
-          <p class="mt-1 text-xs text-muted">Spot wallet as of {when(s.taken_at)} · {s.status}</p>
+          {@const s = shown}
+          {#if !isLive}<p class="mt-1 text-xs text-muted">Spot wallet as of {when(s.taken_at)} · {s.status}</p>{/if}
 
           {#if wallet}
             <!-- 1. Everything in the Spot wallet -->
@@ -417,15 +546,90 @@
               {:else}
                 <p class="mt-2 text-xs text-muted">No coins held — the sleeve is all cash.</p>
               {/if}
-              {#if sleeve.history.length >= 2}
+              {#if (sleeve?.history.length ?? 0) >= 2}
                 <div class="mt-3"><EChart option={sleeveChart} height={180} /></div>
               {/if}
             {:else}
-              <p class="mt-1 text-sm text-soft">
-                Not started. It will spend up to {usd(s.budget_usdt)} USDT on the index's coins{wallet && wallet.usdtFree < s.budget_usdt ? ` — add USDT to Spot first (${usd(wallet.usdtFree)} free now)` : ''}.
-              </p>
+              <p class="mt-1 text-sm text-soft">Not started — the first run buys the index's coins with the budget below.</p>
+            {/if}
+            {#if s.last_run}
+              <p class="mt-2 text-[11px] text-muted">Last run {when(s.last_run.at)} ({s.last_run.by === 'admin' ? 'from this page' : 'from the command line'}) · {s.last_run.summary}</p>
             {/if}
           </div>
+
+          <!-- 3. Run the bot on the server, with the server's own key -->
+          {#if lw && !liveUnsupported}
+            {@const c = lw.control}
+            {@const k = lw.key}
+            <div class="mt-4 border-t border-edge/60 pt-3">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <h3 class="text-xs font-semibold text-strong">Run the bot</h3>
+                <div class="flex gap-2">
+                  <button class="btn-ghost px-3 py-1.5 text-xs" disabled={busy !== null || !lw.keys} onclick={() => preview('preview')}>
+                    <Eye class="h-3.5 w-3.5" /> Preview
+                  </button>
+                  <button
+                    class="btn px-3 py-1.5 text-xs font-semibold {botMode === 'live' ? 'bg-danger text-white hover:bg-danger/90' : 'bg-accent text-white hover:bg-accent/90'} disabled:opacity-50"
+                    disabled={busy !== null || !c.can_trade || c.running}
+                    onclick={() => preview('check')}
+                  >
+                    <Play class="h-3.5 w-3.5" /> {busy === 'check' ? 'Checking…' : busy === 'run' ? 'Placing orders…' : 'Run now'}
+                  </button>
+                </div>
+              </div>
+              <p class="mt-1 text-[11px] leading-snug text-muted">
+                Copies the Rotation Index inside the sleeve: sells what the index sold and buys what it bought, at market, once the index has saved its fill.{view?.pending ? ` The index's review decided ${niceDate(view.pending.decided)} fills at the next close — until that is saved, a run does nothing.` : ''} Run now shows the orders first; nothing is placed until you confirm.
+              </p>
+              {#if !s.started}
+                <label class="mt-2 flex flex-wrap items-center gap-2 text-xs text-soft">
+                  First-run budget
+                  <input class="input-sm w-28" type="number" min="1" step="1" bind:value={budgetInput} oninput={() => (budgetTouched = true)} />
+                  USDT{c.max_budget_usdt ? ` · at most ${usd(c.max_budget_usdt)} (BOT_MAX_BUDGET_USDT)` : ''}{wallet ? ` · ${usd(wallet.usdtFree)} free in Spot` : ''}
+                </label>
+              {/if}
+              {#if c.running}<p class="mt-2 text-[11px] text-warn">A run is in progress — the buttons come back when it finishes.</p>{/if}
+              {#if !c.can_trade && c.why_not}<p class="mt-2 text-[11px] text-warn">Run is off on this server: {c.why_not}</p>{/if}
+              {#if k}
+                {#if k.withdrawals}<p class="mt-1 text-[11px] text-danger">This key can withdraw funds — the bot refuses to trade with it. Turn withdrawals off on Binance.</p>{/if}
+                {#if !k.spot_trading}<p class="mt-1 text-[11px] text-warn">Spot trading is off for this key — on Binance › API Management, restrict it to trusted IPs, then tick "Enable Spot & Margin Trading".</p>{/if}
+                {#if !k.ip_restricted}<p class="mt-1 text-[11px] text-warn">This key is not restricted to an IP address — add this server's IP on Binance › API Management.</p>{/if}
+              {/if}
+
+              {#if result && result.mode === botMode}
+                {@const r = result}
+                {@const plan = r.outcome?.plan}
+                <div class="mt-3 rounded-lg border {r.ok ? 'border-edge' : 'border-danger/40'} bg-panel-2/60 p-3 text-xs">
+                  <p class="font-semibold {r.ok ? 'text-strong' : 'text-danger'}">
+                    {r.kind === 'run' ? (r.ok ? 'Done' : 'Stopped') : 'Preview'} · {r.ok ? r.outcome?.summary : r.message}
+                  </p>
+                  {#if plan && (plan.sell.length || plan.buy.length)}
+                    <div class="mt-2 space-y-0.5 text-soft">
+                      {#if plan.sell.length}<p><span class="text-danger">Sell</span> {plan.sell.map((x) => `${x.asset} (${x.reason})`).join(', ')}</p>{/if}
+                      {#if plan.buy.length}<p><span class="text-mint">Buy</span> {plan.buy.map((x) => (x.usdt == null ? x.asset : `${x.asset} ~${usd(x.usdt)} USDT`)).join(', ')}</p>{/if}
+                      {#if plan.keep.length}<p><span class="text-muted">Keep</span> {plan.keep.join(', ')}</p>{/if}
+                    </div>
+                  {/if}
+                  {#if r.kind === 'check' && hasOrders(r)}
+                    <div class="mt-3 flex flex-wrap items-center gap-2 border-t border-edge/60 pt-3">
+                      <span class="text-strong">{botMode === 'live' ? 'Place these orders with real money on Binance?' : 'Place these orders on Binance testnet?'}</span>
+                      <button class="btn px-3 py-1.5 text-xs font-semibold {botMode === 'live' ? 'bg-danger text-white hover:bg-danger/90' : 'bg-accent text-white hover:bg-accent/90'}" disabled={busy !== null} onclick={run}>
+                        {busy === 'run' ? 'Placing orders…' : 'Place orders'}
+                      </button>
+                      <button class="btn-ghost px-3 py-1.5 text-xs" disabled={busy !== null} onclick={() => (result = null)}>Cancel</button>
+                    </div>
+                  {:else if r.kind === 'check' && r.ok}
+                    <p class="mt-1 text-muted">Nothing to place now.</p>
+                  {/if}
+                  {#if r.log.length}
+                    <details class="mt-2">
+                      <summary class="cursor-pointer text-muted">Run log</summary>
+                      <pre class="mt-1 max-h-72 overflow-auto whitespace-pre-wrap rounded bg-panel p-2 font-mono text-[11px] leading-snug text-soft">{r.log.join('\n')}</pre>
+                    </details>
+                  {/if}
+                </div>
+              {/if}
+            </div>
+          {/if}
 
           {#if s.trades.length}
             <div class="mt-4 border-t border-edge/60 pt-3">
