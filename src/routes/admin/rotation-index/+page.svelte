@@ -67,6 +67,7 @@
     started: boolean;
     started_on: string | null;
     budget_usdt: number;
+    top_ups?: { at: string; usdt: number }[];
     cash_usdt: number;
     equity_usdt: number | null;
     return_pct: number | null;
@@ -117,9 +118,12 @@
   const POLL_MS = 10_000;
   /** What the bot buttons are doing, and what the last preview / run said. */
   let busy = $state<'preview' | 'check' | 'run' | null>(null);
-  let result = $state<(BotResult & { mode: Mode; kind: 'preview' | 'check' | 'run' }) | null>(null);
+  let result = $state<(BotResult & { mode: Mode; kind: 'preview' | 'check' | 'run'; topUp?: number }) | null>(null);
   let budgetInput = $state('');
   let budgetTouched = false;
+  /** Adding USDT to a sleeve that has started. */
+  let topUpInput = $state('');
+  let topUpTouched = false;
   let loading = $state(true);
   let updating = $state(false);
   let error = $state('');
@@ -176,6 +180,7 @@
     botMode = m;
     botModePicked = true;
     budgetTouched = false;
+    topUpTouched = false;
     if (result?.mode !== m) result = null;
   };
 
@@ -221,18 +226,33 @@
     budgetInput = pick > 0 ? String(pick) : '';
   });
   const budgetBody = () => (shown && !shown.started && budgetInput ? { budget: Number(budgetInput) } : {});
+
+  /** USDT in Spot that is not the sleeve's, and how much more the cap allows (live). */
+  const topUpRoom = $derived.by(() => {
+    if (!shown?.started || !wallet) return null;
+    const outside = Math.max(0, wallet.usdtFree - shown.cash_usdt);
+    const cap = lw?.control.max_budget_usdt ?? null;
+    const capRoom = botMode === 'live' && cap != null ? Math.max(0, cap - shown.budget_usdt) : null;
+    return { outside, capRoom, most: Math.floor(capRoom == null ? outside : Math.min(outside, capRoom)) };
+  });
+  /** Suggest adding what is free outside the sleeve, up to the cap (testnet: up to 1,000). */
+  $effect(() => {
+    if (topUpTouched || !topUpRoom) return;
+    const pick = botMode === 'live' ? topUpRoom.most : Math.min(topUpRoom.most, 1000);
+    topUpInput = pick >= 1 ? String(pick) : '';
+  });
   const hasOrders = (r: BotResult | null) => !!r?.ok && r.outcome?.kind === 'preview' && !!(r.outcome.plan?.sell.length || r.outcome.plan?.buy.length);
 
   /** Preview: what a run would do now. "check" is the same, as the first step of Run. */
-  const preview = async (kind: 'preview' | 'check') => {
+  const preview = async (kind: 'preview' | 'check', topUp?: number) => {
     const mode = botMode;
     busy = kind;
     result = null;
     try {
-      const r = await api<BotResult>(`/admin/rotation-index/bot/${mode}/preview`, { auth: true, method: 'POST', body: budgetBody() });
-      result = { ...r, mode, kind };
+      const r = await api<BotResult>(`/admin/rotation-index/bot/${mode}/preview`, { auth: true, method: 'POST', body: topUp ? { topUp } : budgetBody() });
+      result = { ...r, mode, kind, topUp };
     } catch (e) {
-      result = { ok: false, message: e instanceof Error ? e.message : 'Preview failed.', log: [], wallet: null, mode, kind };
+      result = { ok: false, message: e instanceof Error ? e.message : 'Preview failed.', log: [], wallet: null, mode, kind, topUp };
     } finally {
       busy = null;
     }
@@ -245,8 +265,10 @@
     try {
       const plan = result?.outcome?.plan;
       const expect = { sell: plan?.sell.map((x) => x.asset) ?? [], buy: plan?.buy.map((x) => x.asset) ?? [] };
-      const r = await api<BotResult>(`/admin/rotation-index/bot/${mode}/run`, { auth: true, method: 'POST', body: { ...budgetBody(), confirm: true, expect } });
-      result = { ...r, mode, kind: 'run' };
+      const topUp = result?.topUp;
+      const body = { ...(topUp ? { topUp } : budgetBody()), confirm: true, expect };
+      const r = await api<BotResult>(`/admin/rotation-index/bot/${mode}/run`, { auth: true, method: 'POST', body });
+      result = { ...r, mode, kind: 'run', topUp };
       if (r.wallet) liveWallets[mode] = r.wallet;
     } catch (e) {
       result = { ok: false, message: e instanceof Error ? e.message : 'The run failed.', log: [], wallet: null, mode, kind: 'run' };
@@ -526,6 +548,11 @@
                   <p class="text-lg font-semibold text-strong">{usd(s.cash_usdt)} <span class="text-xs font-normal text-muted">USDT</span></p>
                 </div>
               </div>
+              {#if s.top_ups?.length}
+                <p class="mt-2 text-[11px] text-muted">
+                  Budget {usd(s.budget_usdt)} USDT: started with {usd(s.budget_usdt - s.top_ups.reduce((x, t) => x + t.usdt, 0))}, then added {s.top_ups.map((t) => `${usd(t.usdt)} on ${niceDate(t.at.slice(0, 10))}`).join(', ')}.
+                </p>
+              {/if}
               {#if s.positions.length}
                 <table class="mt-3 w-full text-sm">
                   <thead>
@@ -595,12 +622,42 @@
                 {#if !k.ip_restricted}<p class="mt-1 text-[11px] text-warn">This key is not restricted to an IP address — add this server's IP on Binance › API Management.</p>{/if}
               {/if}
 
+              {#if s.started && topUpRoom}
+                {@const room = topUpRoom}
+                <div class="mt-3 rounded-lg border border-edge/60 p-3">
+                  <div class="flex flex-wrap items-center justify-between gap-2">
+                    <p class="text-xs font-semibold text-strong">Add to the sleeve</p>
+                    <p class="text-[11px] {room.outside >= 5 ? 'text-mint' : 'text-muted'}">
+                      {usd(room.outside)} USDT in Spot is outside the sleeve{room.capRoom != null ? ` · the cap allows ${usd(room.capRoom)} more` : ''}
+                    </p>
+                  </div>
+                  <p class="mt-1 text-[11px] leading-snug text-muted">
+                    Moves USDT from your Spot wallet into the sleeve and buys more of the index's coins now, at the index's weights. From then on every review trades the bigger sleeve. Binance needs about 5 USDT per coin.
+                  </p>
+                  {#if room.capRoom != null && room.capRoom < 1}
+                    <p class="mt-2 text-[11px] text-warn">The sleeve is at the cap ({usd(c.max_budget_usdt)} USDT). Raise BOT_MAX_BUDGET_USDT in the server's backend/.env and restart it to add more.</p>
+                  {:else}
+                    <div class="mt-2 flex flex-wrap items-center gap-2 text-xs text-soft">
+                      <input class="input-sm w-28" type="number" min="1" step="1" bind:value={topUpInput} oninput={() => (topUpTouched = true)} />
+                      USDT
+                      <button
+                        class="btn-ghost px-3 py-1.5 text-xs"
+                        disabled={busy !== null || !c.can_trade || c.running || !(Number(topUpInput) > 0)}
+                        onclick={() => preview('check', Number(topUpInput))}
+                      >
+                        <Eye class="h-3.5 w-3.5" /> {busy === 'check' && !!topUpInput ? 'Checking…' : 'Check & add'}
+                      </button>
+                    </div>
+                  {/if}
+                </div>
+              {/if}
+
               {#if result && result.mode === botMode}
                 {@const r = result}
                 {@const plan = r.outcome?.plan}
                 <div class="mt-3 rounded-lg border {r.ok ? 'border-edge' : 'border-danger/40'} bg-panel-2/60 p-3 text-xs">
                   <p class="font-semibold {r.ok ? 'text-strong' : 'text-danger'}">
-                    {r.kind === 'run' ? (r.ok ? 'Done' : 'Stopped') : 'Preview'} · {r.ok ? r.outcome?.summary : r.message}
+                    {r.kind === 'run' ? (r.ok ? 'Done' : 'Stopped') : r.topUp ? 'Add to the sleeve' : 'Preview'} · {r.ok ? r.outcome?.summary : r.message}
                   </p>
                   {#if plan && (plan.sell.length || plan.buy.length)}
                     <div class="mt-2 space-y-0.5 text-soft">
@@ -611,7 +668,9 @@
                   {/if}
                   {#if r.kind === 'check' && hasOrders(r)}
                     <div class="mt-3 flex flex-wrap items-center gap-2 border-t border-edge/60 pt-3">
-                      <span class="text-strong">{botMode === 'live' ? 'Place these orders with real money on Binance?' : 'Place these orders on Binance testnet?'}</span>
+                      <span class="text-strong">
+                        {r.topUp ? `Add ${usd(r.topUp)} USDT to the sleeve and place these orders` : 'Place these orders'}{botMode === 'live' ? ' with real money on Binance?' : ' on Binance testnet?'}
+                      </span>
                       <button class="btn px-3 py-1.5 text-xs font-semibold {botMode === 'live' ? 'bg-danger text-white hover:bg-danger/90' : 'bg-accent text-white hover:bg-accent/90'}" disabled={busy !== null} onclick={run}>
                         {busy === 'run' ? 'Placing orders…' : 'Place orders'}
                       </button>
