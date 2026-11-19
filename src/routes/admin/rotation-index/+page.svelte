@@ -171,6 +171,7 @@
 
   const niceDate = (d: string | null | undefined) =>
     d ? new Date(`${d}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }) : '—';
+  const dayMonth = (d: string) => niceDate(d).replace(/\s\d{4}$/, '');
   // Sign and colour follow the figure as shown, so -0.04 reads as a plain 0.0%, not a red one.
   const shownAs = (n: number, digits: number) => {
     const r = Math.round(n * 10 ** digits) / 10 ** digits;
@@ -559,10 +560,11 @@
             {#if s.positions.length}
               <ul class="mt-3 divide-y divide-edge/60">
                 {#each s.positions as p (p.coin)}
+                  {@const added = s.trades.find((t) => t.side === 'BUY' && t.symbol.replace(/USDT$/, '') === p.asset && t.at.slice(0, 10) > p.entry_date)}
                   <li class="flex items-center gap-3 py-2.5">
                     <div class="min-w-0 flex-1">
                       <p class="text-sm font-semibold text-strong">{p.asset}</p>
-                      <p class="truncate text-xs text-muted">{amount(p.qty)} · bought {niceDate(p.entry_date)}</p>
+                      <p class="truncate text-xs text-muted">{amount(p.qty)} · bought {dayMonth(p.entry_date)}{added ? ` · added ${dayMonth(added.at.slice(0, 10))}` : ''}</p>
                     </div>
                     <div class="shrink-0 text-right">
                       <p class="text-sm font-semibold tabular-nums text-strong">{usd(p.value_usdt)}</p>
@@ -829,13 +831,13 @@
       <div class="grid gap-4 lg:grid-cols-2">
         <div class="card">
           <div class="flex flex-wrap items-center justify-between gap-2">
-            <h2 class="flex items-center gap-1.5 text-sm font-semibold text-strong"><ListChecks class="h-4 w-4 text-accent" /> Holding now</h2>
+            <h2 class="flex items-center gap-1.5 text-sm font-semibold text-strong"><ListChecks class="h-4 w-4 text-accent" /> Index holds now</h2>
             <span class="pill bg-edge text-soft"><CalendarClock class="mr-1 inline h-3 w-3" />Next review {niceDate(v.next_review)}</span>
           </div>
           {#if v.holdings?.length}
             <table class="mt-2 w-full text-sm">
               <thead>
-                <tr class="text-left text-[11px] text-muted"><th class="py-1 font-medium">Coin</th><th class="py-1 text-right font-medium">Weight</th><th class="py-1 text-right font-medium">Since entry</th><th class="py-1 text-right font-medium">Bought</th></tr>
+                <tr class="text-left text-[11px] text-muted"><th class="py-1 font-medium">Coin</th><th class="py-1 text-right font-medium">Weight</th><th class="py-1 text-right font-medium">Since entry</th><th class="py-1 text-right font-medium">Index bought</th></tr>
               </thead>
               <tbody>
                 {#each v.holdings as h (h.coin)}

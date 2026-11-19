@@ -18,6 +18,7 @@
     X
   } from '@lucide/svelte';
   import { api } from '$lib/api';
+  import { fitVisualViewport, lockPageScroll } from '$lib/actions/modal';
   import Sparkline from '$lib/components/Sparkline.svelte';
   import { categorical } from '$lib/charts/presets';
 
@@ -403,13 +404,10 @@
     document.body.appendChild(node);
     return { destroy: () => node.remove() };
   };
+  // While a sheet or statement is open, the page behind it stays still.
   $effect(() => {
     if (!personId && !statementId) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = prev;
-    };
+    return lockPageScroll();
   });
   const onKey = (e: KeyboardEvent) => {
     if (e.key !== 'Escape') return;
@@ -563,7 +561,7 @@
         <p class="mt-5 text-lg font-semibold">Start the books</p>
         <p class="mt-1 text-sm leading-snug text-white/70">Everything in the sleeve today is yours: one unit for every USDT you have put in. Then add each friend and put their money in from their page.</p>
         <div class="mt-4 flex flex-wrap items-center gap-2">
-          <input class="w-48 rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-sm text-white outline-none placeholder:text-white/40 focus:border-white/40" placeholder="Your name" bind:value={ownerName} maxlength="60" />
+          <input class="w-48 rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-base text-white outline-none placeholder:text-white/40 sm:text-sm focus:border-white/40" placeholder="Your name" bind:value={ownerName} maxlength="60" />
           {#if !confirmStart}
             <button class="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-neutral-900 hover:bg-white/90 disabled:opacity-50" disabled={!ownerName.trim() || busy !== null} onclick={() => (confirmStart = true)}>Start</button>
           {/if}
@@ -684,12 +682,13 @@
   {@const v = view}
   <div
     use:portal
-    class="fixed inset-0 z-[200] flex items-end justify-center sm:items-center sm:p-6"
+    use:fitVisualViewport
+    class="fixed inset-x-0 top-0 z-[200] flex h-dvh items-end justify-center overscroll-contain sm:items-center sm:p-6"
     style="background: rgba(0, 0, 0, 0.55)"
     role="presentation"
     onclick={(e) => e.target === e.currentTarget && closeSheet()}>
     <div
-      class="max-h-[92vh] w-full overflow-y-auto rounded-t-[28px] border border-edge/70 bg-panel p-5 pb-7 shadow-2xl sm:max-w-[440px] sm:rounded-[28px]"
+      class="max-h-[calc(100%-1rem)] w-full overflow-y-auto overscroll-contain rounded-t-[28px] border border-edge/70 bg-panel p-5 pb-[max(1.75rem,env(safe-area-inset-bottom))] shadow-2xl sm:max-h-full sm:max-w-[440px] sm:rounded-[28px] sm:pb-7"
       role="dialog"
       aria-modal="true"
       aria-label={p.name}>
@@ -806,7 +805,7 @@
         <div class="mt-4 flex items-center gap-2 rounded-2xl border border-edge bg-panel-2 px-3.5 py-2.5 focus-within:border-mint">
           <Search class="h-4 w-4 shrink-0 text-muted" />
           <!-- svelte-ignore a11y_autofocus -->
-          <input class="w-full min-w-0 bg-transparent text-sm text-strong outline-none placeholder:text-muted" placeholder="Search by email or name" bind:value={userQuery} autofocus />
+          <input class="w-full min-w-0 bg-transparent text-base text-strong outline-none placeholder:text-muted sm:text-sm" placeholder="Search by email or name" bind:value={userQuery} autofocus />
         </div>
         {#if formError}<p class="mt-2 text-xs text-danger">{formError}</p>{/if}
         <ul class="mt-2 divide-y divide-edge/60">
@@ -994,7 +993,7 @@
 {#if statement && view}
   {@const s = statement}
   {@const v = view}
-  <div use:portal class="statement-overlay fixed inset-0 z-[210] overflow-auto p-3 sm:p-8" style="background: rgba(0, 0, 0, 0.62)" role="dialog" aria-modal="true" aria-label="Statement for {s.name}">
+  <div use:portal class="statement-overlay fixed inset-0 z-[210] overflow-auto overscroll-contain p-3 sm:p-8" style="background: rgba(0, 0, 0, 0.62)" role="dialog" aria-modal="true" aria-label="Statement for {s.name}">
     <div class="no-print mx-auto mb-3 flex max-w-[680px] justify-end gap-2">
       <button class="btn bg-white px-3 py-1.5 text-xs font-semibold text-neutral-900 hover:bg-neutral-100" onclick={() => window.print()}><Printer class="h-3.5 w-3.5" /> Print / save as PDF</button>
       <button class="btn bg-white px-3 py-1.5 text-xs text-neutral-900 hover:bg-neutral-100" onclick={() => (statementId = null)}><X class="h-3.5 w-3.5" /> Close</button>
@@ -1095,6 +1094,10 @@
     box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.08), 0 12px 30px rgb(0 0 0 / 0.22);
   }
   @media print {
+    /* The popup scroll lock must not cut the printout to one page. */
+    :global(html) {
+      overflow: visible !important;
+    }
     :global(body *) {
       visibility: hidden;
     }
