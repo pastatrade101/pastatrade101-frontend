@@ -17,6 +17,8 @@
     base: number;
     top10_size: number;
     top10_rebalance_days: number;
+    /** Stock tokens that join every review next to the top coins. */
+    extras?: { symbol: string; name: string }[];
   }
   interface Review {
     date: string;
@@ -922,6 +924,11 @@
       <ul class="list-disc space-y-1 pl-5 text-[11px] leading-snug text-muted">
         <li>Tracked forward on paper: each review picks from the coins that are biggest on that day, and its decisions are saved and never recalculated, so nothing here benefits from hindsight.</li>
         <li>Rule: {v.index.style.label} — top {v.index.style.universe_size} coins by market cap that Binance trades against USDT, ranked by {v.index.style.lookback_days}-day {v.index.style.signal}, {v.index.style.top_n} held at equal weight, reviewed every {v.index.style.rebalance_days} days. The same rule as the rotation bot.</li>
+        {#if v.index.extras?.length}
+          <li>
+            Stock tokens join every review too: {v.index.extras.map((x) => x.symbol).join(', ')} ({v.index.extras.map((x) => x.name).join('; ')}). They have no market cap here, so they skip the top-{v.index.style.universe_size} cut and compete in the same ranking. Their prices are Binance's 00:00 UTC prices; they trade around the clock, also when US markets are shut.
+          </li>
+        {/if}
         <li>Orders are decided on the review day's close and filled at the next day's close, with a {v.index.fee_pct}% fee on every buy and sell. Slippage is not modelled.</li>
         <li>Closing prices are CoinGecko's 00:00 UTC prices. A day is added only once its price is final, so the newest point is usually yesterday.</li>
         <li>BTC and the top-{v.index.top10_size} index start on the first fill day ({niceDate(v.first_fill)}) at the same fee. Binance coin list as of {niceDate(v.tradable_as_of)}.</li>
