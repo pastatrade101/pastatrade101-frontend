@@ -4,10 +4,11 @@
   import { fly } from 'svelte/transition';
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
-  import { ArrowRight, Check, ChevronDown, CreditCard, DoorOpen, FileText, Flame, Languages, LayoutDashboard, LogIn, LogOut, Mail, Menu, Moon, PanelLeftClose, PanelLeftOpen, Phone, Radar, Repeat, Rocket, Shield, Spline, Sun, Tag, X } from '@lucide/svelte';
+  import { ArrowRight, Check, ChevronDown, CreditCard, DoorOpen, FileText, Flame, Languages, LayoutDashboard, LogIn, LogOut, Mail, Menu, Moon, PanelLeftClose, PanelLeftOpen, Phone, Radar, Repeat, Rocket, Shield, Spline, Sun, Tag, Wallet, X } from '@lucide/svelte';
   import BrandMark from '$lib/components/BrandMark.svelte';
   import { authReady, initAuth, logout, user } from '$lib/stores/auth';
   import { clearMembership, loadMembership, membership } from '$lib/stores/membership';
+  import { clearInvestmentLinked, investmentLinked, loadInvestmentLinked } from '$lib/stores/investment';
   import { sidebarCollapsed, sidebarOpen } from '$lib/stores/ui';
   import { initTheme, theme, toggleTheme } from '$lib/stores/theme';
   import { initLocale, locale, setLocale, t } from '$lib/i18n';
@@ -27,14 +28,20 @@
 
   // Keep plan access in sync with the signed-in user.
   $effect(() => {
-    if ($user) loadMembership();
-    else clearMembership();
+    if ($user) {
+      loadMembership();
+      loadInvestmentLinked();
+    } else {
+      clearMembership();
+      clearInvestmentLinked();
+    }
   });
 
   const handleLogout = () => {
     menuOpen = false;
     logout();
     clearMembership();
+    clearInvestmentLinked();
     goto('/');
   };
 
@@ -123,6 +130,11 @@
                   <a href="/app/account" onclick={() => (menuOpen = false)} class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-body transition hover:bg-panel-2">
                     <CreditCard class="h-4 w-4" /> {$t('nav.account')}
                   </a>
+                  {#if $investmentLinked}
+                    <a href="/app/investment" onclick={() => (menuOpen = false)} class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-body transition hover:bg-panel-2">
+                      <Wallet class="h-4 w-4" /> My investment
+                    </a>
+                  {/if}
                   <a href="/pricing" onclick={() => (menuOpen = false)} class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-body transition hover:bg-panel-2">
                     <Tag class="h-4 w-4" /> {$t('nav.pricing')}
                   </a>

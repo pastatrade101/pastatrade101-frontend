@@ -12,6 +12,8 @@
     Pencil,
     Printer,
     RefreshCw,
+    Link2,
+    Search,
     UserPlus,
     X
   } from '@lucide/svelte';
@@ -44,6 +46,8 @@
     first_unit_price: number | null;
     since_joined_pct: number | null;
     provisional: boolean;
+    user_id: string | null;
+    user_email: string | null;
   }
   interface Entry {
     id: string;
@@ -81,7 +85,8 @@
   interface BotResult { ok: boolean; message?: string; outcome?: { kind: string; summary: string; plan: BotPlan | null }; log: string[] }
   type Kind = 'in' | 'out';
   /** The person sheet's screens: their account → amount → review → receipt (or rename). */
-  type Screen = 'view' | 'amount' | 'review' | 'done' | 'edit';
+  type Screen = 'view' | 'amount' | 'review' | 'done' | 'edit' | 'link';
+  interface SiteUser { id: string; email: string; full_name: string | null; role: string; is_active: boolean }
 
   let {
     mode,
@@ -126,6 +131,10 @@
   let outAll = $state(false);
   let editName = $state('');
   let editNote = $state('');
+  let userQuery = $state('');
+  let userResults = $state<SiteUser[]>([]);
+  let userSearching = $state(false);
+  let confirmUnlink = $state(false);
   let result = $state<(BotResult & { step: 'check' | 'run'; kind: Kind; amount: number | 'all' }) | null>(null);
   let statementId = $state<string | null>(null);
 
@@ -264,6 +273,7 @@
   const openPerson = (i: Investor) => {
     personId = i.id;
     screen = 'view';
+    confirmUnlink = false;
     result = null;
     formError = '';
   };
@@ -281,6 +291,52 @@
     formError = '';
     screen = 'amount';
   };
+  /* ── View access for a site account ── */
+  const startLink = () => {
+    userQuery = '';
+    userResults = [];
+    formError = '';
+    screen = 'link';
+  };
+  let searchSeq = 0;
+  const searchUsers = async (q: string) => {
+    const seq = ++searchSeq;
+    if (q.trim().length < 2) {
+      userResults = [];
+      return;
+    }
+    userSearching = true;
+    try {
+      const r = await api<{ items: SiteUser[] }>(`/admin/users?search=${encodeURIComponent(q.trim())}&limit=8`, { auth: true });
+      if (seq === searchSeq) userResults = r.items;
+    } catch (e) {
+      if (seq === searchSeq) formError = e instanceof Error ? e.message : 'Could not search accounts.';
+    } finally {
+      if (seq === searchSeq) userSearching = false;
+    }
+  };
+  $effect(() => {
+    const q = userQuery;
+    if (screen !== 'link') return;
+    const t = setTimeout(() => searchUsers(q), 250);
+    return () => clearTimeout(t);
+  });
+  const setAccount = (userId: string | null) =>
+    run(async () => {
+      if (!personId) return;
+      const id = personId;
+      const inv = await api<{ userId?: string; userEmail?: string }>(`/admin/rotation-index/bot/${mode}/fund/investors/${encodeURIComponent(id)}/account`, {
+        auth: true,
+        method: 'PUT',
+        body: { userId }
+      });
+      // Show the change at once; the full books (with prices) follow.
+      if (view) view = { ...view, investors: view.investors.map((x) => (x.id === id ? { ...x, user_id: inv.userId ?? null, user_email: inv.userEmail ?? null } : x)) };
+      confirmUnlink = false;
+      screen = 'view';
+      await load(mode);
+    }, 'edit');
+
   const startEdit = () => {
     if (!person) return;
     editName = person.name;
@@ -714,6 +770,28 @@
         </dl>
         {#if p.cost_usdt > 0}<p class="mt-2 text-[11px] text-muted">Fees on their own money in and out: {usd(p.cost_usdt)} USDT.</p>{/if}
 
+        <!-- Who can see this share on the site (view only). -->
+        <div class="mt-4 flex items-center gap-3 rounded-2xl border border-edge/70 px-3.5 py-3">
+          <span class="grid h-9 w-9 shrink-0 place-items-center rounded-full {p.user_id ? 'bg-accent/15 text-accent' : 'bg-panel-2 text-muted'}"><Link2 class="h-4 w-4" /></span>
+          <div class="min-w-0 flex-1">
+            <p class="text-[11px] text-muted">View access on the site</p>
+            <p class="truncate text-sm font-medium {p.user_id ? 'text-strong' : 'text-muted'}">{p.user_email ?? 'No account linked'}</p>
+          </div>
+          {#if v.can_edit}
+            {#if !p.user_id}
+              <button class="btn-ghost shrink-0 rounded-full px-3 py-1.5 text-xs" onclick={startLink}>Link</button>
+            {:else if !confirmUnlink}
+              <button class="shrink-0 rounded-full px-3 py-1.5 text-xs text-muted hover:bg-panel-2 hover:text-strong" onclick={() => (confirmUnlink = true)}>Unlink</button>
+            {:else}
+              <div class="flex shrink-0 gap-1">
+                <button class="rounded-full bg-danger/15 px-3 py-1.5 text-xs font-medium text-danger hover:bg-danger/25 disabled:opacity-50" disabled={busy !== null} onclick={() => setAccount(null)}>{busy === 'edit' ? '…' : 'Unlink'}</button>
+                <button class="rounded-full px-2 py-1.5 text-xs text-muted hover:bg-panel-2" onclick={() => (confirmUnlink = false)}>Keep</button>
+              </div>
+            {/if}
+          {/if}
+        </div>
+        {#if formError && screen === 'view'}<p class="mt-2 text-xs text-danger">{formError}</p>{/if}
+
         {#if personEntries.length}
           <h4 class="mt-6 text-sm font-semibold text-strong">Activity</h4>
           <ul class="mt-1 divide-y divide-edge/60">
@@ -721,6 +799,37 @@
               {@render activityRow(e, false)}
             {/each}
           </ul>
+        {/if}
+      {:else if screen === 'link'}
+        <p class="mt-1 text-lg font-semibold text-strong">Link an account to {p.name}</p>
+        <p class="mt-0.5 text-xs leading-relaxed text-muted">That account sees only {p.name}'s share on its own page: value, gain, holdings and their money in and out. It can't move money, and it never sees other people or the sleeve's total.</p>
+        <div class="mt-4 flex items-center gap-2 rounded-2xl border border-edge bg-panel-2 px-3.5 py-2.5 focus-within:border-mint">
+          <Search class="h-4 w-4 shrink-0 text-muted" />
+          <!-- svelte-ignore a11y_autofocus -->
+          <input class="w-full min-w-0 bg-transparent text-sm text-strong outline-none placeholder:text-muted" placeholder="Search by email or name" bind:value={userQuery} autofocus />
+        </div>
+        {#if formError}<p class="mt-2 text-xs text-danger">{formError}</p>{/if}
+        <ul class="mt-2 divide-y divide-edge/60">
+          {#each userResults as u (u.id)}
+            <li>
+              <button
+                class="-mx-2 flex w-[calc(100%+1rem)] items-center gap-3 rounded-2xl px-2 py-2.5 text-left transition hover:bg-panel-2/70 disabled:opacity-50"
+                disabled={busy !== null || !u.is_active}
+                onclick={() => setAccount(u.id)}>
+                {@render avatar(u.id, u.full_name || u.email)}
+                <div class="min-w-0 flex-1">
+                  <p class="truncate text-sm font-medium text-strong">{u.email}</p>
+                  <p class="truncate text-xs text-muted">{u.full_name || 'No name'}{u.role !== 'user' ? ` · ${u.role}` : ''}{u.is_active ? '' : ' · switched off'}</p>
+                </div>
+                <span class="shrink-0 text-xs font-medium text-accent">{busy === 'edit' ? '…' : 'Link'}</span>
+              </button>
+            </li>
+          {/each}
+        </ul>
+        {#if userQuery.trim().length >= 2 && !userSearching && !userResults.length}
+          <p class="mt-3 text-center text-xs text-muted">No account matches. They need to sign up on the site first.</p>
+        {:else if userQuery.trim().length < 2}
+          <p class="mt-3 text-center text-xs text-muted">Type at least two letters of their email or name.</p>
         {/if}
       {:else if screen === 'edit'}
         <p class="mt-1 text-lg font-semibold text-strong">Edit {p.name}</p>
