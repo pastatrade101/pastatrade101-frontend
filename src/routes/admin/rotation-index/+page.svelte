@@ -627,7 +627,7 @@
 
               {#if s.started && s.fund}
                 <p class="mt-3 rounded-lg border border-edge/60 p-3 text-[11px] leading-snug text-muted">
-                  The investor books are started, so money goes in and out per person — use ↓ (money in) and ↑ (money out) next to each name under Investors below.
+                  The investor books are started, so money goes in and out per person — open a person under Investors below and use Add money or Withdraw.
                 </p>
               {:else if s.started && topUpRoom}
                 {@const room = topUpRoom}
