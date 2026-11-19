@@ -204,7 +204,7 @@
             </li>
           {/each}
         </ul>
-        <p class="mt-1 text-[11px] text-muted">The sleeve copies the Pastatrade Rotation Index (Balanced): a weekly review picks the strongest of the biggest coins on Binance.</p>
+        <p class="mt-1 text-[11px] text-muted">The sleeve copies the Pastatrade Rotation Index (Balanced + BTC switch): a weekly review picks the strongest of the biggest coins on Binance, and holds cash while BTC is below its 50-day average.</p>
       </section>
     {/if}
 

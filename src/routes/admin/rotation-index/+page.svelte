@@ -116,7 +116,8 @@
   let switchView = $state<View | null>(null);
   const SWITCH_ID = 'rotation-balanced-switch';
   /** Which index the Index tab shows. */
-  let indexPick = $state<'balanced' | 'switch'>('balanced');
+  // Both sleeves follow Balanced + BTC switch, so it is shown first; Balanced is the comparison.
+  let indexPick = $state<'balanced' | 'switch'>('switch');
   let bot = $state<BotView | null>(null);
   let botMode = $state<'live' | 'testnet'>('live');
   let botModePicked = false;
@@ -346,7 +347,7 @@
   });
   /** The index the Index tab shows. */
   const iv = $derived(indexPick === 'switch' && switchView?.latest ? switchView : view);
-  /** The index the shown sleeve copies (testnet follows Balanced + BTC switch). */
+  /** The index the shown sleeve copies (both sleeves follow Balanced + BTC switch). */
   const followed = $derived(shown?.follow === SWITCH_ID ? switchView : view);
   const followedName = (follow: string | null | undefined) => (follow === SWITCH_ID ? 'Balanced + BTC switch' : 'the Rotation Index');
 
@@ -845,7 +846,7 @@
       {#if indexPick === 'switch' && !switchView?.latest}
         <div class="card space-y-2 text-sm text-soft">
           <p class="font-semibold text-strong">{switchView ? 'Balanced + BTC switch has not been started.' : 'This backend does not track Balanced + BTC switch yet.'}</p>
-          <p>The Balanced rule plus one check on each review day: when BTC closes below its 50-day average, sell everything and hold cash until a review finds BTC back above. The testnet bot follows it; the live sleeve stays on Balanced.</p>
+          <p>The Balanced rule plus one check on each review day: when BTC closes below its 50-day average, sell everything and hold cash until a review finds BTC back above. The live and testnet sleeves both follow it; Balanced stays on the page as the comparison.</p>
           {#if switchView}
             <p>Start it once from the backend folder, on the same day Balanced started: <code class="rounded bg-panel-2 px-1.5 py-0.5 text-xs">npm run index:rotation -- --id {SWITCH_ID} --start --start-on 2026-11-16</code>. After that, every price sync adds the new day on its own.</p>
           {:else}
