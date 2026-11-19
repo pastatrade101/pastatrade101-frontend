@@ -8,6 +8,7 @@
   import Disclaimer from '$lib/components/Disclaimer.svelte';
   import { axisTooltip, categorical, grid, lineSeries, timeAxis, valueAxis, zoomInside } from '$lib/charts/presets';
   import InvestorBooks from './InvestorBooks.svelte';
+  import ReplayCard from './ReplayCard.svelte';
 
   interface Meta {
     id: string;
@@ -829,6 +830,8 @@
           </p>
         {/if}
       </div>
+
+      <ReplayCard topN={v.index.style.top_n} worstRankHeld={v.index.style.worst_rank_held} top10Size={v.index.top10_size} rebalanceDays={v.index.style.rebalance_days} />
 
       <div class="grid gap-4 lg:grid-cols-2">
         <div class="card">
