@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
-  import { RefreshCw, Repeat, CalendarClock, ListChecks, Wallet, Eye, Play } from '@lucide/svelte';
+  import { ArrowDownLeft, ArrowUpRight, Bot, CalendarClock, ChartLine, Eye, ListChecks, Play, RefreshCw, Users, Wallet } from '@lucide/svelte';
   import { api } from '$lib/api';
   import { authReady, user } from '$lib/stores/auth';
   import EChart from '$lib/components/EChart.svelte';
@@ -171,8 +171,21 @@
 
   const niceDate = (d: string | null | undefined) =>
     d ? new Date(`${d}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }) : '—';
-  const pct = (n: number | null | undefined, digits = 1) => (n == null ? '—' : `${n >= 0 ? '+' : ''}${n.toFixed(digits)}%`);
-  const tone = (n: number | null | undefined) => (n == null ? 'text-muted' : n >= 0 ? 'text-mint' : 'text-danger');
+  // Sign and colour follow the figure as shown, so -0.04 reads as a plain 0.0%, not a red one.
+  const shownAs = (n: number, digits: number) => {
+    const r = Math.round(n * 10 ** digits) / 10 ** digits;
+    return r === 0 ? 0 : r;
+  };
+  const pct = (n: number | null | undefined, digits = 1) => {
+    if (n == null) return '—';
+    const r = shownAs(n, digits);
+    return `${r > 0 ? '+' : ''}${r.toFixed(digits)}%`;
+  };
+  const tone = (n: number | null | undefined, digits = 1) => {
+    if (n == null) return 'text-muted';
+    const r = shownAs(n, digits);
+    return r > 0 ? 'text-mint' : r < 0 ? 'text-danger' : 'text-soft';
+  };
   const ts = (d: string) => Date.parse(`${d}T00:00:00Z`);
   const price = (p: number) => (p >= 100 ? p.toLocaleString('en-US', { maximumFractionDigits: 0 }) : p >= 1 ? p.toFixed(2) : p.toPrecision(3));
 
@@ -387,26 +400,103 @@
       ]
     };
   });
+
+  /* ── Tabs: one job per screen instead of one long page ── */
+  type Tab = 'bot' | 'investors' | 'wallet' | 'index';
+  const TABS: { id: Tab; label: string; icon: typeof Bot }[] = [
+    { id: 'bot', label: 'Bot', icon: Bot },
+    { id: 'investors', label: 'Investors', icon: Users },
+    { id: 'wallet', label: 'Wallet', icon: Wallet },
+    { id: 'index', label: 'Index', icon: ChartLine }
+  ];
+  const TAB_KEY = 'pastatrade_admin_rotation_tab';
+  let tab = $state<Tab>('bot');
+  onMount(() => {
+    const fromUrl = new URLSearchParams(window.location.search).get('tab');
+    let saved: string | null = null;
+    try {
+      saved = localStorage.getItem(TAB_KEY);
+    } catch {
+      /* private mode: start on Bot */
+    }
+    const want = fromUrl ?? saved;
+    if (TABS.some((t) => t.id === want)) tab = want as Tab;
+  });
+  const pickTab = (t: Tab) => {
+    tab = t;
+    try {
+      localStorage.setItem(TAB_KEY, t);
+    } catch {
+      /* ignore */
+    }
+  };
+  // The investor books are read once, on the first visit to their tab.
+  let booksSeen = $state(false);
+  $effect(() => {
+    if (tab === 'investors') booksSeen = true;
+  });
+  const booksReady = $derived(!!shown && !!lw && !liveUnsupported);
+  const MODES = ['live', 'testnet'] as const;
+  const agoText = $derived(secondsAgo == null ? '' : secondsAgo < 60 ? `${secondsAgo}s ago` : `${Math.round(secondsAgo / 60)} min ago`);
 </script>
 
 <svelte:head><title>Rotation Index · Admin · Pastatrade</title></svelte:head>
 
-<header class="mb-5 flex flex-wrap items-start justify-between gap-3">
-  <div>
-    <h1 class="flex items-center gap-2 text-xl font-semibold text-strong"><Repeat class="h-5 w-5 text-accent" /> Admin · Rotation Index</h1>
-    <p class="mt-1 max-w-2xl text-sm text-muted">
-      The {view?.index.style.label ?? 'Balanced'} rotation rule tracked forward on paper. Each review picks from the coins that are biggest on that day, and its decisions are saved and never recalculated — so unlike the backtest, nothing here benefits from hindsight. Private to admins.
-    </p>
+<header class="mb-4 flex flex-wrap items-end justify-between gap-3">
+  <div class="min-w-0">
+    <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">Admin</p>
+    <h1 class="mt-0.5 text-2xl font-semibold tracking-tight text-strong">Rotation Index</h1>
+    {#if view?.latest}
+      <p class="mt-0.5 text-sm text-muted">{view.index.style.label} rule{view.next_review ? ` · next review ${niceDate(view.next_review)}` : ''}</p>
+    {/if}
   </div>
-  {#if view?.started}
-    <button class="btn-ghost text-sm" disabled={updating} onclick={update}>
-      <RefreshCw class="h-4 w-4 {updating ? 'animate-spin' : ''}" /> Update now
-    </button>
+  {#if view?.latest && tab !== 'index'}
+    <div class="flex items-center gap-1 rounded-full bg-panel-2/80 p-1 text-xs font-medium" role="group" aria-label="Binance account">
+      {#each MODES as m (m)}
+        <button
+          class="flex items-center gap-1.5 rounded-full px-3.5 py-1.5 transition {botMode === m ? 'bg-panel text-strong shadow-sm' : 'text-muted hover:text-strong'}"
+          aria-pressed={botMode === m}
+          onclick={() => pickMode(m)}>
+          <span class="h-1.5 w-1.5 rounded-full {m === 'live' ? 'bg-danger' : 'bg-accent'}"></span>{m === 'live' ? 'Live' : 'Testnet'}
+        </button>
+      {/each}
+    </div>
   {/if}
 </header>
 
 {#if error}<div class="card mb-4 border-danger/30 bg-danger/5 text-sm text-danger">{error}</div>{/if}
 {#if notice}<div class="card mb-4 text-sm text-soft">{notice}</div>{/if}
+
+{#snippet accountStatus()}
+  <div class="mb-3 flex items-center justify-between gap-2 text-xs text-muted">
+    <p class="flex min-w-0 items-center gap-1.5">
+      {#if isLive}
+        <span class="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-mint"></span><span class="truncate">Live from Binance · updated {agoText}</span>
+      {:else if lw && !lw.keys}
+        <span class="truncate text-warn">No {botMode} API key on this server{shown ? ` · snapshot from ${when(shown.taken_at)}` : ''}</span>
+      {:else if lw?.error || liveFailed[botMode]}
+        <span class="truncate text-warn" title={lw?.error || liveFailed[botMode]}>Binance could not be read: {lw?.error || liveFailed[botMode]}</span>
+      {:else if shown}
+        <span class="truncate">{liveLoading ? 'Reading Binance…' : `Saved snapshot from ${when(shown.taken_at)}`}</span>
+      {/if}
+    </p>
+    <button
+      class="grid h-8 w-8 shrink-0 place-items-center rounded-full transition hover:bg-panel-2 hover:text-strong disabled:opacity-40"
+      title="Read Binance now"
+      aria-label="Read Binance now"
+      disabled={liveLoading || liveUnsupported}
+      onclick={() => refreshLive(botMode, true)}><RefreshCw class="h-3.5 w-3.5 {liveLoading ? 'animate-spin' : ''}" /></button>
+  </div>
+  {#if !shown}
+    <div class="card text-sm text-muted">
+      {#if bot?.table_missing}
+        The snapshot table doesn't exist yet. Create it once by running <code class="rounded bg-panel-2 px-1.5 py-0.5 text-xs">backend/database/rotation-bot-snapshots.sql</code> in the Supabase SQL editor.
+      {:else}
+        {liveLoading ? 'Reading Binance…' : `No ${botMode} balance yet.`}
+      {/if}
+    </div>
+  {/if}
+{/snippet}
 
 {#if loading}
   <div class="card text-sm text-muted">Loading the index…</div>
@@ -422,300 +512,425 @@
   </div>
 {:else if view?.latest}
   {@const v = view}
-  <div class="space-y-4">
-    {#if bot || liveWallets.live || liveWallets.testnet}
-      <!-- The owner's Binance account: live from Binance while the page is open, else the last saved snapshot. -->
-      <div class="card">
-        <div class="flex flex-wrap items-center justify-between gap-2">
-          <h2 class="flex items-center gap-1.5 text-sm font-semibold text-strong"><Wallet class="h-4 w-4 text-accent" /> Your Binance portfolio</h2>
-          <div class="flex items-center gap-1 text-xs">
-            <button class="mr-1 rounded p-1 text-muted hover:text-strong" title="Read Binance now" disabled={liveLoading || liveUnsupported} onclick={() => refreshLive(botMode, true)}>
-              <RefreshCw class="h-3.5 w-3.5 {liveLoading ? 'animate-spin' : ''}" />
-            </button>
-            {#each [['live', 'Live'], ['testnet', 'Testnet']] as [m, label] (m)}
-              <button
-                class="pill {botMode === m ? (m === 'live' ? 'bg-danger/15 text-danger' : 'bg-accent/15 text-accent') : 'bg-edge text-soft'}"
-                onclick={() => pickMode(m as 'live' | 'testnet')}>{label}</button
-              >
-            {/each}
-          </div>
+  <div class="mb-4 grid grid-cols-4 gap-1 rounded-2xl bg-panel-2/80 p-1" role="tablist" aria-label="Sections">
+    {#each TABS as t (t.id)}
+      <button
+        role="tab"
+        aria-selected={tab === t.id}
+        class="flex items-center justify-center gap-1.5 rounded-xl px-2 py-2 text-sm font-medium transition {tab === t.id ? 'bg-panel text-strong shadow-sm' : 'text-muted hover:text-strong'}"
+        onclick={() => pickTab(t.id)}>
+        <t.icon class="hidden h-4 w-4 sm:block" />{t.label}
+      </button>
+    {/each}
+  </div>
+
+  {#if tab === 'bot'}
+    {@render accountStatus()}
+    {#if shown}
+      {@const s = shown}
+      <div class="space-y-4">
+        <!-- The sleeve -->
+        <div class="card">
+          <p class="text-xs text-muted">Bot sleeve · {s.follow ? 'copies the Rotation Index' : `runs the ${s.style} rule`}</p>
+          {#if s.started}
+            <p class="mt-1 text-3xl font-semibold tracking-tight tabular-nums text-strong">{usd(s.equity_usdt)} <span class="text-sm font-medium text-muted">USDT</span></p>
+            <p class="mt-0.5 text-sm"><span class="font-semibold {tone(s.return_pct, 2)}">{pct(s.return_pct, 2)}</span> <span class="text-muted">on the {usd(s.budget_usdt)} budget</span></p>
+
+            <dl class="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
+              <div class="rounded-2xl bg-panel-2/70 px-3.5 py-3">
+                <dt class="text-[11px] text-muted">Index, same days</dt>
+                <dd class="mt-0.5 font-semibold tabular-nums {tone(indexSameDays?.pct, 2)}">{pct(indexSameDays?.pct, 2)}</dd>
+              </div>
+              <div class="rounded-2xl bg-panel-2/70 px-3.5 py-3">
+                <dt class="text-[11px] text-muted">Cash in the sleeve</dt>
+                <dd class="mt-0.5 font-semibold tabular-nums text-strong">{usd(s.cash_usdt)}</dd>
+              </div>
+              <div class="col-span-2 rounded-2xl bg-panel-2/70 px-3.5 py-3 sm:col-span-1">
+                <dt class="text-[11px] text-muted">Last run</dt>
+                <dd class="mt-0.5 truncate font-semibold text-strong">{s.last_run ? `${when(s.last_run.at)} · ${s.last_run.by === 'admin' ? 'this page' : 'command line'}` : '—'}</dd>
+              </div>
+            </dl>
+            {#if s.top_ups?.length && !s.fund}
+              <p class="mt-2 text-[11px] text-muted">
+                Budget {usd(s.budget_usdt)} USDT: started with {usd(s.budget_usdt - s.top_ups.reduce((x, t) => x + t.usdt, 0))}, then added {s.top_ups.map((t) => `${usd(t.usdt)} on ${niceDate(t.at.slice(0, 10))}`).join(', ')}.
+              </p>
+            {/if}
+
+            {#if s.positions.length}
+              <ul class="mt-3 divide-y divide-edge/60">
+                {#each s.positions as p (p.coin)}
+                  <li class="flex items-center gap-3 py-2.5">
+                    <div class="min-w-0 flex-1">
+                      <p class="text-sm font-semibold text-strong">{p.asset}</p>
+                      <p class="truncate text-xs text-muted">{amount(p.qty)} · bought {niceDate(p.entry_date)}</p>
+                    </div>
+                    <div class="shrink-0 text-right">
+                      <p class="text-sm font-semibold tabular-nums text-strong">{usd(p.value_usdt)}</p>
+                      <p class="text-xs tabular-nums {tone(p.return_pct)}">{pct(p.return_pct)}</p>
+                    </div>
+                  </li>
+                {/each}
+              </ul>
+            {:else}
+              <p class="mt-3 text-xs text-muted">No coins held — the sleeve is all cash.</p>
+            {/if}
+            {#if (sleeve?.history.length ?? 0) >= 2}
+              <div class="mt-3"><EChart option={sleeveChart} height={180} /></div>
+            {/if}
+            {#if s.last_run}<p class="mt-2 text-[11px] text-muted">{s.last_run.summary}</p>{/if}
+          {:else}
+            <p class="mt-1 text-sm text-soft">Not started. The first run buys the index's coins with the budget you set below.</p>
+          {/if}
         </div>
 
-        {#if isLive}
-          <p class="mt-1 flex flex-wrap items-center gap-x-1.5 text-xs text-muted">
-            <span class="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-mint"></span>
-            <span class="text-mint">Live from Binance</span> · updated {secondsAgo != null && secondsAgo < 60 ? `${secondsAgo}s` : `${Math.round((secondsAgo ?? 0) / 60)} min`} ago · refreshes every {POLL_MS / 1000}s
-          </p>
-        {:else if lw && !lw.keys}
-          <p class="mt-1 text-xs text-warn">This server has no {botMode} API key, so it can't read Binance live.{shown ? ` Showing the snapshot saved ${when(shown.taken_at)}.` : ''}</p>
-        {:else if lw?.error || liveFailed[botMode]}
-          <p class="mt-1 text-xs text-warn">Binance could not be read just now: {lw?.error || liveFailed[botMode]}{shown ? ` Showing the snapshot saved ${when(shown.taken_at)}.` : ''}</p>
-        {/if}
-
-        {#if !shown && bot?.table_missing}
-          <p class="mt-2 text-sm text-soft">
-            The snapshot table doesn't exist yet. Create it once by running <code class="rounded bg-panel-2 px-1.5 py-0.5 text-xs">backend/database/rotation-bot-snapshots.sql</code> in the Supabase SQL editor.
-          </p>
-        {:else if !shown}
-          <p class="mt-2 text-sm text-muted">{liveLoading ? 'Reading Binance…' : `No ${botMode} balance yet.`}</p>
-        {:else}
-          {@const s = shown}
-          {#if !isLive}<p class="mt-1 text-xs text-muted">Spot wallet as of {when(s.taken_at)} · {s.status}</p>{/if}
-
-          {#if wallet}
-            <!-- 1. Everything in the Spot wallet -->
-            <div class="mt-3 flex flex-wrap items-end justify-between gap-3">
-              <div>
-                <p class="text-[11px] text-muted">Total value</p>
-                <p class="text-3xl font-semibold text-strong">{usd(wallet.total)} <span class="text-sm font-normal text-muted">USDT</span></p>
-              </div>
-              <div class="text-right">
-                <p class="text-[11px] text-muted">USDT free to spend</p>
-                <p class="text-lg font-semibold text-strong">{usd(wallet.usdtFree)}</p>
+        <!-- Run the bot on the server, with the server's own key -->
+        {#if lw && !liveUnsupported}
+          {@const c = lw.control}
+          {@const k = lw.key}
+          <div class="card">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <h2 class="text-sm font-semibold text-strong">Run the bot</h2>
+              <div class="flex gap-2">
+                <button class="btn-ghost px-3 py-1.5 text-xs" disabled={busy !== null || !lw.keys} onclick={() => preview('preview')}>
+                  <Eye class="h-3.5 w-3.5" /> Preview
+                </button>
+                <button
+                  class="btn px-3 py-1.5 text-xs font-semibold {botMode === 'live' ? 'bg-danger text-white hover:bg-danger/90' : 'bg-accent text-white hover:bg-accent/90'} disabled:opacity-50"
+                  disabled={busy !== null || !c.can_trade || c.running}
+                  onclick={() => preview('check')}>
+                  <Play class="h-3.5 w-3.5" /> {busy === 'check' ? 'Checking…' : busy === 'run' ? 'Placing orders…' : 'Run now'}
+                </button>
               </div>
             </div>
+            <p class="mt-1 text-xs text-muted">Copies the index's orders inside the sleeve once the index has saved its fill. You see the orders first; nothing is placed until you confirm.</p>
+            {#if view?.pending}<p class="mt-1 text-xs text-muted">The review decided {niceDate(view.pending.decided)} fills at the next close. Until that is saved, a run does nothing.</p>{/if}
+            {#if !s.started}
+              <label class="mt-3 flex flex-wrap items-center gap-2 text-xs text-soft">
+                First-run budget
+                <input class="input-sm w-28" type="number" min="1" step="1" bind:value={budgetInput} oninput={() => (budgetTouched = true)} />
+                USDT{c.max_budget_usdt ? ` · at most ${usd(c.max_budget_usdt)} (BOT_MAX_BUDGET_USDT)` : ''}{wallet ? ` · ${usd(wallet.usdtFree)} free in Spot` : ''}
+              </label>
+            {/if}
+            {#if c.running}<p class="mt-2 text-xs text-warn">A run is in progress. The buttons come back when it finishes.</p>{/if}
+            {#if !c.can_trade && c.why_not}<p class="mt-2 text-xs text-warn">Run is off on this server: {c.why_not}</p>{/if}
+            {#if k}
+              {#if k.withdrawals}<p class="mt-1 text-xs text-danger">This key can withdraw funds — the bot refuses to trade with it. Turn withdrawals off on Binance.</p>{/if}
+              {#if !k.spot_trading}<p class="mt-1 text-xs text-warn">Spot trading is off for this key — on Binance › API Management, restrict it to trusted IPs, then tick "Enable Spot & Margin Trading".</p>{/if}
+              {#if !k.ip_restricted}<p class="mt-1 text-xs text-warn">This key is not restricted to an IP address — add this server's IP on Binance › API Management.</p>{/if}
+            {/if}
 
-            {#if wallet.segments.length}
-              <div class="mt-3 flex h-2.5 w-full overflow-hidden rounded-sm bg-panel-2">
-                {#each wallet.segments as g (g.label)}
-                  <span class="h-full" style="width:{g.share}%; background:{g.color}" title="{g.label} {g.share.toFixed(1)}%"></span>
-                {/each}
-              </div>
-              <div class="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-[11px]">
-                {#each wallet.segments as g (g.label)}
-                  <span class="flex items-center gap-1 text-soft"><span class="inline-block h-2 w-2 rounded-sm" style="background:{g.color}"></span>{g.label} {g.share.toFixed(1)}%</span>
-                {/each}
+            {#if s.started && s.fund}
+              <p class="mt-3 rounded-2xl bg-panel-2/70 p-3 text-xs text-muted">
+                Money goes in and out per person now: open someone in the
+                <button class="font-medium text-accent hover:underline" onclick={() => pickTab('investors')}>Investors</button> tab and use Add money or Withdraw.
+              </p>
+            {:else if s.started && topUpRoom}
+              {@const room = topUpRoom}
+              <div class="mt-3 rounded-2xl border border-edge/70 p-3">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <p class="text-xs font-semibold text-strong">Add to the sleeve</p>
+                  <p class="text-[11px] {room.outside >= 5 ? 'text-mint' : 'text-muted'}">
+                    {usd(room.outside)} USDT in Spot is outside the sleeve{room.capRoom != null ? ` · the cap allows ${usd(room.capRoom)} more` : ''}
+                  </p>
+                </div>
+                <p class="mt-1 text-[11px] leading-snug text-muted">Moves USDT from Spot into the sleeve and buys more of the index's coins at its weights. Binance needs about 5 USDT per coin.</p>
+                {#if room.capRoom != null && room.capRoom < 1}
+                  <p class="mt-2 text-[11px] text-warn">The sleeve is at the cap ({usd(c.max_budget_usdt)} USDT). Raise BOT_MAX_BUDGET_USDT in the server's backend/.env and restart it to add more.</p>
+                {:else}
+                  <div class="mt-2 flex flex-wrap items-center gap-2 text-xs text-soft">
+                    <input class="input-sm w-28" type="number" min="1" step="1" bind:value={topUpInput} oninput={() => (topUpTouched = true)} />
+                    USDT
+                    <button
+                      class="btn-ghost px-3 py-1.5 text-xs"
+                      disabled={busy !== null || !c.can_trade || c.running || !(Number(topUpInput) > 0)}
+                      onclick={() => preview('check', Number(topUpInput))}>
+                      <Eye class="h-3.5 w-3.5" /> {busy === 'check' && !!topUpInput ? 'Checking…' : 'Check & add'}
+                    </button>
+                  </div>
+                {/if}
               </div>
             {/if}
 
-            {#if wallet.main.length}
-              <table class="mt-3 w-full text-sm">
-                <thead>
-                  <tr class="text-left text-[11px] text-muted"><th class="py-1 font-medium">Coin</th><th class="py-1 text-right font-medium">Amount</th><th class="py-1 text-right font-medium">Value (USDT)</th><th class="py-1 text-right font-medium">Share</th></tr>
-                </thead>
-                <tbody>
-                  {#each showAllSpot ? wallet.main : wallet.main.slice(0, SPOT_SHOWN) as b (b.asset)}
-                    <tr class="border-t border-edge/60">
-                      <td class="py-1.5 font-semibold text-strong">
-                        {b.asset}{#if botCoins.has(b.asset)}<span class="ml-1.5 rounded-sm bg-accent/15 px-1 py-px text-[10px] font-medium text-accent">bot</span>{/if}
-                        {#if b.locked > 0}<span class="ml-1 text-[11px] font-normal text-muted">({amount(b.locked)} in orders)</span>{/if}
-                      </td>
-                      <td class="py-1.5 text-right text-soft">{amount(b.free + b.locked)}</td>
-                      <td class="py-1.5 text-right text-strong">{usd(b.value_usdt)}</td>
-                      <td class="py-1.5 text-right text-soft">{b.share == null ? '—' : `${b.share.toFixed(1)}%`}</td>
-                    </tr>
-                  {/each}
-                </tbody>
-              </table>
-              {#if wallet.main.length > SPOT_SHOWN}
-                <button class="mt-1 text-[11px] font-medium text-accent hover:underline" onclick={() => (showAllSpot = !showAllSpot)}>
-                  {showAllSpot ? 'Show fewer' : `Show all ${wallet.main.length}`}
-                </button>
-              {/if}
-            {:else}
-              <p class="mt-3 text-sm text-soft">No coin worth {DUST_USDT} USDT or more — the wallet holds only small leftovers.</p>
-            {/if}
-
-            {#if wallet.small.length}
-              <details class="mt-2 text-xs">
-                <summary class="cursor-pointer text-muted">
-                  {wallet.small.length} small balance{wallet.small.length === 1 ? '' : 's'} under {DUST_USDT} USDT, about {usd(wallet.smallValue)} USDT in all{wallet.more ? ` (+ ${wallet.more} not listed)` : ''}
-                </summary>
-                <p class="mt-1 leading-relaxed text-soft">
-                  {#each wallet.small as b, i (b.asset)}{i ? ' · ' : ''}{b.asset} {amount(b.free + b.locked)}{b.value_usdt == null ? '' : ` (${usd(b.value_usdt)})`}{/each}
+            {#if result && result.mode === botMode}
+              {@const r = result}
+              {@const plan = r.outcome?.plan}
+              <div class="mt-3 rounded-2xl border {r.ok ? 'border-edge' : 'border-danger/40'} bg-panel-2/60 p-3 text-xs">
+                <p class="font-semibold {r.ok ? 'text-strong' : 'text-danger'}">
+                  {r.kind === 'run' ? (r.ok ? 'Done' : 'Stopped') : r.topUp ? 'Add to the sleeve' : 'Preview'} · {r.ok ? r.outcome?.summary : r.message}
                 </p>
-              </details>
-            {/if}
-            <p class="mt-2 text-[11px] text-muted">Spot wallet only — Funding and Earn are not included. Coins marked <span class="text-accent">bot</span> are the bot's; it never touches the rest.</p>
-          {/if}
-
-          <!-- 2. The bot's part of it -->
-          <div class="mt-4 border-t border-edge/60 pt-3">
-            <h3 class="text-xs font-semibold text-strong">Bot sleeve · {s.follow ? 'copies the Rotation Index' : `runs the ${s.style} rule`}</h3>
-            {#if s.started}
-              <div class="mt-2 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">
-                <div>
-                  <p class="text-[11px] text-muted">Sleeve value</p>
-                  <p class="text-lg font-semibold text-strong">{usd(s.equity_usdt)} <span class="text-xs font-normal text-muted">USDT</span></p>
-                </div>
-                <div>
-                  <p class="text-[11px] text-muted">On the {usd(s.budget_usdt)} budget</p>
-                  <p class="text-lg font-semibold {tone(s.return_pct)}">{pct(s.return_pct, 2)}</p>
-                </div>
-                <div>
-                  <p class="text-[11px] text-muted">Index, same days</p>
-                  <p class="text-lg font-semibold {tone(indexSameDays?.pct)}">{pct(indexSameDays?.pct, 2)}</p>
-                </div>
-                <div>
-                  <p class="text-[11px] text-muted">Cash in the sleeve</p>
-                  <p class="text-lg font-semibold text-strong">{usd(s.cash_usdt)} <span class="text-xs font-normal text-muted">USDT</span></p>
-                </div>
+                {#if plan && (plan.sell.length || plan.buy.length)}
+                  <div class="mt-2 space-y-0.5 text-soft">
+                    {#if plan.sell.length}<p><span class="text-danger">Sell</span> {plan.sell.map((x) => `${x.asset} (${x.reason})`).join(', ')}</p>{/if}
+                    {#if plan.buy.length}<p><span class="text-mint">Buy</span> {plan.buy.map((x) => (x.usdt == null ? x.asset : `${x.asset} ~${usd(x.usdt)} USDT`)).join(', ')}</p>{/if}
+                    {#if plan.keep.length}<p><span class="text-muted">Keep</span> {plan.keep.join(', ')}</p>{/if}
+                  </div>
+                {/if}
+                {#if r.kind === 'check' && hasOrders(r)}
+                  <div class="mt-3 flex flex-wrap items-center gap-2 border-t border-edge/60 pt-3">
+                    <span class="text-strong">
+                      {r.topUp ? `Add ${usd(r.topUp)} USDT to the sleeve and place these orders` : 'Place these orders'}{botMode === 'live' ? ' with real money on Binance?' : ' on Binance testnet?'}
+                    </span>
+                    <button class="btn px-3 py-1.5 text-xs font-semibold {botMode === 'live' ? 'bg-danger text-white hover:bg-danger/90' : 'bg-accent text-white hover:bg-accent/90'}" disabled={busy !== null} onclick={run}>
+                      {busy === 'run' ? 'Placing orders…' : 'Place orders'}
+                    </button>
+                    <button class="btn-ghost px-3 py-1.5 text-xs" disabled={busy !== null} onclick={() => (result = null)}>Cancel</button>
+                  </div>
+                {:else if r.kind === 'check' && r.ok}
+                  <p class="mt-1 text-muted">Nothing to place now.</p>
+                {/if}
+                {#if r.log.length}
+                  <details class="mt-2">
+                    <summary class="cursor-pointer text-muted">Run log</summary>
+                    <pre class="mt-1 max-h-72 overflow-auto whitespace-pre-wrap rounded bg-panel p-2 font-mono text-[11px] leading-snug text-soft">{r.log.join('\n')}</pre>
+                  </details>
+                {/if}
               </div>
-              {#if s.top_ups?.length && !s.fund}
-                <p class="mt-2 text-[11px] text-muted">
-                  Budget {usd(s.budget_usdt)} USDT: started with {usd(s.budget_usdt - s.top_ups.reduce((x, t) => x + t.usdt, 0))}, then added {s.top_ups.map((t) => `${usd(t.usdt)} on ${niceDate(t.at.slice(0, 10))}`).join(', ')}.
-                </p>
-              {/if}
-              {#if s.positions.length}
-                <table class="mt-3 w-full text-sm">
-                  <thead>
-                    <tr class="text-left text-[11px] text-muted"><th class="py-1 font-medium">Coin</th><th class="py-1 text-right font-medium">Amount</th><th class="py-1 text-right font-medium">Value (USDT)</th><th class="py-1 text-right font-medium">Since entry</th><th class="hidden py-1 text-right font-medium sm:table-cell">Bought</th></tr>
-                  </thead>
-                  <tbody>
-                    {#each s.positions as p (p.coin)}
-                      <tr class="border-t border-edge/60">
-                        <td class="py-1.5 font-semibold text-strong">{p.asset}</td>
-                        <td class="py-1.5 text-right text-soft">{amount(p.qty)}</td>
-                        <td class="py-1.5 text-right text-soft">{usd(p.value_usdt)}</td>
-                        <td class="py-1.5 text-right {tone(p.return_pct)}">{pct(p.return_pct)}</td>
-                        <td class="hidden py-1.5 text-right text-xs text-muted sm:table-cell">{niceDate(p.entry_date)}</td>
-                      </tr>
-                    {/each}
-                  </tbody>
-                </table>
-              {:else}
-                <p class="mt-2 text-xs text-muted">No coins held — the sleeve is all cash.</p>
-              {/if}
-              {#if (sleeve?.history.length ?? 0) >= 2}
-                <div class="mt-3"><EChart option={sleeveChart} height={180} /></div>
-              {/if}
-            {:else}
-              <p class="mt-1 text-sm text-soft">Not started — the first run buys the index's coins with the budget below.</p>
-            {/if}
-            {#if s.last_run}
-              <p class="mt-2 text-[11px] text-muted">Last run {when(s.last_run.at)} ({s.last_run.by === 'admin' ? 'from this page' : 'from the command line'}) · {s.last_run.summary}</p>
             {/if}
           </div>
+        {/if}
 
-          <!-- 3. Run the bot on the server, with the server's own key -->
-          {#if lw && !liveUnsupported}
-            {@const c = lw.control}
-            {@const k = lw.key}
-            <div class="mt-4 border-t border-edge/60 pt-3">
-              <div class="flex flex-wrap items-center justify-between gap-2">
-                <h3 class="text-xs font-semibold text-strong">Run the bot</h3>
-                <div class="flex gap-2">
-                  <button class="btn-ghost px-3 py-1.5 text-xs" disabled={busy !== null || !lw.keys} onclick={() => preview('preview')}>
-                    <Eye class="h-3.5 w-3.5" /> Preview
-                  </button>
-                  <button
-                    class="btn px-3 py-1.5 text-xs font-semibold {botMode === 'live' ? 'bg-danger text-white hover:bg-danger/90' : 'bg-accent text-white hover:bg-accent/90'} disabled:opacity-50"
-                    disabled={busy !== null || !c.can_trade || c.running}
-                    onclick={() => preview('check')}
-                  >
-                    <Play class="h-3.5 w-3.5" /> {busy === 'check' ? 'Checking…' : busy === 'run' ? 'Placing orders…' : 'Run now'}
-                  </button>
-                </div>
-              </div>
-              <p class="mt-1 text-[11px] leading-snug text-muted">
-                Copies the Rotation Index inside the sleeve: sells what the index sold and buys what it bought, at market, once the index has saved its fill.{view?.pending ? ` The index's review decided ${niceDate(view.pending.decided)} fills at the next close — until that is saved, a run does nothing.` : ''} Run now shows the orders first; nothing is placed until you confirm.
-              </p>
-              {#if !s.started}
-                <label class="mt-2 flex flex-wrap items-center gap-2 text-xs text-soft">
-                  First-run budget
-                  <input class="input-sm w-28" type="number" min="1" step="1" bind:value={budgetInput} oninput={() => (budgetTouched = true)} />
-                  USDT{c.max_budget_usdt ? ` · at most ${usd(c.max_budget_usdt)} (BOT_MAX_BUDGET_USDT)` : ''}{wallet ? ` · ${usd(wallet.usdtFree)} free in Spot` : ''}
-                </label>
-              {/if}
-              {#if c.running}<p class="mt-2 text-[11px] text-warn">A run is in progress — the buttons come back when it finishes.</p>{/if}
-              {#if !c.can_trade && c.why_not}<p class="mt-2 text-[11px] text-warn">Run is off on this server: {c.why_not}</p>{/if}
-              {#if k}
-                {#if k.withdrawals}<p class="mt-1 text-[11px] text-danger">This key can withdraw funds — the bot refuses to trade with it. Turn withdrawals off on Binance.</p>{/if}
-                {#if !k.spot_trading}<p class="mt-1 text-[11px] text-warn">Spot trading is off for this key — on Binance › API Management, restrict it to trusted IPs, then tick "Enable Spot & Margin Trading".</p>{/if}
-                {#if !k.ip_restricted}<p class="mt-1 text-[11px] text-warn">This key is not restricted to an IP address — add this server's IP on Binance › API Management.</p>{/if}
-              {/if}
-
-              {#if s.started && s.fund}
-                <p class="mt-3 rounded-lg border border-edge/60 p-3 text-[11px] leading-snug text-muted">
-                  The investor books are started, so money goes in and out per person — open a person under Investors below and use Add money or Withdraw.
-                </p>
-              {:else if s.started && topUpRoom}
-                {@const room = topUpRoom}
-                <div class="mt-3 rounded-lg border border-edge/60 p-3">
-                  <div class="flex flex-wrap items-center justify-between gap-2">
-                    <p class="text-xs font-semibold text-strong">Add to the sleeve</p>
-                    <p class="text-[11px] {room.outside >= 5 ? 'text-mint' : 'text-muted'}">
-                      {usd(room.outside)} USDT in Spot is outside the sleeve{room.capRoom != null ? ` · the cap allows ${usd(room.capRoom)} more` : ''}
-                    </p>
+        <!-- Recent orders -->
+        {#if s.trades.length}
+          <div class="card">
+            <h2 class="text-sm font-semibold text-strong">Recent orders</h2>
+            <ul class="mt-1 divide-y divide-edge/60">
+              {#each s.trades.slice(0, 8) as t (t.at + t.symbol + t.side)}
+                {@const buy = t.side === 'BUY'}
+                <li class="flex items-center gap-3 py-2.5">
+                  <span class="grid h-9 w-9 shrink-0 place-items-center rounded-full {buy ? 'bg-mint/15 text-mint' : 'bg-danger/15 text-danger'}" aria-hidden="true">
+                    {#if buy}<ArrowDownLeft class="h-4 w-4" />{:else}<ArrowUpRight class="h-4 w-4" />{/if}
+                  </span>
+                  <div class="min-w-0 flex-1">
+                    <p class="text-sm font-medium text-strong">{buy ? 'Bought' : 'Sold'} {t.symbol.replace(/USDT$/, '')}</p>
+                    <p class="truncate text-xs text-muted">{when(t.at)} · {t.reason}</p>
                   </div>
-                  <p class="mt-1 text-[11px] leading-snug text-muted">
-                    Moves USDT from your Spot wallet into the sleeve and buys more of the index's coins now, at the index's weights. From then on every review trades the bigger sleeve. Binance needs about 5 USDT per coin.
-                  </p>
-                  {#if room.capRoom != null && room.capRoom < 1}
-                    <p class="mt-2 text-[11px] text-warn">The sleeve is at the cap ({usd(c.max_budget_usdt)} USDT). Raise BOT_MAX_BUDGET_USDT in the server's backend/.env and restart it to add more.</p>
-                  {:else}
-                    <div class="mt-2 flex flex-wrap items-center gap-2 text-xs text-soft">
-                      <input class="input-sm w-28" type="number" min="1" step="1" bind:value={topUpInput} oninput={() => (topUpTouched = true)} />
-                      USDT
-                      <button
-                        class="btn-ghost px-3 py-1.5 text-xs"
-                        disabled={busy !== null || !c.can_trade || c.running || !(Number(topUpInput) > 0)}
-                        onclick={() => preview('check', Number(topUpInput))}
-                      >
-                        <Eye class="h-3.5 w-3.5" /> {busy === 'check' && !!topUpInput ? 'Checking…' : 'Check & add'}
-                      </button>
-                    </div>
-                  {/if}
-                </div>
-              {/if}
-
-              {#if result && result.mode === botMode}
-                {@const r = result}
-                {@const plan = r.outcome?.plan}
-                <div class="mt-3 rounded-lg border {r.ok ? 'border-edge' : 'border-danger/40'} bg-panel-2/60 p-3 text-xs">
-                  <p class="font-semibold {r.ok ? 'text-strong' : 'text-danger'}">
-                    {r.kind === 'run' ? (r.ok ? 'Done' : 'Stopped') : r.topUp ? 'Add to the sleeve' : 'Preview'} · {r.ok ? r.outcome?.summary : r.message}
-                  </p>
-                  {#if plan && (plan.sell.length || plan.buy.length)}
-                    <div class="mt-2 space-y-0.5 text-soft">
-                      {#if plan.sell.length}<p><span class="text-danger">Sell</span> {plan.sell.map((x) => `${x.asset} (${x.reason})`).join(', ')}</p>{/if}
-                      {#if plan.buy.length}<p><span class="text-mint">Buy</span> {plan.buy.map((x) => (x.usdt == null ? x.asset : `${x.asset} ~${usd(x.usdt)} USDT`)).join(', ')}</p>{/if}
-                      {#if plan.keep.length}<p><span class="text-muted">Keep</span> {plan.keep.join(', ')}</p>{/if}
-                    </div>
-                  {/if}
-                  {#if r.kind === 'check' && hasOrders(r)}
-                    <div class="mt-3 flex flex-wrap items-center gap-2 border-t border-edge/60 pt-3">
-                      <span class="text-strong">
-                        {r.topUp ? `Add ${usd(r.topUp)} USDT to the sleeve and place these orders` : 'Place these orders'}{botMode === 'live' ? ' with real money on Binance?' : ' on Binance testnet?'}
-                      </span>
-                      <button class="btn px-3 py-1.5 text-xs font-semibold {botMode === 'live' ? 'bg-danger text-white hover:bg-danger/90' : 'bg-accent text-white hover:bg-accent/90'}" disabled={busy !== null} onclick={run}>
-                        {busy === 'run' ? 'Placing orders…' : 'Place orders'}
-                      </button>
-                      <button class="btn-ghost px-3 py-1.5 text-xs" disabled={busy !== null} onclick={() => (result = null)}>Cancel</button>
-                    </div>
-                  {:else if r.kind === 'check' && r.ok}
-                    <p class="mt-1 text-muted">Nothing to place now.</p>
-                  {/if}
-                  {#if r.log.length}
-                    <details class="mt-2">
-                      <summary class="cursor-pointer text-muted">Run log</summary>
-                      <pre class="mt-1 max-h-72 overflow-auto whitespace-pre-wrap rounded bg-panel p-2 font-mono text-[11px] leading-snug text-soft">{r.log.join('\n')}</pre>
-                    </details>
-                  {/if}
-                </div>
-              {/if}
-            </div>
-          {/if}
-
-          {#if s.trades.length}
-            <div class="mt-4 border-t border-edge/60 pt-3">
-              <h3 class="text-xs font-semibold text-strong">Recent bot orders</h3>
-              <div class="mt-1 space-y-0.5 text-xs">
-                {#each s.trades.slice(0, 8) as t (t.at + t.symbol + t.side)}
-                  <p class="text-soft">
-                    <span class="text-muted">{when(t.at)}</span>
-                    <span class={t.side === 'BUY' ? 'text-mint' : 'text-danger'}>{t.side === 'BUY' ? 'Bought' : 'Sold'}</span>
-                    {amount(t.qty)} {t.symbol.replace(/USDT$/, '')} for {usd(t.usdt)} USDT · <span class="text-muted">{t.reason}</span>
-                  </p>
-                {/each}
-              </div>
-            </div>
-          {/if}
+                  <div class="shrink-0 text-right">
+                    <p class="text-sm font-semibold tabular-nums text-strong">{usd(t.usdt)}</p>
+                    <p class="text-xs tabular-nums text-muted">{amount(t.qty)}</p>
+                  </div>
+                </li>
+              {/each}
+            </ul>
+          </div>
         {/if}
       </div>
     {/if}
+  {:else if tab === 'investors'}
+    {#if !booksReady}{@render accountStatus()}{/if}
+  {:else if tab === 'wallet'}
+    {@render accountStatus()}
+    {#if shown && wallet}
+      <div class="card">
+        <div class="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p class="text-xs text-muted">Spot wallet</p>
+            <p class="mt-1 text-3xl font-semibold tracking-tight tabular-nums text-strong">{usd(wallet.total)} <span class="text-sm font-medium text-muted">USDT</span></p>
+          </div>
+          <div class="sm:text-right">
+            <p class="text-[11px] text-muted">USDT free to spend</p>
+            <p class="text-lg font-semibold tabular-nums text-strong">{usd(wallet.usdtFree)}</p>
+          </div>
+        </div>
 
-    {#if shown && lw && !liveUnsupported}
+        {#if wallet.segments.length}
+          <div class="mt-4 flex h-2 w-full overflow-hidden rounded-full bg-panel-2">
+            {#each wallet.segments as g (g.label)}
+              <span class="h-full" style="width:{g.share}%; background:{g.color}" title="{g.label} {g.share.toFixed(1)}%"></span>
+            {/each}
+          </div>
+        {/if}
+
+        {#if wallet.main.length}
+          <ul class="mt-2 divide-y divide-edge/60">
+            {#each showAllSpot ? wallet.main : wallet.main.slice(0, SPOT_SHOWN) as b (b.asset)}
+              <li class="flex items-center gap-3 py-2.5">
+                <div class="min-w-0 flex-1">
+                  <p class="flex items-center gap-1.5 text-sm font-semibold text-strong">
+                    {b.asset}{#if botCoins.has(b.asset)}<span class="rounded-full bg-accent/15 px-1.5 py-px text-[10px] font-medium text-accent">bot</span>{/if}
+                  </p>
+                  <p class="truncate text-xs text-muted">{amount(b.free + b.locked)}{b.locked > 0 ? ` · ${amount(b.locked)} in orders` : ''}</p>
+                </div>
+                <div class="shrink-0 text-right">
+                  <p class="text-sm font-semibold tabular-nums text-strong">{usd(b.value_usdt)}</p>
+                  <p class="text-xs tabular-nums text-muted">{b.share == null ? '—' : `${b.share.toFixed(1)}%`}</p>
+                </div>
+              </li>
+            {/each}
+          </ul>
+          {#if wallet.main.length > SPOT_SHOWN}
+            <button class="mt-1 text-xs font-medium text-accent hover:underline" onclick={() => (showAllSpot = !showAllSpot)}>
+              {showAllSpot ? 'Show fewer' : `Show all ${wallet.main.length}`}
+            </button>
+          {/if}
+        {:else}
+          <p class="mt-3 text-sm text-soft">No coin worth {DUST_USDT} USDT or more — the wallet holds only small leftovers.</p>
+        {/if}
+
+        {#if wallet.small.length}
+          <details class="mt-2 text-xs">
+            <summary class="cursor-pointer text-muted">
+              {wallet.small.length} small balance{wallet.small.length === 1 ? '' : 's'} under {DUST_USDT} USDT, about {usd(wallet.smallValue)} USDT in all{wallet.more ? ` (+ ${wallet.more} not listed)` : ''}
+            </summary>
+            <p class="mt-1 leading-relaxed text-soft">
+              {#each wallet.small as b, i (b.asset)}{i ? ' · ' : ''}{b.asset} {amount(b.free + b.locked)}{b.value_usdt == null ? '' : ` (${usd(b.value_usdt)})`}{/each}
+            </p>
+          </details>
+        {/if}
+        <p class="mt-3 text-[11px] text-muted">Spot only; Funding and Earn are not included. Coins marked <span class="text-accent">bot</span> belong to the bot's sleeve, which never touches the rest.</p>
+      </div>
+    {/if}
+  {:else}
+    <div class="space-y-4">
+      <div class="flex items-center justify-between gap-3">
+        <p class="text-xs text-muted">{v.days} day{v.days === 1 ? '' : 's'} · prices up to {niceDate(v.last_date)} · all start at {v.index.base}</p>
+        <button class="btn-ghost shrink-0 px-3 py-1.5 text-xs" disabled={updating} onclick={update}>
+          <RefreshCw class="h-3.5 w-3.5 {updating ? 'animate-spin' : ''}" /> Update now
+        </button>
+      </div>
+
+      <!-- The three lines; all start at the same base on the first fill day. One card of rows on a phone… -->
+      <ul class="card divide-y divide-edge/60 py-1 sm:hidden">
+        {#each lines as l (l.key)}
+          <li class="flex items-center justify-between gap-3 py-2.5">
+            <div class="min-w-0">
+              <p class="flex items-center gap-1.5 text-sm font-medium text-strong"><span class="inline-block h-2 w-2 shrink-0 rounded-full" style="background:{l.color}"></span>{l.name}</p>
+              <p class="mt-0.5 text-xs text-muted">Worst drop <span class={l.dd < 0 ? 'text-danger' : 'text-muted'}>{l.dd.toFixed(1)}%</span></p>
+            </div>
+            <div class="shrink-0 text-right">
+              <p class="text-base font-semibold tabular-nums text-strong">{l.value.toFixed(2)}</p>
+              <p class="text-xs tabular-nums {tone(l.ret)}">{pct(l.ret)}</p>
+            </div>
+          </li>
+        {/each}
+      </ul>
+      <!-- …side by side on a wider screen. -->
+      <div class="hidden gap-3 sm:grid sm:grid-cols-3">
+        {#each lines as l (l.key)}
+          <div class="card">
+            <p class="flex items-center gap-1.5 text-xs font-medium text-muted"><span class="inline-block h-2 w-2 rounded-full" style="background:{l.color}"></span>{l.name}</p>
+            <p class="mt-1 text-2xl font-semibold text-strong">{l.value.toFixed(2)}</p>
+            <p class="mt-0.5 text-xs"><span class={tone(l.ret)}>{pct(l.ret)}</span> <span class="text-muted">since start</span></p>
+            <p class="text-xs text-muted">Worst drop so far <span class={l.dd < 0 ? 'text-danger' : 'text-muted'}>{l.dd.toFixed(1)}%</span></p>
+          </div>
+        {/each}
+      </div>
+
+      <div class="card">
+        <h2 class="text-sm font-semibold text-strong">Since {niceDate(v.start_date)}</h2>
+        {#if (v.series?.length ?? 0) >= 2}
+          <EChart option={chartOption} height={300} />
+        {:else}
+          <p class="mt-3 rounded-lg bg-panel-2/60 px-3 py-6 text-center text-xs text-muted">
+            Day 1. The first orders fill at the next day's close, and the chart fills in from there — one point a day, after each price sync.
+          </p>
+        {/if}
+      </div>
+
+      <div class="grid gap-4 lg:grid-cols-2">
+        <div class="card">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <h2 class="flex items-center gap-1.5 text-sm font-semibold text-strong"><ListChecks class="h-4 w-4 text-accent" /> Holding now</h2>
+            <span class="pill bg-edge text-soft"><CalendarClock class="mr-1 inline h-3 w-3" />Next review {niceDate(v.next_review)}</span>
+          </div>
+          {#if v.holdings?.length}
+            <table class="mt-2 w-full text-sm">
+              <thead>
+                <tr class="text-left text-[11px] text-muted"><th class="py-1 font-medium">Coin</th><th class="py-1 text-right font-medium">Weight</th><th class="py-1 text-right font-medium">Since entry</th><th class="py-1 text-right font-medium">Bought</th></tr>
+              </thead>
+              <tbody>
+                {#each v.holdings as h (h.coin)}
+                  <tr class="border-t border-edge/60">
+                    <td class="py-1.5"><span class="flex items-center gap-2">{#if h.image}<img src={h.image} alt="" class="h-4 w-4 rounded-full" />{/if}<span class="font-semibold text-strong">{h.symbol}</span></span></td>
+                    <td class="py-1.5 text-right text-soft">{h.weight_pct.toFixed(1)}%</td>
+                    <td class="py-1.5 text-right {tone(h.return_pct)}">{pct(h.return_pct)}</td>
+                    <td class="py-1.5 text-right text-xs text-muted">{niceDate(h.entry_date)}</td>
+                  </tr>
+                {/each}
+                {#if (v.cash_pct ?? 0) >= 0.5}
+                  <tr class="border-t border-edge/60"><td class="py-1.5 text-muted">Cash</td><td class="py-1.5 text-right text-muted">{v.cash_pct?.toFixed(1)}%</td><td></td><td></td></tr>
+                {/if}
+              </tbody>
+            </table>
+          {:else}
+            <p class="mt-2 text-xs text-muted">Nothing yet — all cash until the first orders fill.</p>
+          {/if}
+
+          {#if v.pending}
+            <div class="mt-3 border-t border-edge/60 pt-3 text-xs">
+              <p class="text-[11px] text-muted">Decided {niceDate(v.pending.decided)} · fills at the next day's close</p>
+              <p class="mt-1 flex flex-wrap gap-1">
+                {#each v.pending.sells as s}<span class="pill bg-danger/15 text-danger">− {s.symbol} · {s.reason}</span>{/each}
+                {#each v.pending.adds as a}<span class="pill bg-mint/15 text-mint">+ {a}</span>{/each}
+              </p>
+            </div>
+          {/if}
+        </div>
+
+        <div class="card">
+          <h2 class="text-sm font-semibold text-strong">Top {v.index.top10_size} by market cap — the passive yardstick</h2>
+          <p class="mt-1 text-xs text-muted">Weighted by market cap, reweighted every {v.index.top10_rebalance_days} days, same {v.index.fee_pct}% fee.</p>
+          {#if v.top10?.length}
+            <div class="mt-2 space-y-1">
+              {#each v.top10 as t (t.symbol)}
+                <div class="flex items-center gap-2 text-xs">
+                  <span class="w-12 font-semibold text-strong">{t.symbol}</span>
+                  <span class="h-1.5 flex-1 overflow-hidden rounded-full bg-panel-2"><span class="block h-full rounded-full" style="width:{Math.min(100, t.weight_pct)}%; background:{colors.top}"></span></span>
+                  <span class="w-12 text-right text-soft">{t.weight_pct.toFixed(1)}%</span>
+                </div>
+              {/each}
+            </div>
+          {:else}
+            <p class="mt-2 text-xs text-muted">Starts on the first fill day, together with the index.</p>
+          {/if}
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 class="text-sm font-semibold text-strong">Reviews</h2>
+        <p class="mt-1 text-xs text-muted">Every {v.index.style.rebalance_days} days: keep coins still in the top {v.index.style.worst_rank_held}, sell the rest, fill free slots with the strongest coin not held.</p>
+        <div class="mt-2 divide-y divide-edge/60">
+          {#each v.reviews ?? [] as r (r.date)}
+            <details class="py-2">
+              <summary class="flex cursor-pointer flex-wrap items-center gap-1.5 text-xs">
+                <span class="w-24 font-medium text-strong">{niceDate(r.date)}</span>
+                {#each r.sells as s}<span class="pill bg-danger/15 text-danger">− {s.symbol}</span>{/each}
+                {#each r.adds as a}<span class="pill bg-mint/15 text-mint">+ {a}</span>{/each}
+                {#each r.keep as k}<span class="pill bg-edge text-soft">{k}</span>{/each}
+                {#if !r.sells.length && !r.adds.length}<span class="text-muted">no change</span>{/if}
+              </summary>
+              <div class="mt-2 grid gap-3 pl-1 text-xs sm:grid-cols-2">
+                <div>
+                  <p class="text-[11px] text-muted">Ranking that day ({v.index.style.signal}, {v.index.style.lookback_days} days)</p>
+                  <p class="mt-1 flex flex-wrap gap-1">{#each r.ranking as x}<span class="pill bg-edge text-soft">#{x.rank} {x.symbol} {pct(x.score, 0)}</span>{/each}</p>
+                </div>
+                <div>
+                  <p class="text-[11px] text-muted">Filled</p>
+                  {#each r.fills as f}
+                    <p class="mt-0.5 text-soft"><span class={f.side === 'BUY' ? 'text-mint' : 'text-danger'}>{f.side === 'BUY' ? 'Bought' : 'Sold'}</span> {f.symbol} at {price(f.price)} · {f.value.toFixed(2)} pts{f.side === 'SELL' ? ` · ${f.reason}` : ''}</p>
+                  {:else}
+                    <p class="mt-0.5 text-muted">{r.sells.length || r.adds.length ? 'Fills at the next day’s close.' : 'Nothing to fill.'}</p>
+                  {/each}
+                </div>
+              </div>
+            </details>
+          {/each}
+        </div>
+      </div>
+
+      <ul class="list-disc space-y-1 pl-5 text-[11px] leading-snug text-muted">
+        <li>Tracked forward on paper: each review picks from the coins that are biggest on that day, and its decisions are saved and never recalculated, so nothing here benefits from hindsight.</li>
+        <li>Rule: {v.index.style.label} — top {v.index.style.universe_size} coins by market cap that Binance trades against USDT, ranked by {v.index.style.lookback_days}-day {v.index.style.signal}, {v.index.style.top_n} held at equal weight, reviewed every {v.index.style.rebalance_days} days. The same rule as the rotation bot.</li>
+        <li>Orders are decided on the review day's close and filled at the next day's close, with a {v.index.fee_pct}% fee on every buy and sell. Slippage is not modelled.</li>
+        <li>Closing prices are CoinGecko's 00:00 UTC prices. A day is added only once its price is final, so the newest point is usually yesterday.</li>
+        <li>BTC and the top-{v.index.top10_size} index start on the first fill day ({niceDate(v.first_fill)}) at the same fee. Binance coin list as of {niceDate(v.tradable_as_of)}.</li>
+      </ul>
+      <Disclaimer compact />
+    </div>
+  {/if}
+
+  <!-- Kept mounted after the first visit, so coming back to the tab doesn't read the books again. -->
+  {#if booksSeen && booksReady && shown && lw}
+    <div class:hidden={tab !== 'investors'}>
       <InvestorBooks
         mode={botMode}
         canTrade={lw.control.can_trade && !lw.control.running}
@@ -727,131 +942,6 @@
           await Promise.all([load(), refreshLive(botMode, true)]);
         }}
       />
-    {/if}
-
-    <!-- The three lines side by side; all start at the same base on the first fill day. -->
-    <div class="grid gap-3 sm:grid-cols-3">
-      {#each lines as l (l.key)}
-        <div class="card">
-          <p class="flex items-center gap-1.5 text-xs font-medium text-muted"><span class="inline-block h-2 w-2 rounded-full" style="background:{l.color}"></span>{l.name}</p>
-          <p class="mt-1 text-2xl font-semibold text-strong">{l.value.toFixed(2)}</p>
-          <p class="mt-0.5 text-xs"><span class={tone(l.ret)}>{pct(l.ret)}</span> <span class="text-muted">since start</span></p>
-          <p class="text-xs text-muted">Worst drop so far <span class={l.dd < 0 ? 'text-danger' : 'text-muted'}>{l.dd.toFixed(1)}%</span></p>
-        </div>
-      {/each}
     </div>
-
-    <div class="card">
-      <div class="flex flex-wrap items-center justify-between gap-2">
-        <h2 class="text-sm font-semibold text-strong">Since {niceDate(v.start_date)}</h2>
-        <span class="text-[11px] text-muted">{v.days} day{v.days === 1 ? '' : 's'} · prices up to {niceDate(v.last_date)} · all start at {v.index.base}</span>
-      </div>
-      {#if (v.series?.length ?? 0) >= 2}
-        <EChart option={chartOption} height={300} />
-      {:else}
-        <p class="mt-3 rounded-lg bg-panel-2/60 px-3 py-6 text-center text-xs text-muted">
-          Day 1. The first orders fill at the next day's close, and the chart fills in from there — one point a day, after each price sync.
-        </p>
-      {/if}
-    </div>
-
-    <div class="grid gap-4 lg:grid-cols-2">
-      <div class="card">
-        <div class="flex flex-wrap items-center justify-between gap-2">
-          <h2 class="flex items-center gap-1.5 text-sm font-semibold text-strong"><ListChecks class="h-4 w-4 text-accent" /> Holding now</h2>
-          <span class="pill bg-edge text-soft"><CalendarClock class="mr-1 inline h-3 w-3" />Next review {niceDate(v.next_review)}</span>
-        </div>
-        {#if v.holdings?.length}
-          <table class="mt-2 w-full text-sm">
-            <thead>
-              <tr class="text-left text-[11px] text-muted"><th class="py-1 font-medium">Coin</th><th class="py-1 text-right font-medium">Weight</th><th class="py-1 text-right font-medium">Since entry</th><th class="py-1 text-right font-medium">Bought</th></tr>
-            </thead>
-            <tbody>
-              {#each v.holdings as h (h.coin)}
-                <tr class="border-t border-edge/60">
-                  <td class="py-1.5"><span class="flex items-center gap-2">{#if h.image}<img src={h.image} alt="" class="h-4 w-4 rounded-full" />{/if}<span class="font-semibold text-strong">{h.symbol}</span></span></td>
-                  <td class="py-1.5 text-right text-soft">{h.weight_pct.toFixed(1)}%</td>
-                  <td class="py-1.5 text-right {tone(h.return_pct)}">{pct(h.return_pct)}</td>
-                  <td class="py-1.5 text-right text-xs text-muted">{niceDate(h.entry_date)}</td>
-                </tr>
-              {/each}
-              {#if (v.cash_pct ?? 0) >= 0.5}
-                <tr class="border-t border-edge/60"><td class="py-1.5 text-muted">Cash</td><td class="py-1.5 text-right text-muted">{v.cash_pct?.toFixed(1)}%</td><td></td><td></td></tr>
-              {/if}
-            </tbody>
-          </table>
-        {:else}
-          <p class="mt-2 text-xs text-muted">Nothing yet — all cash until the first orders fill.</p>
-        {/if}
-
-        {#if v.pending}
-          <div class="mt-3 border-t border-edge/60 pt-3 text-xs">
-            <p class="text-[11px] text-muted">Decided {niceDate(v.pending.decided)} · fills at the next day's close</p>
-            <p class="mt-1 flex flex-wrap gap-1">
-              {#each v.pending.sells as s}<span class="pill bg-danger/15 text-danger">− {s.symbol} · {s.reason}</span>{/each}
-              {#each v.pending.adds as a}<span class="pill bg-mint/15 text-mint">+ {a}</span>{/each}
-            </p>
-          </div>
-        {/if}
-      </div>
-
-      <div class="card">
-        <h2 class="text-sm font-semibold text-strong">Top {v.index.top10_size} by market cap — the passive yardstick</h2>
-        <p class="mt-1 text-xs text-muted">Weighted by market cap, reweighted every {v.index.top10_rebalance_days} days, same {v.index.fee_pct}% fee.</p>
-        {#if v.top10?.length}
-          <div class="mt-2 space-y-1">
-            {#each v.top10 as t (t.symbol)}
-              <div class="flex items-center gap-2 text-xs">
-                <span class="w-12 font-semibold text-strong">{t.symbol}</span>
-                <span class="h-1.5 flex-1 overflow-hidden rounded-full bg-panel-2"><span class="block h-full rounded-full" style="width:{Math.min(100, t.weight_pct)}%; background:{colors.top}"></span></span>
-                <span class="w-12 text-right text-soft">{t.weight_pct.toFixed(1)}%</span>
-              </div>
-            {/each}
-          </div>
-        {:else}
-          <p class="mt-2 text-xs text-muted">Starts on the first fill day, together with the index.</p>
-        {/if}
-      </div>
-    </div>
-
-    <div class="card">
-      <h2 class="text-sm font-semibold text-strong">Reviews</h2>
-      <p class="mt-1 text-xs text-muted">Every {v.index.style.rebalance_days} days: keep coins still in the top {v.index.style.worst_rank_held}, sell the rest, fill free slots with the strongest coin not held.</p>
-      <div class="mt-2 divide-y divide-edge/60">
-        {#each v.reviews ?? [] as r (r.date)}
-          <details class="py-2">
-            <summary class="flex cursor-pointer flex-wrap items-center gap-1.5 text-xs">
-              <span class="w-24 font-medium text-strong">{niceDate(r.date)}</span>
-              {#each r.sells as s}<span class="pill bg-danger/15 text-danger">− {s.symbol}</span>{/each}
-              {#each r.adds as a}<span class="pill bg-mint/15 text-mint">+ {a}</span>{/each}
-              {#each r.keep as k}<span class="pill bg-edge text-soft">{k}</span>{/each}
-              {#if !r.sells.length && !r.adds.length}<span class="text-muted">no change</span>{/if}
-            </summary>
-            <div class="mt-2 grid gap-3 pl-1 text-xs sm:grid-cols-2">
-              <div>
-                <p class="text-[11px] text-muted">Ranking that day ({v.index.style.signal}, {v.index.style.lookback_days} days)</p>
-                <p class="mt-1 flex flex-wrap gap-1">{#each r.ranking as x}<span class="pill bg-edge text-soft">#{x.rank} {x.symbol} {pct(x.score, 0)}</span>{/each}</p>
-              </div>
-              <div>
-                <p class="text-[11px] text-muted">Filled</p>
-                {#each r.fills as f}
-                  <p class="mt-0.5 text-soft"><span class={f.side === 'BUY' ? 'text-mint' : 'text-danger'}>{f.side === 'BUY' ? 'Bought' : 'Sold'}</span> {f.symbol} at {price(f.price)} · {f.value.toFixed(2)} pts{f.side === 'SELL' ? ` · ${f.reason}` : ''}</p>
-                {:else}
-                  <p class="mt-0.5 text-muted">{r.sells.length || r.adds.length ? 'Fills at the next day’s close.' : 'Nothing to fill.'}</p>
-                {/each}
-              </div>
-            </div>
-          </details>
-        {/each}
-      </div>
-    </div>
-
-    <ul class="list-disc space-y-1 pl-5 text-[11px] leading-snug text-muted">
-      <li>Rule: {v.index.style.label} — top {v.index.style.universe_size} coins by market cap that Binance trades against USDT, ranked by {v.index.style.lookback_days}-day {v.index.style.signal}, {v.index.style.top_n} held at equal weight, reviewed every {v.index.style.rebalance_days} days. The same rule as the rotation bot.</li>
-      <li>Orders are decided on the review day's close and filled at the next day's close, with a {v.index.fee_pct}% fee on every buy and sell. Slippage is not modelled.</li>
-      <li>Closing prices are CoinGecko's 00:00 UTC prices. A day is added only once its price is final, so the newest point is usually yesterday.</li>
-      <li>BTC and the top-{v.index.top10_size} index start on the first fill day ({niceDate(v.first_fill)}) at the same fee. Binance coin list as of {niceDate(v.tradable_as_of)}.</li>
-    </ul>
-    <Disclaimer compact />
-  </div>
+  {/if}
 {/if}
