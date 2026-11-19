@@ -7,6 +7,7 @@
   import EChart from '$lib/components/EChart.svelte';
   import Disclaimer from '$lib/components/Disclaimer.svelte';
   import { axisTooltip, categorical, grid, lineSeries, timeAxis, valueAxis, zoomInside } from '$lib/charts/presets';
+  import InvestorBooks from './InvestorBooks.svelte';
 
   interface Meta {
     id: string;
@@ -79,6 +80,8 @@
     next_review: string | null;
     spot: { total_usdt: number; assets: { asset: string; free: number; locked: number; value_usdt: number | null }[]; more: number } | null;
     trades: BotTrade[];
+    /** The investor books, once started (units outstanding and the unit price). */
+    fund?: { started_at: string; units: number; unit_price: number | null; investors: number } | null;
   }
   interface BotMode { latest: BotSnapshot; history: { date: string; equity_usdt: number }[] }
   interface BotView { table_missing: boolean; live: BotMode | null; testnet: BotMode | null }
@@ -548,7 +551,7 @@
                   <p class="text-lg font-semibold text-strong">{usd(s.cash_usdt)} <span class="text-xs font-normal text-muted">USDT</span></p>
                 </div>
               </div>
-              {#if s.top_ups?.length}
+              {#if s.top_ups?.length && !s.fund}
                 <p class="mt-2 text-[11px] text-muted">
                   Budget {usd(s.budget_usdt)} USDT: started with {usd(s.budget_usdt - s.top_ups.reduce((x, t) => x + t.usdt, 0))}, then added {s.top_ups.map((t) => `${usd(t.usdt)} on ${niceDate(t.at.slice(0, 10))}`).join(', ')}.
                 </p>
@@ -622,7 +625,11 @@
                 {#if !k.ip_restricted}<p class="mt-1 text-[11px] text-warn">This key is not restricted to an IP address — add this server's IP on Binance › API Management.</p>{/if}
               {/if}
 
-              {#if s.started && topUpRoom}
+              {#if s.started && s.fund}
+                <p class="mt-3 rounded-lg border border-edge/60 p-3 text-[11px] leading-snug text-muted">
+                  The investor books are started, so money goes in and out per person — use ↓ (money in) and ↑ (money out) next to each name under Investors below.
+                </p>
+              {:else if s.started && topUpRoom}
                 {@const room = topUpRoom}
                 <div class="mt-3 rounded-lg border border-edge/60 p-3">
                   <div class="flex flex-wrap items-center justify-between gap-2">
@@ -706,6 +713,20 @@
           {/if}
         {/if}
       </div>
+    {/if}
+
+    {#if shown && lw && !liveUnsupported}
+      <InvestorBooks
+        mode={botMode}
+        canTrade={lw.control.can_trade && !lw.control.running}
+        whyNot={lw.control.running ? 'a run is in progress' : lw.control.why_not}
+        outsideUsdt={topUpRoom?.outside ?? null}
+        capRoom={topUpRoom?.capRoom ?? null}
+        holdings={shown.positions}
+        onChanged={async () => {
+          await Promise.all([load(), refreshLive(botMode, true)]);
+        }}
+      />
     {/if}
 
     <!-- The three lines side by side; all start at the same base on the first fill day. -->
