@@ -6,7 +6,8 @@
   import { axisTooltip, categorical, grid, lineSeries, timeAxis, valueAxis, zoomInside } from '$lib/charts/presets';
 
   // Replays the index over a chosen period on past prices, next to holding BTC and the
-  // top-10 index. A check only: nothing is saved.
+  // top-10 index, and optionally the same rule with a BTC trend cash switch. A check
+  // only: nothing is saved.
 
   interface Props {
     top10Size: number;
@@ -31,6 +32,7 @@
     keep: string[];
     sells: { symbol: string; reason: string }[];
     adds: string[];
+    btc_below?: boolean;
   }
   interface Replay {
     from: string;
@@ -47,7 +49,16 @@
     };
     holdings: { coin: string; symbol: string; weight_pct: number; return_pct: number }[];
     changes: Change[];
-    series: { date: string; nav: number; btc: number; top10: number }[];
+    series: { date: string; nav: number; btc: number; top10: number; switched: number | null }[];
+    btc_switch: {
+      days: number;
+      latest: { return_pct: number; max_drawdown_pct: number };
+      holdings: { symbol: string }[];
+      changes: Change[];
+      cash_days: number;
+      measured_days: number;
+      cash_ranges: { from: string; to: string }[];
+    } | null;
     warnings: string[];
   }
 
@@ -56,15 +67,19 @@
     bear: 'Bad time (bear)',
     recent: 'Recent'
   };
+  /** BTC average lengths for the cash switch (0 = off). */
+  const TRENDS = [0, 50, 100, 200];
 
   let periods = $state<Periods | null>(null);
   let periodsError = $state('');
   let from = $state('');
   let to = $state('');
+  let trend = $state(50);
   let running = $state(false);
   let runError = $state('');
   let result = $state<Replay | null>(null);
 
+  const DAY_MS = 86_400_000;
   const niceDate = (d: string | null | undefined) =>
     d ? new Date(`${d}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }) : '—';
   const shortDate = (d: string) => niceDate(d).replace(/\s\d{4}$/, '');
@@ -85,6 +100,7 @@
   const ts = (d: string) => Date.parse(`${d}T00:00:00Z`);
   const dayLabel = (t: number) => new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' });
   const range = (a: string, b: string) => `${a.slice(0, 4) === b.slice(0, 4) ? shortDate(a) : niceDate(a)} – ${niceDate(b)}`;
+  const held = (h: { symbol: string }[]) => (h.length ? h.map((x) => x.symbol).join(', ') : 'cash');
 
   onMount(async () => {
     try {
@@ -106,7 +122,7 @@
     running = true;
     runError = '';
     try {
-      const q = new URLSearchParams({ from: f, to: t });
+      const q = new URLSearchParams({ from: f, to: t, btc_trend: String(trend) });
       result = await api<Replay>(`/admin/rotation-index/replay?${q}`, { auth: true, timeoutMs: 120_000 });
     } catch (e) {
       runError = e instanceof Error ? e.message : 'The replay failed.';
@@ -115,29 +131,57 @@
     }
   };
 
+  /** A new switch setting re-runs the period on screen. */
+  const pickTrend = (n: number) => {
+    if (n === trend || running) return;
+    trend = n;
+    if (result) run(result.from, result.to);
+  };
+
   const activeKey = $derived(periods?.periods.find((p) => p.from === from && p.to === to)?.key ?? null);
   const shownKey = $derived(result ? (periods?.periods.find((p) => p.from === result!.from && p.to === result!.to)?.key ?? null) : null);
 
-  // Index in blue, BTC in amber, top 10 in green, as in the chart above.
-  const colors = $derived({ rot: $categorical[1], btc: $categorical[0], top: $categorical[2] });
+  // Index in blue, BTC in amber, top 10 in green, as in the chart above; the switch version in violet.
+  const colors = $derived({ rot: $categorical[1], btc: $categorical[0], top: $categorical[2], sw: $categorical[4] });
 
-  const rows = $derived(
-    result
-      ? [
-          { name: 'Rotation index', ret: result.latest.return_pct, dd: result.latest.max_drawdown_pct, color: colors.rot },
-          { name: 'Hold BTC', ret: result.latest.btc_return_pct, dd: result.latest.btc_max_drawdown_pct, color: colors.btc },
-          { name: `Top ${top10Size} by market cap`, ret: result.latest.top10_return_pct, dd: result.latest.top10_max_drawdown_pct, color: colors.top }
-        ]
-      : []
-  );
+  const rows = $derived.by(() => {
+    if (!result) return [];
+    const sw = result.btc_switch;
+    return [
+      { key: 'rot', name: 'Rotation index', ret: result.latest.return_pct, dd: result.latest.max_drawdown_pct, color: colors.rot },
+      ...(sw ? [{ key: 'sw', name: `With the ${sw.days}-day switch`, ret: sw.latest.return_pct, dd: sw.latest.max_drawdown_pct, color: colors.sw }] : []),
+      { key: 'btc', name: 'Hold BTC', ret: result.latest.btc_return_pct, dd: result.latest.btc_max_drawdown_pct, color: colors.btc },
+      { key: 'top', name: `Top ${top10Size} by market cap`, ret: result.latest.top10_return_pct, dd: result.latest.top10_max_drawdown_pct, color: colors.top }
+    ];
+  });
   const best = $derived(rows.length ? Math.max(...rows.map((r) => shownAs(r.ret, 1))) : null);
+
+  const switchNote = $derived.by(() => {
+    const sw = result?.btc_switch;
+    if (!result || !sw) return '';
+    // A stretch that begins the day after the start is waiting to buy, not a move to cash.
+    const startsInCash = sw.cash_ranges[0]?.from === nextDay(result.from);
+    const exits = sw.cash_ranges.length - (startsInCash ? 1 : 0);
+    if (!sw.cash_days) return `BTC stayed above its ${sw.days}-day average on every review, so the switch never moved to cash.`;
+    if (sw.cash_days >= sw.measured_days) return `BTC was below its ${sw.days}-day average on every review, so the switch stayed in cash the whole period.`;
+    const parts = [`Fully in cash on ${sw.cash_days} of ${sw.measured_days} days`];
+    if (startsInCash) parts.push('waited in cash at the start');
+    if (exits) parts.push(`moved to cash ${exits} time${exits === 1 ? '' : 's'}`);
+    return `${parts.join(', ')} (shaded on the chart).`;
+  });
+  function nextDay(d: string) {
+    return new Date(ts(d) + DAY_MS).toISOString().slice(0, 10);
+  }
 
   const chartOption = $derived.by(() => {
     const s = result?.series ?? [];
+    const sw = result?.btc_switch;
     if (s.length < 2) return {};
-    const values = s.flatMap((p) => [p.nav, p.btc, p.top10]);
+    const values = s.flatMap((p) => [p.nav, p.btc, p.top10, ...(p.switched != null ? [p.switched] : [])]);
     const spread = Math.max(...values) - Math.min(...values);
     const digits = spread < 1 ? 2 : spread < 10 ? 1 : 0;
+    const byKey = new Map(rows.map((r) => [r.key, r.name]));
+    const nameOf = (k: string) => byKey.get(k) ?? k;
     return {
       backgroundColor: 'transparent',
       useUTC: true,
@@ -148,12 +192,31 @@
         axisPointer: { label: { formatter: ({ value }: { value: number }) => dayLabel(value) } }
       }),
       dataZoom: [zoomInside()],
-      xAxis: timeAxis({ splitLine: { show: false }, minInterval: 86_400_000, axisLabel: { formatter: dayLabel, hideOverlap: true, showMinLabel: true, showMaxLabel: true } }),
+      xAxis: timeAxis({ splitLine: { show: false }, minInterval: DAY_MS, axisLabel: { formatter: dayLabel, hideOverlap: true, showMinLabel: true, showMaxLabel: true } }),
       yAxis: valueAxis({ scale: true, axisLabel: { formatter: (v: number) => v.toFixed(digits) } }),
       series: [
-        lineSeries({ name: rows[0].name, color: colors.rot, width: 2, z: 3, data: s.map((p) => [ts(p.date), p.nav]) }),
-        lineSeries({ name: rows[1].name, color: colors.btc, width: 1.6, data: s.map((p) => [ts(p.date), p.btc]) }),
-        lineSeries({ name: rows[2].name, color: colors.top, width: 1.6, dashed: true, data: s.map((p) => [ts(p.date), p.top10]) })
+        lineSeries({ name: nameOf('rot'), color: colors.rot, width: sw ? 1.6 : 2, z: 3, data: s.map((p) => [ts(p.date), p.nav]) }),
+        ...(sw
+          ? [
+              lineSeries({
+                name: nameOf('sw'),
+                color: colors.sw,
+                width: 2,
+                z: 4,
+                data: s.map((p) => [ts(p.date), p.switched]),
+                // The days the switch sat fully in cash.
+                extra: {
+                  markArea: {
+                    silent: true,
+                    itemStyle: { color: `${colors.sw}1f` },
+                    data: sw.cash_ranges.map((c) => [{ xAxis: ts(c.from) }, { xAxis: ts(c.to) }])
+                  }
+                }
+              })
+            ]
+          : []),
+        lineSeries({ name: nameOf('btc'), color: colors.btc, width: 1.6, data: s.map((p) => [ts(p.date), p.btc]) }),
+        lineSeries({ name: nameOf('top'), color: colors.top, width: 1.6, dashed: true, data: s.map((p) => [ts(p.date), p.top10]) })
       ]
     };
   });
@@ -203,6 +266,30 @@
       </button>
     </form>
     <p class="mt-1 text-[11px] text-muted">Any period from {niceDate(periods.min_from)} to {niceDate(periods.max_to)}, at least {rebalanceDays + 1} days.</p>
+
+    <div class="mt-3 rounded-lg border border-edge/60 px-3 py-2">
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="text-xs font-medium text-strong">BTC trend cash switch</span>
+        <div class="flex overflow-hidden rounded-lg border border-edge text-xs" role="group" aria-label="BTC average length">
+          {#each TRENDS as n (n)}
+            <button
+              type="button"
+              class="px-2.5 py-1 transition-colors disabled:opacity-60 {trend === n ? 'bg-accent text-white' : 'text-soft hover:bg-panel-2/60'}"
+              aria-pressed={trend === n}
+              disabled={running}
+              onclick={() => pickTrend(n)}>{n ? `${n} days` : 'Off'}</button
+            >
+          {/each}
+        </div>
+      </div>
+      <p class="mt-1 text-[11px] text-muted">
+        {#if trend}
+          Adds a second line: the same rule, but on each review day when BTC closes below its average price of the last {trend} days, it sells everything and waits in USDT until a review finds BTC back above it.
+        {:else}
+          Off: only the rule as it runs today.
+        {/if}
+      </p>
+    </div>
   {/if}
 
   {#if runError}
@@ -220,8 +307,8 @@
         {niceDate(result.from)} → {niceDate(result.to)} · {result.days} days · {result.reviews} reviews
       </p>
 
-      <div class="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
-        {#each rows as r (r.name)}
+      <div class="mt-2 grid grid-cols-2 gap-2 {rows.length === 4 ? 'lg:grid-cols-4' : 'sm:grid-cols-3'}">
+        {#each rows as r (r.key)}
           <div class="rounded-lg bg-panel-2/60 px-3 py-2">
             <p class="flex items-center gap-1.5 text-[11px] text-muted"><span class="h-2 w-2 shrink-0 rounded-full" style="background:{r.color}"></span>{r.name}</p>
             <p class="mt-0.5 text-lg font-semibold {tone(r.ret)}">
@@ -237,9 +324,12 @@
         <EChart option={chartOption} height={300} />
       </div>
 
-      <p class="mt-2 text-xs text-soft">
-        Held at the end: <span class="text-strong">{result.holdings.length ? result.holdings.map((h) => h.symbol).join(', ') : 'cash'}</span>.
-      </p>
+      <ul class="mt-2 space-y-1 text-xs text-soft">
+        {#if switchNote}<li><span class="font-medium text-strong">Switch:</span> {switchNote}</li>{/if}
+        <li>
+          Held at the end: <span class="text-strong">{held(result.holdings)}</span>{#if result.btc_switch}; with the switch <span class="text-strong">{held(result.btc_switch.holdings)}</span>{/if}.
+        </li>
+      </ul>
 
       {#if result.changes.length}
         <details class="mt-3 rounded-lg border border-edge/60 px-3 py-2">
@@ -248,6 +338,23 @@
             {#each result.changes as c (c.date)}
               <p class="flex flex-wrap items-center gap-1.5 py-1.5 text-xs">
                 <span class="w-24 font-medium text-strong">{niceDate(c.date)}</span>
+                {#each c.sells as s}<span class="pill bg-danger/15 text-danger">− {s.symbol}</span>{/each}
+                {#each c.adds as a}<span class="pill bg-mint/15 text-mint">+ {a}</span>{/each}
+                {#each c.keep as k}<span class="pill bg-edge text-soft">{k}</span>{/each}
+              </p>
+            {/each}
+          </div>
+        </details>
+      {/if}
+
+      {#if result.btc_switch?.changes.length}
+        <details class="mt-2 rounded-lg border border-edge/60 px-3 py-2">
+          <summary class="cursor-pointer text-xs font-medium text-strong">With the switch: reviews that changed something ({result.btc_switch.changes.length})</summary>
+          <div class="mt-2 divide-y divide-edge/60">
+            {#each result.btc_switch.changes as c (c.date)}
+              <p class="flex flex-wrap items-center gap-1.5 py-1.5 text-xs">
+                <span class="w-24 font-medium text-strong">{niceDate(c.date)}</span>
+                {#if c.btc_below}<span class="pill bg-edge text-soft">BTC below its {result.btc_switch.days}-day average → cash</span>{/if}
                 {#each c.sells as s}<span class="pill bg-danger/15 text-danger">− {s.symbol}</span>{/each}
                 {#each c.adds as a}<span class="pill bg-mint/15 text-mint">+ {a}</span>{/each}
                 {#each c.keep as k}<span class="pill bg-edge text-soft">{k}</span>{/each}
@@ -266,6 +373,6 @@
   {/if}
 
   <p class="mt-3 text-[11px] leading-snug text-muted">
-    Past prices, today's Binance coin list, decisions on each review day's close and fills at the next close with the same fee. It shows how the rule behaved, not what it will do next.
+    Past prices, today's Binance coin list, decisions on each review day's close and fills at the next close with the same fee. The switch is only checked on review days, so it can react up to {rebalanceDays} days late, and cash earns nothing. It shows how the rule behaved, not what it will do next.
   </p>
 </div>
