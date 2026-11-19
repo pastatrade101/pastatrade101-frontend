@@ -18,8 +18,6 @@
     base: number;
     top10_size: number;
     top10_rebalance_days: number;
-    /** Stock tokens that join every review next to the top coins. */
-    extras?: { symbol: string; name: string }[];
   }
   interface Review {
     date: string;
@@ -342,6 +340,33 @@
     if (!start) return null;
     return { pct: (end.nav / start.nav - 1) * 100, from: start.date, to: end.date };
   });
+
+  /** "TRX, BNB and HYPE" */
+  const listJoin = (xs: string[]) => (xs.length < 2 ? xs.join('') : `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`);
+
+  /** The last review's ranking, down to one place past the hold band: why the index holds what it holds. */
+  const whyHeld = $derived.by(() => {
+    const r = view?.reviews?.[0];
+    const band = view?.index.style.worst_rank_held ?? 0;
+    if (!r?.ranking.length || !band) return null;
+    const held = new Set((view?.holdings ?? []).map((h) => h.symbol));
+    const rows = r.ranking.slice(0, band + 1).map((x) => ({ ...x, held: held.has(x.symbol) }));
+    return {
+      date: r.date,
+      band,
+      rows,
+      names: rows.filter((x) => x.held).map((x) => x.symbol),
+      allDown: r.ranking.every((x) => x.score <= 0)
+    };
+  });
+
+  /** The yardstick's BTC share, and how many times the other nine together that is. */
+  const top10Btc = $derived.by(() => {
+    const btc = view?.top10?.find((t) => t.symbol === 'BTC')?.weight_pct;
+    if (btc == null || btc >= 100) return null;
+    return { pct: btc, times: btc / (100 - btc) };
+  });
+  const heldNow = $derived(new Set((view?.holdings ?? []).map((h) => h.symbol)));
 
   // Rotation in blue and BTC in amber, as in the Rotation Lab; the top-10 index in green.
   const colors = $derived({ rot: $categorical[1], btc: $categorical[0], top: $categorical[2] });
@@ -831,7 +856,7 @@
         {/if}
       </div>
 
-      <ReplayCard topN={v.index.style.top_n} worstRankHeld={v.index.style.worst_rank_held} top10Size={v.index.top10_size} rebalanceDays={v.index.style.rebalance_days} />
+      <ReplayCard top10Size={v.index.top10_size} rebalanceDays={v.index.style.rebalance_days} />
 
       <div class="grid gap-4 lg:grid-cols-2">
         <div class="card">
@@ -862,6 +887,30 @@
             <p class="mt-2 text-xs text-muted">Nothing yet — all cash until the first orders fill.</p>
           {/if}
 
+          {#if whyHeld && whyHeld.names.length}
+            <div class="mt-3 border-t border-edge/60 pt-3">
+              <h3 class="text-xs font-semibold text-strong">Why {listJoin(whyHeld.names)}</h3>
+              <p class="mt-1 text-xs text-muted">
+                On {niceDate(whyHeld.date)} the rule ranked its coins by price change over the past {v.index.style.lookback_days} days. The top {v.index.style.top_n} are bought. A coin already held is kept while it stays in the top {whyHeld.band}, so a small slip doesn't force a sale.
+              </p>
+              <ol class="mt-2 space-y-0.5 text-xs">
+                {#each whyHeld.rows as x (x.symbol)}
+                  <li class="flex items-center gap-2 rounded px-1.5 py-1 {x.held ? 'bg-accent/10' : ''} {x.rank === whyHeld.band + 1 ? 'mt-1 border-t border-dashed border-edge pt-1.5' : ''}">
+                    <span class="w-6 text-muted">#{x.rank}</span>
+                    <span class="w-14 font-semibold {x.held ? 'text-strong' : 'text-soft'}">{x.symbol}</span>
+                    <span class="flex-1 {tone(x.score)}">{pct(x.score)}</span>
+                    {#if x.held}<span class="pill bg-accent/15 text-accent">held</span>{:else if x.rank > whyHeld.band}<span class="text-[11px] text-muted">a held coin here is sold</span>{/if}
+                  </li>
+                {/each}
+              </ol>
+              {#if whyHeld.allDown}
+                <p class="mt-2 text-xs text-soft">
+                  Every coin fell over those {v.index.style.lookback_days} days. These fell the least, so they ranked first: the rule always holds the strongest of the group and never moves to cash, so in a falling market it falls too.
+                </p>
+              {/if}
+            </div>
+          {/if}
+
           {#if v.pending}
             <div class="mt-3 border-t border-edge/60 pt-3 text-xs">
               <p class="text-[11px] text-muted">Decided {niceDate(v.pending.decided)} · fills at the next day's close</p>
@@ -876,11 +925,39 @@
         <div class="card">
           <h2 class="text-sm font-semibold text-strong">Top {v.index.top10_size} by market cap — the passive yardstick</h2>
           <p class="mt-1 text-xs text-muted">Weighted by market cap, reweighted every {v.index.top10_rebalance_days} days, same {v.index.fee_pct}% fee.</p>
+          <dl class="mt-2 space-y-1.5 text-xs">
+            <div>
+              <dt class="font-medium text-strong">What it is</dt>
+              <dd class="text-soft">
+                The do-nothing alternative to the rotation. On {niceDate(v.first_fill)} it bought the {v.index.top10_size} biggest coins Binance trades (stablecoins left out), each in proportion to its size, and holds them. Every {v.index.top10_rebalance_days} days it resets to the latest sizes; in between, the weights drift with prices. No ranking, no switching.
+              </dd>
+            </div>
+            {#if top10Btc}
+              <div>
+                <dt class="font-medium text-strong">Why BTC is {top10Btc.pct.toFixed(0)}%</dt>
+                <dd class="text-soft">
+                  BTC alone is worth about {top10Btc.times.toFixed(1)} times the other {v.index.top10_size - 1} together, so weighting by size puts most of the money in BTC. This line moves almost like BTC.
+                </dd>
+              </div>
+            {/if}
+            <div>
+              <dt class="font-medium text-strong">What it is for</dt>
+              <dd class="text-soft">
+                A fair test of the rotation. If, over months, the rotation can't beat simply holding the biggest coins, the switching isn't paying for itself. It's a comparison only; the bot doesn't buy it.
+              </dd>
+            </div>
+          </dl>
+          {#if v.latest}
+            <p class="mt-2 rounded-lg bg-panel-2/60 px-3 py-2 text-xs text-soft">
+              Since {niceDate(v.first_fill)}: top {v.index.top10_size} <span class={tone(v.latest.top10_return_pct)}>{pct(v.latest.top10_return_pct)}</span> · rotation <span class={tone(v.latest.return_pct)}>{pct(v.latest.return_pct)}</span> · BTC <span class={tone(v.latest.btc_return_pct)}>{pct(v.latest.btc_return_pct)}</span>
+            </p>
+          {/if}
           {#if v.top10?.length}
-            <div class="mt-2 space-y-1">
+            <p class="mt-3 text-[11px] text-muted">Weights today{heldNow.size ? ' · the index holds the marked coins' : ''}</p>
+            <div class="mt-1 space-y-1">
               {#each v.top10 as t (t.symbol)}
                 <div class="flex items-center gap-2 text-xs">
-                  <span class="w-12 font-semibold text-strong">{t.symbol}</span>
+                  <span class="flex w-16 items-center gap-1 font-semibold text-strong">{t.symbol}{#if heldNow.has(t.symbol)}<span class="h-1.5 w-1.5 rounded-full bg-accent" title="The index holds it"></span>{/if}</span>
                   <span class="h-1.5 flex-1 overflow-hidden rounded-full bg-panel-2"><span class="block h-full rounded-full" style="width:{Math.min(100, t.weight_pct)}%; background:{colors.top}"></span></span>
                   <span class="w-12 text-right text-soft">{t.weight_pct.toFixed(1)}%</span>
                 </div>
@@ -927,11 +1004,6 @@
       <ul class="list-disc space-y-1 pl-5 text-[11px] leading-snug text-muted">
         <li>Tracked forward on paper: each review picks from the coins that are biggest on that day, and its decisions are saved and never recalculated, so nothing here benefits from hindsight.</li>
         <li>Rule: {v.index.style.label} — top {v.index.style.universe_size} coins by market cap that Binance trades against USDT, ranked by {v.index.style.lookback_days}-day {v.index.style.signal}, {v.index.style.top_n} held at equal weight, reviewed every {v.index.style.rebalance_days} days. The same rule as the rotation bot.</li>
-        {#if v.index.extras?.length}
-          <li>
-            Stock tokens join every review too: {v.index.extras.map((x) => x.symbol).join(', ')} ({v.index.extras.map((x) => x.name).join('; ')}). They have no market cap here, so they skip the top-{v.index.style.universe_size} cut and compete in the same ranking. Their prices are Binance's 00:00 UTC prices; they trade around the clock, also when US markets are shut.
-          </li>
-        {/if}
         <li>Orders are decided on the review day's close and filled at the next day's close, with a {v.index.fee_pct}% fee on every buy and sell. Slippage is not modelled.</li>
         <li>Closing prices are CoinGecko's 00:00 UTC prices. A day is added only once its price is final, so the newest point is usually yesterday.</li>
         <li>BTC and the top-{v.index.top10_size} index start on the first fill day ({niceDate(v.first_fill)}) at the same fee. Binance coin list as of {niceDate(v.tradable_as_of)}.</li>
