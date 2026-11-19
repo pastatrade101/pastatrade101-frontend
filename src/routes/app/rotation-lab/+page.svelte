@@ -31,6 +31,24 @@
     universe: Coin[];
     series: { dates: string[]; strategy: number[]; btc: number[]; drawdown_strategy: number[]; drawdown_btc: number[] };
     metrics: { strategy: M; btc: M };
+    /** The same rule without hindsight, over the days with saved market caps (top-N lists only). */
+    realtime: {
+      start: string;
+      end: string;
+      days: number;
+      caps_from: string;
+      top_n: number;
+      hindsight: M;
+      realtime: M;
+      binance: M | null;
+      binance_note: string | null;
+      btc: M;
+      off_list: string[];
+      not_on_binance: string[];
+      realtime_holdings: string[];
+      binance_holdings: string[];
+    } | null;
+    realtime_note: string | null;
     stats: { trades: number; win_rate_pct: number | null; avg_trade_pct: number | null; best_trade_pct: number | null; worst_trade_pct: number | null; avg_hold_days: number | null; total_fees: number; exposure_pct: number; rebalances: number };
     trades: { coin: string; symbol: string; entry_date: string; exit_date: string; return_pct: number; hold_days: number; exit_reason: 'rank' | 'unrankable' | 'end' }[];
     events: { date: string; bought: string[]; sold: string[]; held: string[] }[];
@@ -707,6 +725,9 @@
                 would be <span class="font-bold {tone(r.metrics.strategy.total_return_pct)}">{plain.ours}</span> today.
               </p>
               <p class="mt-1 text-sm text-muted">Bitcoin alone: <span class="font-semibold text-soft">{plain.btc}</span>.</p>
+              {#if r.realtime}
+                <p class="mt-1 text-xs text-muted">This uses today’s top coins for every past day, so it already knows which coins grew. The real-time check below doesn’t.</p>
+              {/if}
 
               <div class="mt-3 rounded-lg border border-warn/30 bg-warn/5 px-3 py-2">
                 <p class="text-sm font-semibold text-warn">⚠️ At its worst it was down {plain.drop.toFixed(0)}%.</p>
@@ -733,6 +754,7 @@
               </p>
             </div>
           {/if}
+          {@render realtimeCheck(r)}
         {/if}
 
         {#if r.warnings.length}
@@ -768,6 +790,8 @@
             </div>
           </div>
         </div>
+
+        {#if mode === 'custom'}{@render realtimeCheck(r)}{/if}
 
         <div class="card">
           <div class="mb-2 flex items-center justify-between gap-2">
@@ -933,3 +957,58 @@
     </div>
   </div>
 {/if}
+
+<!-- The hindsight check. The Lab's list is today's top coins, used for every past day,
+     so a backtest "knows" which coins grew. This reruns the rule from the first day
+     with saved market caps, picking each review's top coins by that day's size —
+     once from every coin, once from coins Binance trades against USDT (the list the
+     Rotation Index uses). -->
+{#snippet realtimeCheck(r: Result)}
+  {#if r.realtime}
+    {@const c = r.realtime}
+    {@const tiles = [
+      { label: `Today’s top ${c.top_n}`, sub: 'the Lab’s list, as above', m: c.hindsight },
+      { label: `That day’s top ${c.top_n}`, sub: 'each review’s own list', m: c.realtime },
+      { label: `That day’s top ${c.top_n} on Binance`, sub: 'what the Rotation Index trades', m: c.binance },
+      { label: 'Hold BTC', sub: 'same days', m: c.btc }
+    ]}
+    <div class="card {loading ? 'opacity-60' : ''} transition-opacity">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <h2 class="flex items-center gap-1.5 text-sm font-semibold text-strong"><Search class="h-4 w-4 text-accent" /> Real-time check</h2>
+        <span class="text-[11px] text-muted">{niceDate(c.start)} → {niceDate(c.end)} · {c.days} days</span>
+      </div>
+      <p class="mt-2 text-xs leading-snug text-soft">
+        The same rule without hindsight: each review picks the top {c.top_n} by market cap on that day, which is all anyone could have known then.
+        {#if c.start > r.window.start}Saved market caps start {niceDate(c.caps_from)}, so the check starts there.{/if}
+      </p>
+
+      <div class="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-4">
+        {#each tiles as t (t.label)}
+          <div class="rounded-lg border border-edge bg-panel-2 px-3 py-2">
+            <p class="text-[11px] font-medium text-strong">{t.label}</p>
+            <p class="text-[10px] text-muted">{t.sub}</p>
+            {#if t.m}
+              <p class="mt-1.5 text-base font-bold tabular-nums sm:text-lg {tone(t.m.total_return_pct)}">{money(t.m.final_equity)}</p>
+              <p class="text-[11px] text-muted"><span class={tone(t.m.total_return_pct)}>{pct(t.m.total_return_pct)}</span> · worst <span class="text-danger">{pct(t.m.max_drawdown_pct, 0)}</span></p>
+            {:else}
+              <p class="mt-1.5 text-xs text-muted">{c.binance_note ?? 'Not available.'}</p>
+            {/if}
+          </div>
+        {/each}
+      </div>
+      <p class="mt-1.5 text-[11px] text-muted">Each starts with {money(cash)} on {niceDate(c.start)}.</p>
+
+      <ul class="mt-3 space-y-1 border-t border-edge/60 pt-3 text-xs leading-snug text-soft">
+        {#if c.off_list.length}
+          <li>In real time the rule also bought <span class="font-semibold text-strong">{c.off_list.join(', ')}</span>, coins that have since left today’s top {c.top_n}. Today’s list never holds them.</li>
+        {/if}
+        {#if c.not_on_binance.length}
+          <li><span class="font-semibold text-strong">{c.not_on_binance.join(', ')}</span> {c.not_on_binance.length === 1 ? 'is' : 'are'} in today’s top {c.top_n}, but Binance doesn’t trade {c.not_on_binance.length === 1 ? 'it' : 'them'} against USDT.</li>
+        {/if}
+        <li>The gap between the first two tiles is hindsight: knowing today’s winners in advance. Only the real-time numbers could have been earned.</li>
+      </ul>
+    </div>
+  {:else if r.realtime_note && mode === 'custom'}
+    <p class="text-[11px] text-muted">{r.realtime_note}</p>
+  {/if}
+{/snippet}

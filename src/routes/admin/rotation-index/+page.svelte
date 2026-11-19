@@ -18,6 +18,8 @@
     base: number;
     top10_size: number;
     top10_rebalance_days: number;
+    /** Set on an index with the BTC switch: the average's length in days. */
+    btc_trend_days?: number | null;
   }
   interface Review {
     date: string;
@@ -26,6 +28,8 @@
     adds: string[];
     ranking: { symbol: string; rank: number; score: number }[];
     fills: { side: 'BUY' | 'SELL'; symbol: string; price: number; value: number; reason: string }[];
+    /** The BTC switch was on: BTC closed below its average, so the review ranked nothing. */
+    risk_off?: boolean;
   }
   interface View {
     index: Meta;
@@ -55,6 +59,8 @@
     next_review?: string | null;
     series?: { date: string; nav: number; btc: number; top10: number }[];
     reviews?: Review[];
+    /** Index with the BTC switch: BTC against its average on the newest day (what the next review sees). */
+    btc_switch?: { days: number; date: string; btc: number; average: number; gap_pct: number; below: boolean } | null;
   }
 
   // What the rotation bot's Binance sleeve holds. Read live from Binance by the
@@ -106,6 +112,11 @@
   }
 
   let view = $state<View | null>(null);
+  /** Balanced + BTC switch, tracked next to Balanced (null on an older backend). */
+  let switchView = $state<View | null>(null);
+  const SWITCH_ID = 'rotation-balanced-switch';
+  /** Which index the Index tab shows. */
+  let indexPick = $state<'balanced' | 'switch'>('balanced');
   let bot = $state<BotView | null>(null);
   let botMode = $state<'live' | 'testnet'>('live');
   let botModePicked = false;
@@ -139,13 +150,15 @@
 
   const load = async () => {
     try {
-      const [v, b] = await Promise.all([
+      const [v, b, sw] = await Promise.all([
         api<View>('/admin/rotation-index', { auth: true }),
         // The card is optional: an older backend without the route just hides it.
-        api<BotView>('/admin/rotation-index/bot', { auth: true }).catch(() => null)
+        api<BotView>('/admin/rotation-index/bot', { auth: true }).catch(() => null),
+        api<View>(`/admin/rotation-index/${SWITCH_ID}`, { auth: true }).catch(() => null)
       ]);
       view = v;
       bot = b;
+      switchView = sw;
       if (b && !botModePicked) botMode = b.live || !b.testnet ? 'live' : 'testnet';
       error = '';
     } catch (e) {
@@ -160,7 +173,8 @@
     updating = true;
     notice = '';
     try {
-      const r = await api<{ added: number; to: string | null }>('/admin/rotation-index/update', { auth: true, method: 'POST' });
+      const path = indexPick === 'switch' ? `/admin/rotation-index/${SWITCH_ID}/update` : '/admin/rotation-index/update';
+      const r = await api<{ added: number; to: string | null }>(path, { auth: true, method: 'POST' });
       notice = r.added ? `Added ${r.added} day(s), up to ${niceDate(r.to)}.` : 'Already up to date — the next day is added once its closing price is final.';
       await load();
     } catch (e) {
@@ -330,10 +344,16 @@
       segments: total > 0 && main.length ? segments : []
     };
   });
+  /** The index the Index tab shows. */
+  const iv = $derived(indexPick === 'switch' && switchView?.latest ? switchView : view);
+  /** The index the shown sleeve copies (testnet follows Balanced + BTC switch). */
+  const followed = $derived(shown?.follow === SWITCH_ID ? switchView : view);
+  const followedName = (follow: string | null | undefined) => (follow === SWITCH_ID ? 'Balanced + BTC switch' : 'the Rotation Index');
+
   /** The index over the sleeve's own days, to compare like with like. */
   const indexSameDays = $derived.by(() => {
     const from = shown?.started_on;
-    const s = view?.series ?? [];
+    const s = followed?.series ?? [];
     if (!from || !s.length) return null;
     const start = s.find((p) => p.date >= from);
     const end = s[s.length - 1];
@@ -346,10 +366,10 @@
 
   /** The last review's ranking, down to one place past the hold band: why the index holds what it holds. */
   const whyHeld = $derived.by(() => {
-    const r = view?.reviews?.[0];
-    const band = view?.index.style.worst_rank_held ?? 0;
+    const r = iv?.reviews?.[0];
+    const band = iv?.index.style.worst_rank_held ?? 0;
     if (!r?.ranking.length || !band) return null;
-    const held = new Set((view?.holdings ?? []).map((h) => h.symbol));
+    const held = new Set((iv?.holdings ?? []).map((h) => h.symbol));
     const rows = r.ranking.slice(0, band + 1).map((x) => ({ ...x, held: held.has(x.symbol) }));
     return {
       date: r.date,
@@ -362,21 +382,21 @@
 
   /** The yardstick's BTC share, and how many times the other nine together that is. */
   const top10Btc = $derived.by(() => {
-    const btc = view?.top10?.find((t) => t.symbol === 'BTC')?.weight_pct;
+    const btc = iv?.top10?.find((t) => t.symbol === 'BTC')?.weight_pct;
     if (btc == null || btc >= 100) return null;
     return { pct: btc, times: btc / (100 - btc) };
   });
-  const heldNow = $derived(new Set((view?.holdings ?? []).map((h) => h.symbol)));
+  const heldNow = $derived(new Set((iv?.holdings ?? []).map((h) => h.symbol)));
 
   // Rotation in blue and BTC in amber, as in the Rotation Lab; the top-10 index in green.
   const colors = $derived({ rot: $categorical[1], btc: $categorical[0], top: $categorical[2] });
 
   const lines = $derived(
-    view?.latest
+    iv?.latest
       ? [
-          { key: 'rot', name: 'Rotation index', value: view.latest.nav, ret: view.latest.return_pct, dd: view.latest.max_drawdown_pct, color: colors.rot },
-          { key: 'btc', name: 'Hold BTC', value: view.latest.btc, ret: view.latest.btc_return_pct, dd: view.latest.btc_max_drawdown_pct, color: colors.btc },
-          { key: 'top', name: `Top ${view.index.top10_size} by market cap`, value: view.latest.top10, ret: view.latest.top10_return_pct, dd: view.latest.top10_max_drawdown_pct, color: colors.top }
+          { key: 'rot', name: iv.index.btc_trend_days ? 'Balanced + BTC switch' : 'Rotation index', value: iv.latest.nav, ret: iv.latest.return_pct, dd: iv.latest.max_drawdown_pct, color: colors.rot },
+          { key: 'btc', name: 'Hold BTC', value: iv.latest.btc, ret: iv.latest.btc_return_pct, dd: iv.latest.btc_max_drawdown_pct, color: colors.btc },
+          { key: 'top', name: `Top ${iv.index.top10_size} by market cap`, value: iv.latest.top10, ret: iv.latest.top10_return_pct, dd: iv.latest.top10_max_drawdown_pct, color: colors.top }
         ]
       : []
   );
@@ -402,7 +422,7 @@
   const dayLabel = (t: number) => new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' });
 
   const chartOption = $derived.by(() => {
-    const s = view?.series ?? [];
+    const s = iv?.series ?? [];
     if (s.length < 2) return {};
     // Early on the three lines sit within a point of each other, so whole numbers
     // would print "100" on every gridline: show as many decimals as the spread needs.
@@ -560,7 +580,7 @@
       <div class="space-y-4">
         <!-- The sleeve -->
         <div class="card">
-          <p class="text-xs text-muted">Bot sleeve · {s.follow ? 'copies the Rotation Index' : `runs the ${s.style} rule`}</p>
+          <p class="text-xs text-muted">Bot sleeve · {s.follow ? `copies ${followedName(s.follow)}` : `runs the ${s.style} rule`}</p>
           {#if s.started}
             <p class="mt-1 text-3xl font-semibold tracking-tight tabular-nums text-strong">{usd(s.equity_usdt)} <span class="text-sm font-medium text-muted">USDT</span></p>
             <p class="mt-0.5 text-sm"><span class="font-semibold {tone(s.return_pct, 2)}">{pct(s.return_pct, 2)}</span> <span class="text-muted">on the {usd(s.budget_usdt)} budget</span></p>
@@ -633,7 +653,7 @@
               </div>
             </div>
             <p class="mt-1 text-xs text-muted">Copies the index's orders inside the sleeve once the index has saved its fill. You see the orders first; nothing is placed until you confirm.</p>
-            {#if view?.pending}<p class="mt-1 text-xs text-muted">The review decided {niceDate(view.pending.decided)} fills at the next close. Until that is saved, a run does nothing.</p>{/if}
+            {#if followed?.pending}<p class="mt-1 text-xs text-muted">The review decided {niceDate(followed.pending.decided)} fills at the next close. Until that is saved, a run does nothing.</p>{/if}
             {#if !s.started}
               <label class="mt-3 flex flex-wrap items-center gap-2 text-xs text-soft">
                 First-run budget
@@ -810,7 +830,29 @@
       </div>
     {/if}
   {:else}
+    {@const v = iv ?? view}
     <div class="space-y-4">
+      <!-- Two indexes tracked side by side: the rule, and the rule with the BTC switch. -->
+      <div class="grid grid-cols-2 gap-1 rounded-2xl bg-panel-2/80 p-1 text-sm font-medium" role="group" aria-label="Index">
+        {#each [{ id: 'balanced', label: 'Balanced' }, { id: 'switch', label: 'Balanced + BTC switch' }] as const as o (o.id)}
+          <button
+            class="rounded-xl px-2 py-1.5 transition {indexPick === o.id ? 'bg-panel text-strong shadow-sm' : 'text-muted hover:text-strong'}"
+            aria-pressed={indexPick === o.id}
+            onclick={() => (indexPick = o.id)}>{o.label}</button>
+        {/each}
+      </div>
+
+      {#if indexPick === 'switch' && !switchView?.latest}
+        <div class="card space-y-2 text-sm text-soft">
+          <p class="font-semibold text-strong">{switchView ? 'Balanced + BTC switch has not been started.' : 'This backend does not track Balanced + BTC switch yet.'}</p>
+          <p>The Balanced rule plus one check on each review day: when BTC closes below its 50-day average, sell everything and hold cash until a review finds BTC back above. The testnet bot follows it; the live sleeve stays on Balanced.</p>
+          {#if switchView}
+            <p>Start it once from the backend folder, on the same day Balanced started: <code class="rounded bg-panel-2 px-1.5 py-0.5 text-xs">npm run index:rotation -- --id {SWITCH_ID} --start --start-on 2026-11-16</code>. After that, every price sync adds the new day on its own.</p>
+          {:else}
+            <p>Redeploy the backend to add it.</p>
+          {/if}
+        </div>
+      {:else}
       <div class="flex items-center justify-between gap-3">
         <p class="text-xs text-muted">{v.days} day{v.days === 1 ? '' : 's'} · prices up to {niceDate(v.last_date)} · all start at {v.index.base}</p>
         <button class="btn-ghost shrink-0 px-3 py-1.5 text-xs" disabled={updating} onclick={update}>
@@ -856,7 +898,24 @@
         {/if}
       </div>
 
-      <ReplayCard top10Size={v.index.top10_size} rebalanceDays={v.index.style.rebalance_days} />
+      {#if v.btc_switch}
+        {@const b = v.btc_switch}
+        <div class="card">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <h2 class="text-sm font-semibold text-strong">The BTC switch</h2>
+            <span class="pill {b.below ? 'bg-danger/15 text-danger' : 'bg-mint/15 text-mint'}">{b.below ? 'Cash' : 'Invested'} at the next review</span>
+          </div>
+          <p class="mt-2 text-sm text-soft">
+            On {niceDate(b.date)} BTC closed at ${Math.round(b.btc).toLocaleString('en-US')}, <span class={b.below ? 'text-danger' : 'text-mint'}>{Math.abs(b.gap_pct).toFixed(1)}% {b.below ? 'below' : 'above'}</span> its {b.days}-day average of ${Math.round(b.average).toLocaleString('en-US')}.
+            {b.below
+              ? `If it is still below on ${niceDate(v.next_review)}, that review sells everything and stays in cash.`
+              : `If it is still above on ${niceDate(v.next_review)}, that review ranks the coins as usual.`}
+          </p>
+          <p class="mt-1 text-xs text-muted">Checked only on review days. In the replay of Jun 2025 to Nov 2026 the switch gave +17.5% against the plain rule's −25.1%, but it reacts up to a week late and pays fees each time it goes in and out.</p>
+        </div>
+      {:else}
+        <ReplayCard top10Size={v.index.top10_size} rebalanceDays={v.index.style.rebalance_days} />
+      {/if}
 
       <div class="grid gap-4 lg:grid-cols-2">
         <div class="card">
@@ -883,6 +942,8 @@
                 {/if}
               </tbody>
             </table>
+          {:else if v.btc_switch && v.reviews?.[0]?.risk_off}
+            <p class="mt-2 text-xs text-muted">All cash: on {niceDate(v.reviews[0].date)} BTC closed below its {v.btc_switch.days}-day average, so the review bought nothing.</p>
           {:else}
             <p class="mt-2 text-xs text-muted">Nothing yet — all cash until the first orders fill.</p>
           {/if}
@@ -980,12 +1041,12 @@
                 {#each r.sells as s}<span class="pill bg-danger/15 text-danger">− {s.symbol}</span>{/each}
                 {#each r.adds as a}<span class="pill bg-mint/15 text-mint">+ {a}</span>{/each}
                 {#each r.keep as k}<span class="pill bg-edge text-soft">{k}</span>{/each}
-                {#if !r.sells.length && !r.adds.length}<span class="text-muted">no change</span>{/if}
+                {#if r.risk_off}<span class="pill bg-danger/15 text-danger">BTC below its average · cash</span>{:else if !r.sells.length && !r.adds.length}<span class="text-muted">no change</span>{/if}
               </summary>
               <div class="mt-2 grid gap-3 pl-1 text-xs sm:grid-cols-2">
                 <div>
                   <p class="text-[11px] text-muted">Ranking that day ({v.index.style.signal}, {v.index.style.lookback_days} days)</p>
-                  <p class="mt-1 flex flex-wrap gap-1">{#each r.ranking as x}<span class="pill bg-edge text-soft">#{x.rank} {x.symbol} {pct(x.score, 0)}</span>{/each}</p>
+                  <p class="mt-1 flex flex-wrap gap-1">{#each r.ranking as x}<span class="pill bg-edge text-soft">#{x.rank} {x.symbol} {pct(x.score, 0)}</span>{:else}<span class="text-muted">{r.risk_off ? 'Not ranked: BTC was below its average.' : '—'}</span>{/each}</p>
                 </div>
                 <div>
                   <p class="text-[11px] text-muted">Filled</p>
@@ -1003,12 +1064,13 @@
 
       <ul class="list-disc space-y-1 pl-5 text-[11px] leading-snug text-muted">
         <li>Tracked forward on paper: each review picks from the coins that are biggest on that day, and its decisions are saved and never recalculated, so nothing here benefits from hindsight.</li>
-        <li>Rule: {v.index.style.label} — top {v.index.style.universe_size} coins by market cap that Binance trades against USDT, ranked by {v.index.style.lookback_days}-day {v.index.style.signal}, {v.index.style.top_n} held at equal weight, reviewed every {v.index.style.rebalance_days} days. The same rule as the rotation bot.</li>
+        <li>Rule: {v.index.style.label} — top {v.index.style.universe_size} coins by market cap that Binance trades against USDT, ranked by {v.index.style.lookback_days}-day {v.index.style.signal}, {v.index.style.top_n} held at equal weight, reviewed every {v.index.style.rebalance_days} days.{v.index.btc_trend_days ? ` Plus the BTC switch: on a review day with BTC below its ${v.index.btc_trend_days}-day average, everything is sold and held in cash. The testnet bot follows this index.` : ' The same rule as the live rotation bot.'}</li>
         <li>Orders are decided on the review day's close and filled at the next day's close, with a {v.index.fee_pct}% fee on every buy and sell. Slippage is not modelled.</li>
         <li>Closing prices are CoinGecko's 00:00 UTC prices. A day is added only once its price is final, so the newest point is usually yesterday.</li>
         <li>BTC and the top-{v.index.top10_size} index start on the first fill day ({niceDate(v.first_fill)}) at the same fee. Binance coin list as of {niceDate(v.tradable_as_of)}.</li>
       </ul>
       <Disclaimer compact />
+      {/if}
     </div>
   {/if}
 
